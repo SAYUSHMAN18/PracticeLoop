@@ -1,0 +1,16 @@
+{% extends "base_auth.html" %}
+{% block title %}Log in - PracticeLoop{% endblock %}
+{% block content %}
+<div class="card" style="max-width:380px;margin:3rem auto;">
+  <h1>Log in</h1>
+  <form method="post" action="/login">
+    <label>Email</label>
+    <input type="email" name="email" required>
+    <label>Password</label>
+    <input type="password" name="password" required>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    <button type="submit">Log in</button>
+  </form>
+  <p class="muted" style="margin-top:1rem;">No account? <a href="/signup">Sign up</a></p>
+</div>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Practice - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Practice question bank</h1>
+
+<div class="card">
+  <h2>Capture a question</h2>
+  <p class="muted">Paste a raw question/answer block and let AI structure it, or fill the fields in yourself.</p>
+  <form method="post" action="/practice/structure">
+    <label>Paste raw text</label>
+    <textarea name="raw_text" placeholder="Q: What is a hash map?&#10;A: ...&#10;Example: ...&#10;Topic: data structures&#10;Company: Google&#10;Difficulty: medium">{{ raw_text }}</textarea>
+    <button type="submit" class="secondary">Structure with AI</button>
+  </form>
+
+  <form method="post" action="/practice" style="margin-top:1.25rem;border-top:1px solid var(--border);padding-top:1rem;">
+    <label>Question</label>
+    <input type="text" name="question" value="{{ draft.question if draft else '' }}" required>
+    <label>Answer</label>
+    <textarea name="answer">{{ draft.answer if draft else '' }}</textarea>
+    <label>Example</label>
+    <textarea name="example">{{ draft.example if draft else '' }}</textarea>
+    <div style="display:flex;gap:1rem;">
+      <div style="flex:1;">
+        <label>Topic</label>
+        <input type="text" name="topic" value="{{ draft.topic if draft else '' }}">
+      </div>
+      <div style="flex:1;">
+        <label>Company</label>
+        <input type="text" name="company" value="{{ draft.company if draft else '' }}">
+      </div>
+      <div style="flex:1;">
+        <label>Difficulty</label>
+        <select name="difficulty">
+          {% set d = draft.difficulty if draft else 'medium' %}
+          <option value="easy" {{ "selected" if d == "easy" }}>Easy</option>
+          <option value="medium" {{ "selected" if d == "medium" }}>Medium</option>
+          <option value="hard" {{ "selected" if d == "hard" }}>Hard</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:1rem;">
+      <div style="flex:1;">
+        <label>Code snippet (optional)</label>
+        <textarea name="code_snippet">{{ draft.code_snippet if draft else '' }}</textarea>
+      </div>
+      <div style="flex:1;">
+        <label>Language (optional)</label>
+        <input type="text" name="language" value="{{ draft.language if draft else '' }}">
+      </div>
+    </div>
+    <button type="submit">Save question</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Search your bank</h2>
+  <input type="search" name="q" placeholder="Search by meaning, not just keywords..."
+         hx-get="/practice/search" hx-trigger="keyup changed delay:300ms" hx-target="#search-results">
+  <div id="search-results"></div>
+</div>
+
+<div class="card">
+  <h2>Generate a study card</h2>
+  <p class="muted">No match for a topic? Let AI write one.</p>
+  <form method="post" action="/practice/study-card">
+    <div style="display:flex;gap:1rem;align-items:end;">
+      <div style="flex:1;">
+        <label>Topic</label>
+        <input type="text" name="topic" required placeholder="e.g. binary search trees">
+      </div>
+      <div style="flex:1;">
+        <label>Difficulty</label>
+        <select name="difficulty">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </div>
+    </div>
+    <button type="submit" class="secondary">Generate</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>All questions ({{ questions|length }})</h2>
+  {% for q in questions %}
+    <div class="question-item">
+      <strong>{{ q.question }}</strong>
+      <div style="margin-top:0.35rem;">
+        {% if q.topic %}<span class="tag">{{ q.topic }}</span>{% endif %}
+        {% if q.company %}<span class="tag">{{ q.company }}</span>{% endif %}
+        <span class="tag">{{ q.difficulty }}</span>
+        {% if q.source == "ai_generated" %}<span class="tag">AI-generated</span>{% endif %}
+      </div>
+    </div>
+  {% else %}
+    <p class="muted">No questions yet &mdash; capture your first one above.</p>
+  {% endfor %}
+</div>
+{% endblock %}

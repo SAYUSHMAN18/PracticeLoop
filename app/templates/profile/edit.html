@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Profile - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Your profile</h1>
+<div class="card">
+  <form method="post" action="/profile" enctype="multipart/form-data">
+    <label>Target role</label>
+    <input type="text" name="target_role" value="{{ profile.target_role }}" placeholder="e.g. Backend Engineer">
+    <label>Target companies</label>
+    <input type="text" name="target_companies" value="{{ profile.target_companies }}" placeholder="e.g. Stripe, Google">
+    <label>Resume (.pdf or .txt) &mdash; optional, replaces the stored text</label>
+    <input type="file" name="resume" accept=".pdf,.txt">
+    {% if profile.resume_text %}
+      <p class="muted" style="margin-top:0.5rem;">Current resume text on file: {{ profile.resume_text|length }} characters.</p>
+    {% endif %}
+    {% if saved %}<p class="success">Saved.</p>{% endif %}
+    <button type="submit">Save</button>
+  </form>
+</div>
+{% endblock %}

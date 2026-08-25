@@ -1,0 +1,13 @@
+{% if query and not results %}
+  <p class="muted" style="margin-top:0.75rem;">No matches for "{{ query }}".</p>
+{% endif %}
+{% for r in results %}
+  <div class="question-item">
+    <strong>{{ r.question }}</strong>
+    <div class="muted" style="font-size:0.85rem;">{{ r.answer[:160] }}{% if r.answer|length > 160 %}...{% endif %}</div>
+    <div style="margin-top:0.35rem;">
+      {% if r.topic %}<span class="tag">{{ r.topic }}</span>{% endif %}
+      <span class="tag">{{ r.difficulty }}</span>
+    </div>
+  </div>
+{% endfor %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+<div class="card">
+  <div class="stat-grid">
+    <div class="stat"><div class="value">{{ streak }}</div><div class="label">day streak</div></div>
+    <div class="stat"><div class="value">{{ stats.total_questions }}</div><div class="label">questions banked</div></div>
+    <div class="stat"><div class="value">{{ stats.due_today }}</div><div class="label">due for review</div></div>
+    <div class="stat"><div class="value">{{ stats.avg_confidence or "-" }}</div><div class="label">avg confidence</div></div>
+  </div>
+</div>
+<div class="card">
+  <a class="btn" href="/practice/review">Start review{% if stats.due_today %} ({{ stats.due_today }}){% endif %}</a>
+  <a class="btn secondary" href="/practice" style="margin-left:0.75rem;">Capture a question</a>
+</div>
+{% endblock %}
