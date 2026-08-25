@@ -1,0 +1,6 @@
+<div class="card" hx-get="/practice/review/next" hx-trigger="load delay:900ms" hx-target="#review-card" hx-swap="innerHTML">
+  <p class="success" style="margin:0;">
+    Saved &mdash; next review in {{ days_until }} day{{ "s" if days_until != 1 }}
+    ({{ review_date.strftime("%b %d, %Y") }})
+  </p>
+</div>

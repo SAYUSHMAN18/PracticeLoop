@@ -2,14 +2,17 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 
 from app.auth import service
 from app.core.db import get_pool
-from app.core.security import log_in, log_out
+from app.core.logging import get_logger
+from app.core.security import InvalidPassword, log_in, log_out
+from app.core.templates import templates
+from app.practice.service import seed_starter_deck
+
+logger = get_logger(__name__)
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("/signup", response_class=HTMLResponse)
@@ -23,6 +26,7 @@ async def signup(
     name: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
+    seed_deck: bool = Form(False),
     pool=Depends(get_pool),
 ):
     try:
@@ -34,6 +38,19 @@ async def signup(
             {"error": "That email is already registered."},
             status_code=400,
         )
+    except InvalidPassword as exc:
+        return templates.TemplateResponse(
+            request,
+            "auth/signup.html",
+            {"error": str(exc)},
+            status_code=400,
+        )
+
+    if seed_deck:
+        try:
+            await seed_starter_deck(pool, user_id)
+        except Exception:
+            logger.exception("Starter deck seeding failed for new user_id=%s", user_id)
 
     log_in(request, user_id)
     return RedirectResponse("/dashboard", status_code=303)

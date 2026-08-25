@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-from fastapi import Depends, HTTPException, Request
-from starlette.status import HTTP_303_SEE_OTHER
-from starlette.responses import RedirectResponse
+from fastapi import Request
 
-from app.core.db import get_pool
 from app.core.security import current_user_id
 
 
-class RequireLoginRedirect(Exception):
-    """Raised to signal the caller should redirect to /login."""
+class LoginRequired(Exception):
+    """Raised by require_user_id; handled by an app-level exception handler
+    that redirects to /login (see app/main.py)."""
 
 
 async def require_user_id(request: Request) -> int:
     user_id = current_user_id(request)
     if user_id is None:
-        raise HTTPException(status_code=HTTP_303_SEE_OTHER, headers={"Location": "/login"})
+        raise LoginRequired()
     return user_id

@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import asyncpg
 from pgvector.asyncpg import register_vector
 
 from app.core.config import settings
 
-_pool: Optional[asyncpg.Pool] = None
+_pool: asyncpg.Pool | None = None
 
 
 async def _init_connection(connection: asyncpg.Connection) -> None:

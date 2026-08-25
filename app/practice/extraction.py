@@ -70,13 +70,41 @@ TEXT:
 """
 
 
-def parse_llm_json_fields(response: str) -> dict:
-    cleaned = response.strip()
-    if cleaned.startswith("```"):
-        cleaned = cleaned.strip("`")
-        cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned
+def _extract_first_json_object(text: str) -> str:
+    """Find the first balanced {...} block, tolerant of a sentence or a
+    markdown fence before/after it -- LLMs frequently ignore "output ONLY
+    the JSON" and add either."""
+    start = text.find("{")
+    if start == -1:
+        raise ValueError("No JSON object found in LLM response")
 
-    data = json.loads(cleaned)
+    depth = 0
+    in_string = False
+    escape = False
+    for i, ch in enumerate(text[start:], start):
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+
+    raise ValueError("Unbalanced JSON object in LLM response")
+
+
+def parse_llm_json_fields(response: str) -> dict:
+    data = json.loads(_extract_first_json_object(response))
     fields = dict(_EMPTY_FIELDS)
     for key in fields:
         if data.get(key):

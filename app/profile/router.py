@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
 
 from app.core.db import get_pool
 from app.core.deps import require_user_id
+from app.core.templates import templates
 from app.profile import service
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("/profile", response_class=HTMLResponse)

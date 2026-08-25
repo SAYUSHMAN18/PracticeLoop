@@ -1,0 +1,352 @@
+[
+  {
+    "question": "What is the time complexity of searching in a balanced binary search tree?",
+    "answer": "O(log n), because each comparison eliminates half of the remaining nodes.",
+    "example": "",
+    "topic": "data structures",
+    "difficulty": "easy",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "How does a hash map achieve average O(1) lookup?",
+    "answer": "It applies a hash function to the key to compute a bucket index directly, so lookup doesn't depend on the number of stored elements -- collisions (handled via chaining or open addressing) are the only thing that can push it toward O(n) in the worst case.",
+    "example": "Python's dict, Java's HashMap.",
+    "topic": "data structures",
+    "difficulty": "easy",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "What's the difference between a stack and a queue, and where would you use each?",
+    "answer": "A stack is LIFO (last in, first out) -- used for undo history, call stacks, and DFS. A queue is FIFO (first in, first out) -- used for task scheduling, BFS, and buffering.",
+    "example": "",
+    "topic": "data structures",
+    "difficulty": "easy",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "Why is a binary heap a good choice for implementing a priority queue?",
+    "answer": "Insert and extract-min/max are both O(log n), and finding the min/max is O(1) since it's always the root. An array-backed heap also has no pointer overhead, unlike a tree.",
+    "example": "",
+    "topic": "data structures",
+    "difficulty": "medium",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "What is the difference between a linked list and an array for random access vs. insertion?",
+    "answer": "Arrays give O(1) random access but O(n) insertion/deletion in the middle (elements must shift). Linked lists give O(1) insertion/deletion once you have a pointer to the location, but O(n) random access since you must traverse from the head.",
+    "example": "",
+    "topic": "data structures",
+    "difficulty": "easy",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "How would you detect a cycle in a linked list without extra memory?",
+    "answer": "Floyd's cycle detection (tortoise and hare): two pointers traverse the list at different speeds (1 step and 2 steps). If there's a cycle, the fast pointer will eventually lap the slow one; if not, it reaches the end (null).",
+    "example": "",
+    "topic": "data structures",
+    "difficulty": "medium",
+    "company": "Amazon",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "What's the difference between a trie and a hash set for storing strings?",
+    "answer": "A trie stores shared prefixes once, so it supports fast prefix search (autocomplete) and can be more memory-efficient for many similar strings. A hash set is faster for simple membership checks but has no notion of prefixes.",
+    "example": "Autocomplete, spell-checkers.",
+    "topic": "data structures",
+    "difficulty": "medium",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "How does a union-find (disjoint set) structure work, and what's it used for?",
+    "answer": "It tracks a partition of elements into disjoint sets, supporting find(x) (which set is x in) and union(x, y) (merge two sets). With path compression and union by rank, both operations are nearly O(1) amortized. Used for cycle detection in graphs and Kruskal's MST algorithm.",
+    "example": "",
+    "topic": "data structures",
+    "difficulty": "hard",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "Walk through how quicksort partitions an array, and why its worst case is O(n^2).",
+    "answer": "Quicksort picks a pivot, then partitions the array so smaller elements go left and larger go right, recursing on each side. Average case is O(n log n), but if the pivot is always the smallest or largest element (e.g. an already-sorted array with a naive first-element pivot), each partition only removes one element, degrading to O(n^2).",
+    "example": "",
+    "topic": "algorithms",
+    "difficulty": "medium",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "What is dynamic programming, and how do you recognize when a problem needs it?",
+    "answer": "DP solves problems by breaking them into overlapping subproblems and caching their results (memoization or tabulation) so each is solved once. Look for: an optimal substructure (the optimal answer can be built from optimal answers to subproblems) and overlapping subproblems (naive recursion would recompute the same state repeatedly).",
+    "example": "Fibonacci, knapsack, longest common subsequence.",
+    "topic": "algorithms",
+    "difficulty": "medium",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "What's the difference between BFS and DFS, and when would you pick one over the other?",
+    "answer": "BFS explores level by level using a queue -- it finds the shortest path in an unweighted graph. DFS explores as deep as possible using a stack (or recursion) before backtracking -- it's better for exhaustive search, topological sort, and cycle detection.",
+    "example": "",
+    "topic": "algorithms",
+    "difficulty": "easy",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "How does Dijkstra's algorithm find the shortest path, and why doesn't it work with negative edge weights?",
+    "answer": "It greedily picks the closest unvisited node and relaxes its neighbors' distances, using a priority queue. It assumes that once a node is visited with its shortest distance, that distance can never improve -- a negative edge could later create a shorter path through an already-visited node, breaking that assumption. Bellman-Ford handles negative weights instead.",
+    "example": "",
+    "topic": "algorithms",
+    "difficulty": "hard",
+    "company": "Google",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "Explain the two-pointer technique with an example of when it applies.",
+    "answer": "Two pointers move through a data structure (often a sorted array) from different positions -- typically both ends, or one fast and one slow -- to avoid a nested loop. Classic use: finding a pair that sums to a target in a sorted array by moving the left pointer up when the sum is too small and the right pointer down when it's too large, in O(n) instead of O(n^2).",
+    "example": "",
+    "topic": "algorithms",
+    "difficulty": "easy",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "What is a sliding window, and what kind of problems does it solve efficiently?",
+    "answer": "A sliding window maintains a subrange of a sequence (the 'window') and expands/contracts it incrementally rather than recomputing from scratch, turning an O(n^2) or O(n*k) brute force into O(n). Good for subarray/substring problems with a size or sum constraint.",
+    "example": "Longest substring without repeating characters, max sum subarray of size k.",
+    "topic": "algorithms",
+    "difficulty": "medium",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "What's the difference between INNER JOIN, LEFT JOIN, and FULL OUTER JOIN?",
+    "answer": "INNER JOIN returns only rows with matches in both tables. LEFT JOIN returns all rows from the left table, with NULLs for unmatched right-table columns. FULL OUTER JOIN returns all rows from both tables, with NULLs wherever there's no match on either side.",
+    "example": "",
+    "topic": "sql",
+    "difficulty": "easy",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "Why can adding an index sometimes slow down writes but speed up reads?",
+    "answer": "An index is a separate data structure (usually a B-tree) that must be updated on every INSERT/UPDATE/DELETE, adding write overhead. But it lets reads skip a full table scan for lookups on the indexed column(s), often turning an O(n) scan into an O(log n) lookup.",
+    "example": "",
+    "topic": "sql",
+    "difficulty": "medium",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "What's the difference between WHERE and HAVING in SQL?",
+    "answer": "WHERE filters rows before grouping/aggregation happens. HAVING filters groups after GROUP BY has aggregated them -- so HAVING can reference aggregate functions like COUNT() or SUM(), but WHERE cannot.",
+    "example": "SELECT dept, COUNT(*) FROM staff GROUP BY dept HAVING COUNT(*) > 5",
+    "topic": "sql",
+    "difficulty": "easy",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "What is a database transaction, and what do the ACID guarantees mean?",
+    "answer": "A transaction groups multiple operations so they succeed or fail together. Atomicity: all-or-nothing. Consistency: the DB moves between valid states. Isolation: concurrent transactions don't see each other's uncommitted changes. Durability: once committed, changes survive a crash.",
+    "example": "",
+    "topic": "sql",
+    "difficulty": "medium",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "What causes a fan-out bug when joining across a one-to-many relationship, and how do you avoid it?",
+    "answer": "Joining a table to a related table with multiple matching rows (e.g. orders to order_line_items) duplicates each order row once per line item, silently inflating any SUM/COUNT computed on order-level columns. Fix: aggregate the many-side first in a subquery/CTE before joining, or aggregate with DISTINCT where appropriate.",
+    "example": "SUM(order.total) after joining to line_items overcounts every order with more than one line item.",
+    "topic": "sql",
+    "difficulty": "hard",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "What's the difference between a clustered and a non-clustered index?",
+    "answer": "A clustered index determines the physical storage order of the table's rows -- there can only be one per table (often the primary key). A non-clustered index is a separate structure that stores pointers back to the actual rows, so a table can have many of them.",
+    "example": "",
+    "topic": "sql",
+    "difficulty": "hard",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "How would you find the second-highest salary in a table without using LIMIT/OFFSET?",
+    "answer": "Use a window function: SELECT DISTINCT salary FROM (SELECT salary, DENSE_RANK() OVER (ORDER BY salary DESC) AS rnk FROM employees) t WHERE rnk = 2. This handles ties correctly, unlike a naive MAX(salary) WHERE salary < (SELECT MAX(salary) ...) which breaks if the top salary is duplicated.",
+    "example": "",
+    "topic": "sql",
+    "difficulty": "medium",
+    "company": "",
+    "code_snippet": "SELECT DISTINCT salary FROM (\n  SELECT salary, DENSE_RANK() OVER (ORDER BY salary DESC) AS rnk\n  FROM employees\n) t WHERE rnk = 2;",
+    "language": "sql"
+  },
+  {
+    "question": "What's the difference between a Python list and a tuple, beyond mutability?",
+    "answer": "Tuples are immutable, which makes them hashable (usable as dict keys or set members) when their contents are also hashable, and lets the interpreter make some small performance optimizations. Lists are mutable and support in-place methods like append/sort that tuples don't have.",
+    "example": "",
+    "topic": "python",
+    "difficulty": "easy",
+    "company": "",
+    "code_snippet": "",
+    "language": "python"
+  },
+  {
+    "question": "What is the GIL, and how does it affect multithreaded Python programs?",
+    "answer": "The Global Interpreter Lock ensures only one thread executes Python bytecode at a time, even on multi-core machines -- so CPU-bound multithreading doesn't get real parallelism. I/O-bound work still benefits from threads since the GIL is released during I/O waits. For real CPU parallelism, use multiprocessing instead.",
+    "example": "",
+    "topic": "python",
+    "difficulty": "medium",
+    "company": "",
+    "code_snippet": "",
+    "language": "python"
+  },
+  {
+    "question": "What's the difference between a generator and a list comprehension?",
+    "answer": "A list comprehension builds the entire list in memory immediately. A generator (e.g. using parentheses instead of brackets, or `yield`) produces values lazily, one at a time, which is far more memory-efficient for large or infinite sequences -- at the cost of only being iterable once.",
+    "example": "(x*x for x in range(10**9)) vs [x*x for x in range(10**9)]",
+    "topic": "python",
+    "difficulty": "medium",
+    "company": "",
+    "code_snippet": "",
+    "language": "python"
+  },
+  {
+    "question": "What does the `self` parameter actually do in a Python instance method?",
+    "answer": "It's the instance the method was called on, passed automatically by Python's attribute lookup: `obj.method(x)` is sugar for `ClassName.method(obj, x)`. It's not a keyword -- it's just a strong convention for the first parameter of an instance method.",
+    "example": "",
+    "topic": "python",
+    "difficulty": "easy",
+    "company": "",
+    "code_snippet": "",
+    "language": "python"
+  },
+  {
+    "question": "What's the difference between `is` and `==` in Python?",
+    "answer": "`==` checks value equality (calls `__eq__`). `is` checks identity -- whether two names point to the exact same object in memory. Two equal values aren't necessarily the same object, e.g. two separately-constructed lists with identical contents.",
+    "example": "[1,2] == [1,2] is True, but [1,2] is [1,2] is False.",
+    "topic": "python",
+    "difficulty": "easy",
+    "company": "",
+    "code_snippet": "",
+    "language": "python"
+  },
+  {
+    "question": "Why is using a mutable default argument like `def f(x, cache=[])` a common bug?",
+    "answer": "Default argument values are evaluated once, when the function is defined, not on every call -- so every call that doesn't pass `cache` shares and mutates the same list object across calls, causing state to silently leak between unrelated calls.",
+    "example": "",
+    "topic": "python",
+    "difficulty": "medium",
+    "company": "",
+    "code_snippet": "def f(x, cache=[]):\n    cache.append(x)\n    return cache",
+    "language": "python"
+  },
+  {
+    "question": "What's the difference between `@staticmethod` and `@classmethod`?",
+    "answer": "A classmethod receives the class itself as its first argument (`cls`), so it can access/modify class-level state or act as an alternate constructor. A staticmethod receives neither `self` nor `cls` -- it's just a regular function namespaced inside the class for organizational purposes.",
+    "example": "",
+    "topic": "python",
+    "difficulty": "medium",
+    "company": "",
+    "code_snippet": "",
+    "language": "python"
+  },
+  {
+    "question": "How do async/await work in Python, and what problem do they solve?",
+    "answer": "They let a single thread cooperatively switch between many I/O-bound tasks -- when an `await`ed call is waiting on I/O, the event loop runs other ready tasks instead of blocking. This gives high concurrency for I/O-bound work (e.g. many simultaneous network requests) without the overhead of one OS thread per task.",
+    "example": "",
+    "topic": "python",
+    "difficulty": "hard",
+    "company": "",
+    "code_snippet": "",
+    "language": "python"
+  },
+  {
+    "question": "How would you design a URL shortener at a high level?",
+    "answer": "Core: a write path that generates a short, unique code (e.g. base62-encoding an auto-incrementing ID, or a hash with collision retry) and stores {code -> long_url}; a read path that does a fast key-value lookup on the code and 301/302 redirects. At scale: a KV store or cache in front of the DB for reads (reads vastly outnumber writes), and sharding/ID-generation that avoids a single point of contention.",
+    "example": "",
+    "topic": "system design",
+    "difficulty": "medium",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "What's the difference between horizontal and vertical scaling, and what are the tradeoffs?",
+    "answer": "Vertical scaling means adding more resources (CPU/RAM) to a single machine -- simple, but has a hard ceiling and a single point of failure. Horizontal scaling means adding more machines and distributing load across them -- effectively unlimited ceiling and better fault tolerance, but requires the application to handle distributed state, load balancing, and network partitions.",
+    "example": "",
+    "topic": "system design",
+    "difficulty": "easy",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "What is a cache-aside (lazy loading) pattern, and what's the risk of cache stampede?",
+    "answer": "Cache-aside: the app checks the cache first; on a miss, it reads from the DB and populates the cache for next time. Risk: if a popular key expires, many concurrent requests can all miss simultaneously and hammer the DB at once (a stampede). Mitigations: request coalescing (only one request repopulates, others wait), or staggered/jittered TTLs.",
+    "example": "",
+    "topic": "system design",
+    "difficulty": "medium",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "What's the difference between a message queue and a pub/sub system?",
+    "answer": "A queue typically delivers each message to exactly one consumer (competing consumers, for load distribution/work queues). Pub/sub delivers each message to every subscriber of a topic (fan-out, for event broadcasting). Some systems (Kafka) blur the line by supporting both patterns via consumer groups.",
+    "example": "SQS (queue) vs. SNS or Kafka topics (pub/sub).",
+    "topic": "system design",
+    "difficulty": "medium",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "How would you handle rate limiting for an API, and what algorithms are common?",
+    "answer": "Track request counts per client (by API key/IP) in a fast store like Redis. Common algorithms: fixed window (simple, but allows bursts at window boundaries), sliding window log/counter (smoother, more memory), and token bucket (allows controlled bursts while enforcing an average rate -- what this app's own LLM pacer approximates with a simpler fixed interval).",
+    "example": "",
+    "topic": "system design",
+    "difficulty": "hard",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  },
+  {
+    "question": "What's the CAP theorem, and why can't a distributed system have all three?",
+    "answer": "Consistency (every read sees the latest write), Availability (every request gets a response), and Partition tolerance (the system keeps working despite network splits). During an actual network partition, you must choose: reject/delay requests to stay consistent (CP), or serve possibly-stale data to stay available (AP) -- you can't guarantee both C and A once P is forced on you.",
+    "example": "",
+    "topic": "system design",
+    "difficulty": "hard",
+    "company": "",
+    "code_snippet": "",
+    "language": ""
+  }
+]

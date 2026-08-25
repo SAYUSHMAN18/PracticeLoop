@@ -1,13 +1,17 @@
 {% if query and not results %}
-  <p class="muted" style="margin-top:0.75rem;">No matches for "{{ query }}".</p>
+  <p class="muted" style="margin-top:0.75rem;">
+    No matches for "{{ query }}".
+    <a href="#" onclick="document.getElementById('f-sc-topic').value={{ query|tojson }}; document.getElementById('f-sc-topic').scrollIntoView({behavior:'smooth'}); return false;">Generate a study card for it?</a>
+  </p>
 {% endif %}
 {% for r in results %}
-  <div class="question-item">
+  <a href="/practice/{{ r.question_id }}/edit" class="question-item" style="display:block;color:inherit;text-decoration:none;">
     <strong>{{ r.question }}</strong>
+    <span class="muted" style="font-size:0.8rem;float:right;">{{ r.match_pct }}% match</span>
     <div class="muted" style="font-size:0.85rem;">{{ r.answer[:160] }}{% if r.answer|length > 160 %}...{% endif %}</div>
     <div style="margin-top:0.35rem;">
       {% if r.topic %}<span class="tag">{{ r.topic }}</span>{% endif %}
       <span class="tag">{{ r.difficulty }}</span>
     </div>
-  </div>
+  </a>
 {% endfor %}

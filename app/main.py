@@ -3,34 +3,73 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi.exceptions import HTTPException
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.auth.router import router as auth_router
-from app.core.config import settings
+from app.core.config import settings, verify_production_config
 from app.core.db import close_pool, get_pool
+from app.core.deps import LoginRequired
+from app.core.embedder import get_embedding_model, verify_embedding_dimension
+from app.core.logging import configure_logging, get_logger
 from app.core.security import current_user_id
+from app.core.templates import STATIC_DIR, templates
 from app.dashboard.router import router as dashboard_router
 from app.practice.router import router as practice_router
 from app.profile.router import router as profile_router
 
+logger = get_logger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    configure_logging()
+    verify_production_config()
+
     await get_pool()
+    verify_embedding_dimension()
+    get_embedding_model()  # load it now, not on the first user's search request
+
     yield
     await close_pool()
 
 
 app = FastAPI(title="PracticeLoop", lifespan=lifespan)
-app.add_middleware(SessionMiddleware, secret_key=settings.session_secret)
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.session_secret,
+    same_site="lax",
+    https_only=settings.app_env == "production",
+    max_age=14 * 24 * 60 * 60,  # 14 days
+)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(practice_router)
 app.include_router(dashboard_router)
+
+
+@app.exception_handler(LoginRequired)
+async def login_required_handler(request: Request, exc: LoginRequired):
+    return RedirectResponse("/login", status_code=303)
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    if exc.status_code == 404:
+        return templates.TemplateResponse(request, "404.html", {}, status_code=404)
+    return templates.TemplateResponse(
+        request, "error.html", {}, status_code=exc.status_code
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+    return templates.TemplateResponse(request, "error.html", {}, status_code=500)
 
 
 @app.get("/")
@@ -41,4 +80,12 @@ async def root(request: Request):
 
 @app.get("/healthz")
 async def healthz():
+    try:
+        pool = await get_pool()
+        await pool.fetchval("SELECT 1")
+    except Exception as exc:
+        return JSONResponse(
+            {"status": "unhealthy", "component": "database", "error": str(exc)},
+            status_code=503,
+        )
     return {"status": "ok"}

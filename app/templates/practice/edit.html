@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Edit question - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Edit question</h1>
+<div class="card">
+  <form method="post" action="/practice/{{ q.question_id }}/edit">
+    <label for="f-question">Question</label>
+    <input id="f-question" type="text" name="question" value="{{ q.question }}" required>
+    <label for="f-answer">Answer</label>
+    <textarea id="f-answer" name="answer">{{ q.answer }}</textarea>
+    <label for="f-example">Example</label>
+    <textarea id="f-example" name="example">{{ q.example }}</textarea>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+      <div style="flex:1;min-width:140px;">
+        <label for="f-topic">Topic</label>
+        <input id="f-topic" type="text" name="topic" value="{{ q.topic }}">
+      </div>
+      <div style="flex:1;min-width:140px;">
+        <label for="f-company">Company</label>
+        <input id="f-company" type="text" name="company" value="{{ q.company }}">
+      </div>
+      <div style="flex:1;min-width:140px;">
+        <label for="f-difficulty">Difficulty</label>
+        <select id="f-difficulty" name="difficulty">
+          <option value="easy" {{ "selected" if q.difficulty == "easy" }}>Easy</option>
+          <option value="medium" {{ "selected" if q.difficulty == "medium" }}>Medium</option>
+          <option value="hard" {{ "selected" if q.difficulty == "hard" }}>Hard</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+      <div style="flex:1;min-width:140px;">
+        <label for="f-code">Code snippet (optional)</label>
+        <textarea id="f-code" name="code_snippet">{{ q.code_snippet }}</textarea>
+      </div>
+      <div style="flex:1;min-width:140px;">
+        <label for="f-lang">Language (optional)</label>
+        <input id="f-lang" type="text" name="language" value="{{ q.language }}">
+      </div>
+    </div>
+    {% if saved %}<p class="success">Saved.</p>{% endif %}
+    <button type="submit">Save changes</button>
+    <a href="/practice" class="btn secondary" style="margin-left:0.5rem;">Back to bank</a>
+  </form>
+</div>
+<div class="card">
+  <form method="post" action="/practice/{{ q.question_id }}/delete"
+        onsubmit="return confirm('Delete this question and its practice history? This cannot be undone.');">
+    <button type="submit" style="background:var(--danger);color:#fff;">Delete this question</button>
+  </form>
+</div>
+{% endblock %}

@@ -14,4 +14,17 @@
   <a class="btn" href="/practice/review">Start review{% if stats.due_today %} ({{ stats.due_today }}){% endif %}</a>
   <a class="btn secondary" href="/practice" style="margin-left:0.75rem;">Capture a question</a>
 </div>
+
+{% if mastery %}
+<div class="card">
+  <h2>What to study next</h2>
+  <p class="muted">Weakest topics first, by average self-rated confidence.</p>
+  {% for m in mastery %}
+    <div class="question-item">
+      <strong>{{ m.topic }}</strong>
+      <span class="muted"> &mdash; {{ m.avg_confidence }} avg confidence over {{ m.attempt_count }} attempt{{ "s" if m.attempt_count != 1 }}</span>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
 {% endblock %}
