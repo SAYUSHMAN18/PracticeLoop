@@ -87,9 +87,9 @@ Built: capture (manual or AI-structured from pasted text, with a deterministic m
 fallback if no LLM key is configured), pgvector semantic search with a real "no match" state,
 a one-card-at-a-time review queue with spaced repetition and streaks, per-topic mastery on the
 dashboard, question editing and deletion, a 30+ question starter deck, and AI study-card
-generation for a topic with no local match. Production hardening: per-IP rate limiting,
-security headers, request size caps, a non-root Docker image, versioned migrations, and a
-health-checked deploy.
+generation for a topic with no local match. Production hardening: per-IP rate limiting, a
+per-user daily LLM budget, security headers, request size caps, a non-root Docker image,
+versioned migrations, CI, and a health-checked deploy.
 
 Deliberately not built yet: the market-trends scanner, PDF export, an ease-factor-based
 scheduler (see [`docs/spaced-repetition.md`](docs/spaced-repetition.md) for the current

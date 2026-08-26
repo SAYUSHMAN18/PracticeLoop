@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     aws_region: str = "ap-south-1"
     bedrock_model_id: str = ""
     llm_min_interval_seconds: float = 2.1
+    llm_daily_budget: int = 20  # per-user calls/day across all AI-backed routes
 
     # Database
     database_url: str = "postgresql://postgres:postgres@127.0.0.1:5435/practiceloop"

@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.core.db import get_pool
 from app.core.deps import require_user_id
+from app.core.llm_budget import require_llm_budget
 from app.core.logging import get_logger
 from app.core.templates import templates
 from app.practice import extraction, service
@@ -57,6 +58,7 @@ async def structure_raw_text(
     raw_text: str = Form(...),
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
+    _budget: None = Depends(require_llm_budget),
 ):
     ai_error = None
     try:
@@ -163,6 +165,7 @@ async def study_card(
     difficulty: str = Form("medium"),
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
+    _budget: None = Depends(require_llm_budget),
 ):
     try:
         await service.generate_study_card(pool, user_id, topic, difficulty)

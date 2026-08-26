@@ -123,6 +123,14 @@ deliberate choice rather than an oversight.
   isn't caught here -- the resume upload's own byte-counted read cap in
   `app/profile/router.py` is the real backstop for that specific attack surface.
 
+`app/core/llm_budget.py`'s `require_llm_budget` is a separate, DB-backed layer in front of
+every AI-calling route (`/practice/structure`, `/practice/study-card`): unlike
+`RateLimitMiddleware`, it's per-user (via the session, not the client IP) and persisted in
+the `llm_usage` table, so the limit survives a redeploy or a free-tier spin-down instead of
+resetting with an in-memory counter. `LLM_DAILY_BUDGET` (default 20) controls it. It counts
+the call before checking the limit, so the request that would push the total over budget is
+itself the one rejected with a 429 -- not a bonus call let through first.
+
 Two auth-adjacent details worth knowing: `auth/service.py::authenticate` always runs a
 bcrypt comparison, even against a dummy hash for a nonexistent email, so a timing
 difference can't be used to enumerate registered addresses; and `difficulty` is normalized
