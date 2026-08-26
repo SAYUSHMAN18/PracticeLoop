@@ -2,10 +2,18 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+import torch
 from sentence_transformers import SentenceTransformer
 from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
+
+# Belt-and-suspenders alongside the Dockerfile's OMP_NUM_THREADS=1: torch's
+# own intraop thread pool isn't fully governed by that env var in every
+# build, and each thread's buffers add up fast on a memory-constrained
+# instance (this app never benefits from intra-op parallelism anyway --
+# encode() calls are single small strings, not large batches).
+torch.set_num_threads(1)
 
 # scripts/schema.sql hardcodes `vector(384)` -- verify_embedding_dimension()
 # catches a config/schema mismatch at startup instead of deep inside asyncpg

@@ -22,6 +22,14 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
     && chown -R appuser:appuser /app
 USER appuser
 
+# Free-tier instances give this app very little headroom (512MB RAM) for a
+# process that imports torch/transformers -- these cap each library's own
+# thread-pool buffer allocation, which is otherwise sized off the host's
+# full CPU count regardless of how little of it the container is allotted.
+ENV OMP_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    TOKENIZERS_PARALLELISM=false
+
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
