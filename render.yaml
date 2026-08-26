@@ -28,3 +28,9 @@ services:
         sync: false # set this in the Render dashboard after the blueprint deploys -- never commit a real key
       - key: GROQ_MODEL
         value: openai/gpt-oss-120b
+      - key: JOBS_CRON_TOKEN
+        sync: false # must match the JOBS_CRON_TOKEN secret in this repo's GitHub Actions settings
+      - key: ADZUNA_APP_ID
+        sync: false # optional -- discovery runs and records a job_runs row either way, just
+      - key: ADZUNA_APP_KEY
+        sync: false # finds nothing without these (free at developer.adzuna.com)

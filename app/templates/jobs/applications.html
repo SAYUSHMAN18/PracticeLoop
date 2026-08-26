@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Applications - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Application tracker</h1>
+
+<div class="card">
+  <div class="stat-grid">
+    <div class="stat"><div class="value">{{ stats.total }}</div><div class="label">total applications</div></div>
+    <div class="stat"><div class="value">{{ stats.interview_rate }}%</div><div class="label">interview rate</div></div>
+    <div class="stat"><div class="value">{{ stats.offer_rate }}%</div><div class="label">offer rate</div></div>
+  </div>
+</div>
+
+{% if follow_ups %}
+<div class="card">
+  <h2>Follow-ups due</h2>
+  {% for a in follow_ups %}
+    <div class="question-item">{{ a.role }} at {{ a.company }} <span class="muted">&mdash; due {{ a.follow_up_at }}</span></div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if stale %}
+<div class="card">
+  <h2>No update in 14+ days</h2>
+  {% for a in stale %}
+    <div class="question-item">{{ a.role }} at {{ a.company }} <span class="muted">&mdash; applied {{ a.applied_at.date() }}</span></div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Log a new application</h2>
+  <p class="muted">
+    Applying itself stays a human-in-the-browser action -- this just tracks it. Track a
+    discovered <a href="/jobs">listing</a> directly to bring its fit score along.
+  </p>
+  <form method="post" action="/jobs/applications">
+    <label for="f-company">Company</label>
+    <input id="f-company" type="text" name="company" required>
+    <label for="f-role">Role</label>
+    <input id="f-role" type="text" name="role" required>
+    <button type="submit">Log application</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>All applications</h2>
+  {% for a in applications %}
+    <div class="question-item">
+      <strong>{{ a.role }}</strong> at {{ a.company }}
+      <span class="tag">{{ a.status }}</span>
+      {% if a.fit_score is not none %}<span class="tag">{{ a.fit_score }}% fit</span>{% endif %}
+      <span class="muted"> &mdash; applied {{ a.applied_at.date() }}</span>
+      <form method="post" action="/jobs/applications/{{ a.application_id }}/status" class="inline" style="margin-top:0.35rem;">
+        <select name="status">
+          <option value="applied" {{ "selected" if a.status == "applied" }}>Applied</option>
+          <option value="interviewing" {{ "selected" if a.status == "interviewing" }}>Interviewing</option>
+          <option value="offer" {{ "selected" if a.status == "offer" }}>Offer</option>
+          <option value="rejected" {{ "selected" if a.status == "rejected" }}>Rejected</option>
+          <option value="withdrawn" {{ "selected" if a.status == "withdrawn" }}>Withdrawn</option>
+        </select>
+        <button type="submit" class="btn secondary" style="font-size:0.8rem;">Update</button>
+      </form>
+    </div>
+  {% else %}
+    <p class="muted">No applications logged yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

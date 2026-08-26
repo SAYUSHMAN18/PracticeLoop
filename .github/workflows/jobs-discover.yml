@@ -1,0 +1,29 @@
+name: Job discovery
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # once daily, 03:00 UTC
+  workflow_dispatch: {} # lets you trigger a run manually from the Actions tab
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Warm the instance
+        # Render's free tier spins down after 15 minutes idle and takes
+        # ~50s to wake -- hitting the discovery endpoint cold would likely
+        # time out before the app even finishes booting.
+        run: |
+          curl -sf --retry 6 --retry-delay 10 --max-time 30 \
+            https://practiceloop.onrender.com/healthz
+
+      - name: Trigger discovery
+        # -f makes curl exit non-zero on a non-2xx response, which is what
+        # turns a failed run into a failed workflow -- and GitHub emails
+        # the repo owner on a failed scheduled workflow by default. That's
+        # the alerting: no separate notification service needed.
+        run: |
+          curl -sf --max-time 120 \
+            -X POST \
+            -H "Authorization: Bearer ${{ secrets.JOBS_CRON_TOKEN }}" \
+            https://practiceloop.onrender.com/jobs/cron/discover

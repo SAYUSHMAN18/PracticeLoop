@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     retrieval_top_k: int = 5
 
+    # Jobs (Phase 1: scheduled discovery)
+    jobs_cron_token: str = ""  # required to call POST /jobs/cron/discover
+    adzuna_app_id: str = ""
+    adzuna_app_key: str = ""
+    adzuna_country: str = "in"  # Adzuna's country code, e.g. in | us | gb
+    jobs_max_listings_per_user: int = 25  # per source, per run -- keeps each run bounded
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

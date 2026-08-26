@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Job runs - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Discovery runs</h1>
+<p class="muted">
+  Every scheduled discovery run, whether it succeeded, failed, or found nothing to do. A
+  cron job that silently stops looks exactly like a quiet job market -- this page is what
+  tells the difference.
+</p>
+
+{% for run in runs %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <strong>Run #{{ run.run_id }}</strong>
+    <span class="tag">{{ run.status }}</span>
+  </div>
+  <p class="muted" style="margin:0.35rem 0 0;">
+    Started {{ run.started_at }}{% if run.finished_at %} &middot; finished {{ run.finished_at }}{% endif %}
+  </p>
+  <p style="margin:0.35rem 0 0;">
+    {{ run.users_processed }} user{{ "s" if run.users_processed != 1 }} processed,
+    {{ run.listings_found }} new listing{{ "s" if run.listings_found != 1 }} found
+  </p>
+  {% if run.error %}<p class="error" style="margin:0.35rem 0 0;">{{ run.error }}</p>{% endif %}
+</div>
+{% else %}
+<div class="card"><p class="muted">No discovery runs yet.</p></div>
+{% endfor %}
+{% endblock %}

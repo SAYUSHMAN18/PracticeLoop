@@ -31,7 +31,7 @@ flowchart LR
 ## Module layout
 
 Each feature is a self-contained package under `app/`: `auth`, `profile`, `practice`,
-`dashboard`. Every one follows the same shape:
+`dashboard`, `jobs`. Every one follows the same shape:
 
 - `router.py` — FastAPI routes. Thin: parses the request, calls `service.py`, picks a
   template. No SQL, no business logic here.
@@ -51,6 +51,37 @@ sessions), `llm.py` (the provider-swap LLM client), `embedder.py` (sentence-tran
 This is a deliberately flat "modular monolith" shape, not a hard rule about layers — the
 point is that `practice/service.py` has no idea FastAPI exists, so it's testable and
 reusable on its own.
+
+## Scheduled job discovery
+
+Render's free tier has no cron and no background workers, and free web services sleep
+after 15 minutes idle — an in-process scheduler would be asleep whenever it was due. So the
+schedule lives outside the app entirely: `.github/workflows/jobs-discover.yml` runs once
+daily, warms the instance (`GET /healthz`, since a cold start takes ~50s), then
+`POST /jobs/cron/discover` with a bearer token checked via `secrets.compare_digest` against
+`JOBS_CRON_TOKEN`. An unset token fails closed (503) rather than accepting an empty
+submitted one — "unconfigured" is never a backdoor "disabled".
+
+```mermaid
+flowchart LR
+    A[GitHub Actions<br/>daily cron] -->|warm| B[GET /healthz]
+    A -->|Bearer JOBS_CRON_TOKEN| C[POST /jobs/cron/discover]
+    C --> D[run_discovery:<br/>one job_runs row<br/>per invocation]
+    D --> E{each user with<br/>a target_role}
+    E --> F[fetch_adzuna<br/>-- or any source in SOURCES]
+    F -->|no API key| G[returns empty, not an error]
+    F -->|success| H[keyword_fit_score<br/>vs. resume_text]
+    H --> I[(job_listings,<br/>UNIQUE user+source+external_id)]
+    D -->|non-2xx on failure| J[GitHub Actions fails<br/>the workflow -- emails owner]
+```
+
+`app/jobs/sources.py`'s `RawListing` dataclass and `fetch_*(keywords, max_results)` signature
+are the seam for adding a second source (Greenhouse/Lever public board APIs) without
+touching `service.py`: append the function to `SOURCES` and it's tried independently per
+user, so one source failing doesn't stop the others. Fit scoring is deliberately
+keyword-only for now (`app/jobs/scoring.py`, scored against the *listing's* vocabulary so a
+long resume can't inflate its own score) — no LLM key required, matching the rest of the
+app's "degrade to something deterministic" pattern rather than a hard dependency.
 
 ## Data model
 
@@ -90,6 +121,26 @@ erDiagram
         smallint confidence_rating "1-5"
         date next_review_at
         timestamptz practiced_at
+    }
+
+    users ||--o{ job_listings : discovers
+    users ||--o{ applications : tracks
+    job_listings |o--o{ applications : "tracked as"
+
+    job_listings {
+        int listing_id PK
+        int user_id FK
+        text source "adzuna | ..."
+        text external_id "UNIQUE with user_id+source"
+        smallint fit_score "0-100, nullable"
+        text fit_method "llm | keyword"
+    }
+    applications {
+        int application_id PK
+        int user_id FK
+        int listing_id FK "nullable -- manually logged apps have none"
+        text status "applied | interviewing | offer | rejected | withdrawn"
+        date follow_up_at
     }
 ```
 

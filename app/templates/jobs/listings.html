@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Jobs - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Discovered listings</h1>
+<p class="muted">
+  Found by the scheduled discovery run against your profile's target role. Fit score is a
+  deterministic keyword match against your resume, not a considered judgement -- use it to
+  triage, not to decide.
+</p>
+
+{% if not listings %}
+<div class="card">
+  <p class="muted">
+    Nothing yet. Set a target role on your <a href="/profile">profile</a> and wait for the
+    next scheduled discovery run, or trigger one manually if you're running this locally.
+  </p>
+</div>
+{% endif %}
+
+{% for listing in listings %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:start;gap:1rem;">
+    <div>
+      <strong>{{ listing.title }}</strong>
+      {% if listing.company %}<div class="muted">{{ listing.company }}{% if listing.location %} &middot; {{ listing.location }}{% endif %}</div>{% endif %}
+    </div>
+    {% if listing.fit_score is not none %}
+      <span class="tag">{{ listing.fit_score }}% fit</span>
+    {% endif %}
+  </div>
+  <div style="margin-top:0.5rem;">
+    {% if listing.url %}<a href="{{ listing.url }}" target="_blank" rel="noopener" class="muted">View listing &rarr;</a>{% endif %}
+  </div>
+  <form method="post" action="/jobs/applications" style="margin-top:0.75rem;">
+    <input type="hidden" name="listing_id" value="{{ listing.listing_id }}">
+    <input type="hidden" name="company" value="{{ listing.company }}">
+    <input type="hidden" name="role" value="{{ listing.title }}">
+    <input type="hidden" name="fit_score" value="{{ listing.fit_score }}">
+    <button type="submit" class="btn secondary">Track as applied</button>
+  </form>
+</div>
+{% endfor %}
+{% endblock %}

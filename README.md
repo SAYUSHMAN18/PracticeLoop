@@ -21,6 +21,10 @@ search, self-rate a practice attempt, get scheduled a review date, and keep a st
 - **Edit, delete, and organize** your own question bank; every write is scoped to the signed-in
   user.
 - **Start from a 30+ question starter deck** on signup instead of a blank slate.
+- **Discover jobs on a schedule** against your profile's target role (Adzuna's API, no
+  scraping), scored by keyword fit against your resume, and **track applications** through a
+  funnel with follow-up and stale-application reminders. Applying itself stays a
+  human-in-the-browser action on purpose — see [Design notes](#design-notes).
 
 ## Stack
 
@@ -81,19 +85,31 @@ point it at your fork, and set `GROQ_API_KEY` when prompted. See
 [`ARCHITECTURE.md`](ARCHITECTURE.md#production-hardening) for what else is configurable
 (worker count, rate limits, security headers).
 
+For scheduled job discovery on your fork: set `JOBS_CRON_TOKEN` on the Render service (any
+random string) and add the same value as a `JOBS_CRON_TOKEN` secret in your fork's GitHub repo
+settings (**Settings → Secrets and variables → Actions**) -- that's what
+`.github/workflows/jobs-discover.yml` authenticates with. Add `ADZUNA_APP_ID`/`ADZUNA_APP_KEY`
+(free at [developer.adzuna.com](https://developer.adzuna.com)) to actually find listings;
+without them, discovery runs happen and get recorded but find nothing.
+
 ## What's here vs. what's deferred
 
 Built: capture (manual or AI-structured from pasted text, with a deterministic marker-based
 fallback if no LLM key is configured), pgvector semantic search with a real "no match" state,
 a one-card-at-a-time review queue with spaced repetition and streaks, per-topic mastery on the
 dashboard, question editing and deletion, a 30+ question starter deck, and AI study-card
-generation for a topic with no local match. Production hardening: per-IP rate limiting, a
-per-user daily LLM budget, security headers, request size caps, a non-root Docker image,
-versioned migrations, CI, and a health-checked deploy.
+generation for a topic with no local match. Scheduled job discovery (GitHub Actions cron,
+since the free tier has none of its own) with keyword-based fit scoring and a real application
+tracker with funnel stats. Production hardening: per-IP rate limiting, a per-user daily LLM
+budget, security headers, request size caps, a non-root Docker image, versioned migrations,
+CI, and a health-checked deploy.
 
-Deliberately not built yet: the market-trends scanner, PDF export, an ease-factor-based
-scheduler (see [`docs/spaced-repetition.md`](docs/spaced-repetition.md) for the current
-algorithm's limits), and any multi-tenant/multi-student support.
+Deliberately not built yet: LLM-scored fit (keyword scoring is the whole thing today), the
+market-trends scanner, PDF export, an ease-factor-based scheduler (see
+[`docs/spaced-repetition.md`](docs/spaced-repetition.md) for the current algorithm's limits),
+and any multi-tenant/multi-student support. Also deliberately never built: submitting job
+applications on your behalf, or automating LinkedIn/Naukri from the server — both platforms'
+terms bar it, and it would mean risking your account to save you a click.
 
 ## Design notes
 
