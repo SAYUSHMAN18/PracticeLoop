@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Skill gap analysis - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Skill gap analysis</h1>
+<p><a href="/jobs">Listings</a> &middot; <a href="/jobs/applications">Applications</a> &middot; <a href="/jobs/gap-analysis">Skill gap analysis</a> &middot; <a href="/jobs/runs">Discovery runs</a></p>
+<p class="muted">
+  Paste a job description. It's diffed against your resume and your actual practice
+  history -- not just what's on the resume, but what you've genuinely recalled.
+</p>
+
+<div class="card">
+  <h2>What to study next</h2>
+  <p class="muted">
+    <strong>Missing</strong>: not on your resume. <strong>Untested</strong>: on your resume,
+    but no strong practice recall backs it up yet -- this is what gets people rejected for
+    skills their own resume lists. <strong>Proven</strong>: on your resume and recalled.
+  </p>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <form method="post" action="/jobs/gap-analysis">
+    <label for="f-jd">Job description</label>
+    <textarea id="f-jd" name="jd_text" rows="8" required></textarea>
+    <button type="submit">Analyze</button>
+  </form>
+</div>
+
+{% if gaps %}
+<div class="card">
+  <h2>Recent results</h2>
+  {% for gap in gaps %}
+    <div class="question-item">
+      <strong>{{ gap.skill }}</strong>
+      <span class="tag">{{ gap.bucket }}</span>
+      <div class="muted">{{ gap.evidence }}</div>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

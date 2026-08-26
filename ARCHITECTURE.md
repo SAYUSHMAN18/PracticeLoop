@@ -83,6 +83,20 @@ keyword-only for now (`app/jobs/scoring.py`, scored against the *listing's* voca
 long resume can't inflate its own score) — no LLM key required, matching the rest of the
 app's "degrade to something deterministic" pattern rather than a hard dependency.
 
+## Skill gap analysis
+
+`app/jobs/gap_analysis.py` is the feature the rest of the app's data exists to feed: paste a
+job description, one LLM call extracts the skills it requires, and each is diffed against
+two things this app already has -- `profiles.resume_text` (does the resume claim it?) and
+`attempts` (has the user actually *recalled* it, average confidence >= 3, not just attempted
+it once badly?). The middle bucket -- on the resume but never practiced, or practiced with
+weak recall -- is the one no other tool can produce, because no other tool holds both the
+resume and real attempt history. A malformed or missing LLM response surfaces as a plain
+502 with the actual error shown (`app/jobs/router.py::run_gap_analysis`), the same
+fail-loud-not-silently pattern as `/practice/study-card`; there's no deterministic fallback
+here since reliably extracting skills from free text without an LLM isn't a solved problem
+the way marker-parsing a structured Q:/A: paste is.
+
 ## Data model
 
 ```mermaid

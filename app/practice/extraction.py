@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 
+from app.core.json_extraction import extract_first_json_value
 from app.core.llm import generate
 
 _MARKER_PATTERN = re.compile(
@@ -70,41 +71,8 @@ TEXT:
 """
 
 
-def _extract_first_json_object(text: str) -> str:
-    """Find the first balanced {...} block, tolerant of a sentence or a
-    markdown fence before/after it -- LLMs frequently ignore "output ONLY
-    the JSON" and add either."""
-    start = text.find("{")
-    if start == -1:
-        raise ValueError("No JSON object found in LLM response")
-
-    depth = 0
-    in_string = False
-    escape = False
-    for i, ch in enumerate(text[start:], start):
-        if in_string:
-            if escape:
-                escape = False
-            elif ch == "\\":
-                escape = True
-            elif ch == '"':
-                in_string = False
-            continue
-
-        if ch == '"':
-            in_string = True
-        elif ch == "{":
-            depth += 1
-        elif ch == "}":
-            depth -= 1
-            if depth == 0:
-                return text[start : i + 1]
-
-    raise ValueError("Unbalanced JSON object in LLM response")
-
-
 def parse_llm_json_fields(response: str) -> dict:
-    data = json.loads(_extract_first_json_object(response))
+    data = json.loads(extract_first_json_value(response))
     fields = dict(_EMPTY_FIELDS)
     for key in fields:
         if data.get(key):

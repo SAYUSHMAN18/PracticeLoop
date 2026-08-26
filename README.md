@@ -25,6 +25,11 @@ search, self-rate a practice attempt, get scheduled a review date, and keep a st
   scraping), scored by keyword fit against your resume, and **track applications** through a
   funnel with follow-up and stale-application reminders. Applying itself stays a
   human-in-the-browser action on purpose — see [Design notes](#design-notes).
+- **Diff a job description against what you actually know** — paste a JD and it's split
+  into skills you've proven (on your resume and recalled), skills you've only claimed (on
+  your resume, never practiced or weakly recalled), and skills you're missing outright. The
+  middle bucket is the one nothing else can produce, because nothing else holds both your
+  resume and your real practice history.
 
 ## Stack
 

@@ -10,8 +10,12 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from app.core.config import settings
 from app.core.db import get_pool
 from app.core.deps import require_user_id
+from app.core.llm_budget import require_llm_budget
+from app.core.logging import get_logger
 from app.core.templates import templates
-from app.jobs import applications, service
+from app.jobs import applications, gap_analysis, service
+
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/jobs")
 
@@ -113,3 +117,36 @@ async def update_application_status(
     except applications.ApplicationNotFound as exc:
         raise HTTPException(status_code=404) from exc
     return RedirectResponse("/jobs/applications", status_code=303)
+
+
+@router.get("/gap-analysis", response_class=HTMLResponse)
+async def gap_analysis_page(
+    request: Request,
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    gaps = await gap_analysis.list_recent_gaps(pool, user_id)
+    return templates.TemplateResponse(request, "jobs/gap_analysis.html", {"gaps": gaps, "error": None})
+
+
+@router.post("/gap-analysis", response_class=HTMLResponse)
+async def run_gap_analysis(
+    request: Request,
+    jd_text: str = Form(...),
+    listing_id: int | None = Form(None),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+    _budget: None = Depends(require_llm_budget),
+):
+    try:
+        await gap_analysis.analyze_gap(pool, user_id, jd_text, listing_id)
+    except Exception as exc:
+        logger.warning("Gap analysis failed: %s", exc)
+        gaps = await gap_analysis.list_recent_gaps(pool, user_id)
+        return templates.TemplateResponse(
+            request,
+            "jobs/gap_analysis.html",
+            {"gaps": gaps, "error": f"Couldn't analyze that job description right now: {exc}"},
+            status_code=502,
+        )
+    return RedirectResponse("/jobs/gap-analysis", status_code=303)
