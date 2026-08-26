@@ -26,13 +26,25 @@
 {% if gaps %}
 <div class="card">
   <h2>Recent results</h2>
-  {% for gap in gaps %}
-    <div class="question-item">
-      <strong>{{ gap.skill }}</strong>
-      <span class="tag">{{ gap.bucket }}</span>
-      <div class="muted">{{ gap.evidence }}</div>
-    </div>
-  {% endfor %}
+  {% if deck_message %}<p class="success">{{ deck_message }}</p>{% endif %}
+  <p class="muted">
+    Check the gaps worth practicing and generate a question for each -- skipped
+    automatically if a close match already exists in your bank.
+  </p>
+  <form method="post" action="/jobs/gap-analysis/generate-deck">
+    {% for gap in gaps %}
+      <div class="question-item">
+        {% if gap.bucket in ("missing", "untested") %}
+          <label style="display:inline;"><input type="checkbox" name="gap_ids" value="{{ gap.gap_id }}" style="width:auto;display:inline;"> <strong>{{ gap.skill }}</strong></label>
+        {% else %}
+          <strong>{{ gap.skill }}</strong>
+        {% endif %}
+        <span class="tag">{{ gap.bucket }}</span>
+        <div class="muted">{{ gap.evidence }}</div>
+      </div>
+    {% endfor %}
+    <button type="submit" class="btn secondary">Generate practice deck from checked gaps</button>
+  </form>
 </div>
 {% endif %}
 {% endblock %}

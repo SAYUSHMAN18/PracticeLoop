@@ -30,6 +30,9 @@ search, self-rate a practice attempt, get scheduled a review date, and keep a st
   your resume, never practiced or weakly recalled), and skills you're missing outright. The
   middle bucket is the one nothing else can produce, because nothing else holds both your
   resume and your real practice history.
+- **Turn a diagnosis into a deck** — generate a practice question for each missing or
+  untested skill with one click, deduplicated against your existing bank so a similar JD
+  doesn't regenerate cards you already have.
 
 ## Stack
 

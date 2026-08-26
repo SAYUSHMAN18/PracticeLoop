@@ -126,7 +126,9 @@ async def gap_analysis_page(
     pool=Depends(get_pool),
 ):
     gaps = await gap_analysis.list_recent_gaps(pool, user_id)
-    return templates.TemplateResponse(request, "jobs/gap_analysis.html", {"gaps": gaps, "error": None})
+    return templates.TemplateResponse(
+        request, "jobs/gap_analysis.html", {"gaps": gaps, "error": None, "deck_message": None}
+    )
 
 
 @router.post("/gap-analysis", response_class=HTMLResponse)
@@ -146,7 +148,36 @@ async def run_gap_analysis(
         return templates.TemplateResponse(
             request,
             "jobs/gap_analysis.html",
-            {"gaps": gaps, "error": f"Couldn't analyze that job description right now: {exc}"},
+            {
+                "gaps": gaps,
+                "error": f"Couldn't analyze that job description right now: {exc}",
+                "deck_message": None,
+            },
             status_code=502,
         )
     return RedirectResponse("/jobs/gap-analysis", status_code=303)
+
+
+@router.post("/gap-analysis/generate-deck", response_class=HTMLResponse)
+async def generate_deck(
+    request: Request,
+    gap_ids: list[int] = Form(...),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    # No single require_llm_budget dependency here -- this can issue several
+    # LLM calls (one per ungenerated skill), each with its own budget check
+    # inside generate_deck_from_gaps, so a five-skill selection correctly
+    # costs up to five against the daily count, not one.
+    result = await gap_analysis.generate_deck_from_gaps(pool, user_id, gap_ids)
+    gaps = await gap_analysis.list_recent_gaps(pool, user_id)
+
+    message = f"Generated {result['generated']} new practice question(s)."
+    if result["skipped_existing"]:
+        message += f" {result['skipped_existing']} already had a close match in your bank."
+    if result["budget_exhausted"]:
+        message += " Stopped early -- today's AI generation budget is used up."
+
+    return templates.TemplateResponse(
+        request, "jobs/gap_analysis.html", {"gaps": gaps, "error": None, "deck_message": message}
+    )

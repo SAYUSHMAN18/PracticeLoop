@@ -6,6 +6,14 @@ import asyncpg
 
 from app.core.json_extraction import extract_first_json_value
 from app.core.llm import generate
+from app.core.llm_budget import consume_llm_budget
+from app.practice.service import generate_study_card, search_questions
+
+# Deck generation is bounded per request for the same reason discovery is
+# bounded per source: an unbounded batch of LLM calls behind one HTTP
+# request risks the platform's own request timeout, on top of the per-call
+# LLM budget already capping the damage from a single runaway request.
+_MAX_DECK_SIZE = 10
 
 _SKILL_EXTRACTION_PROMPT = """Extract the specific skills, tools, languages, and
 technologies required by the job description below. Output a strict JSON array
@@ -104,3 +112,53 @@ async def list_recent_gaps(pool: asyncpg.Pool, user_id: int, limit: int = 50) ->
         user_id,
         limit,
     )
+
+
+async def generate_deck_from_gaps(pool: asyncpg.Pool, user_id: int, gap_ids: list[int]) -> dict:
+    """Turns a diagnosis into an action: one practice question per missing
+    or untested skill, using the existing AI study-card generation path.
+
+    Deduplicates against the user's own bank via the same pgvector search
+    used for manual search, so a second, similar JD doesn't regenerate
+    near-identical cards for a skill already covered -- "already covered"
+    here means search_questions returns *any* match, since it already
+    applies the real distance threshold for "this counts as a match".
+
+    Each generated question costs its own LLM budget check (not one check
+    for the whole batch); a request that runs out of budget partway
+    through stops there and reports what it managed, rather than losing
+    the questions already generated.
+    """
+    gaps = await pool.fetch(
+        "SELECT gap_id, skill, bucket FROM job_skill_gaps WHERE user_id = $1 AND gap_id = ANY($2)",
+        user_id,
+        gap_ids[:_MAX_DECK_SIZE],
+    )
+
+    generated = 0
+    skipped_existing = 0
+    budget_exhausted = False
+
+    for gap in gaps:
+        if gap["bucket"] not in ("missing", "untested"):
+            continue
+
+        existing = await search_questions(pool, user_id, gap["skill"], top_k=1)
+        if existing:
+            skipped_existing += 1
+            continue
+
+        try:
+            await consume_llm_budget(pool, user_id)
+        except Exception:
+            budget_exhausted = True
+            break
+
+        await generate_study_card(pool, user_id, gap["skill"], difficulty="medium")
+        generated += 1
+
+    return {
+        "generated": generated,
+        "skipped_existing": skipped_existing,
+        "budget_exhausted": budget_exhausted,
+    }
