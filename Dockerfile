@@ -10,7 +10,14 @@ COPY app ./app
 COPY scripts ./scripts
 COPY data ./data
 
-RUN pip install --no-cache-dir -e ".[groq]" \
+# The default torch wheel drags in full CUDA (nvidia-cudnn, triton, cuda-toolkit...)
+# even though inference here only ever runs on CPU -- that bloats the image by
+# ~2GB and was enough extra baseline memory to OOM-kill the container on a small
+# free-tier instance the moment the embedding model loaded. Installing the CPU-only
+# wheel first satisfies sentence-transformers' torch requirement without pip ever
+# reaching for the CUDA build.
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
+    && pip install --no-cache-dir -e ".[groq]" \
     && useradd --create-home --uid 1000 appuser \
     && chown -R appuser:appuser /app
 USER appuser
