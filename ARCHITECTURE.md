@@ -105,6 +105,37 @@ This schema has one row per user, not per (tenant, user) -- see
 [`docs/adr/001-lineage-and-scope.md`](docs/adr/001-lineage-and-scope.md) for why that's a
 deliberate choice rather than an oversight.
 
+## Production hardening
+
+`app/core/middleware.py` adds three cross-cutting layers, wired up in `app/main.py`:
+
+- **`SecurityHeadersMiddleware`** -- `X-Content-Type-Options`, `X-Frame-Options`,
+  `Referrer-Policy` on every response, plus HSTS when `APP_ENV=production`.
+- **`RateLimitMiddleware`** -- per-IP fixed window on `/login` (10/min) and `/signup`
+  (5/min) to blunt credential stuffing and signup spam. It's in-memory and per-process: a
+  multi-worker or multi-replica deployment enforces the limit separately in each process,
+  so the effective ceiling scales with worker count. Tests set
+  `settings.disable_rate_limits = True` (see `tests/conftest.py`) since httpx's
+  `ASGITransport` gives every test the same client IP.
+- **`MaxBodySizeMiddleware`** -- rejects an oversized request by its declared
+  `Content-Length` before FastAPI buffers the body (2MB default, 11MB on `/profile` for
+  the resume upload). It trusts the header, so a client that omits it (chunked transfer)
+  isn't caught here -- the resume upload's own byte-counted read cap in
+  `app/profile/router.py` is the real backstop for that specific attack surface.
+
+Two auth-adjacent details worth knowing: `auth/service.py::authenticate` always runs a
+bcrypt comparison, even against a dummy hash for a nonexistent email, so a timing
+difference can't be used to enumerate registered addresses; and `difficulty` is normalized
+to `easy|medium|hard` in `practice/service.py` before every insert/update, because that
+value can arrive from an LLM or a user's free-text paste (not just the capture form's
+`<select>`) and the column has a `CHECK` constraint.
+
+Deployment notes: the Docker image runs as a non-root user and exposes `WEB_CONCURRENCY`
+(default 1) to control `uvicorn --workers`; each worker loads its own copy of the
+sentence-transformers model, so raising it trades memory for throughput. `/healthz` backs
+both the container `HEALTHCHECK` and `docker-compose`'s `depends_on: condition:
+service_healthy`.
+
 ## Further reading
 
 - [`docs/spaced-repetition.md`](docs/spaced-repetition.md) -- how the review scheduling

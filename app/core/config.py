@@ -24,6 +24,7 @@ class Settings(BaseSettings):
 
     # Auth
     session_secret: str = DEFAULT_SESSION_SECRET
+    disable_rate_limits: bool = False  # tests flip this on -- the limiter is per-IP
 
     # Retrieval
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"

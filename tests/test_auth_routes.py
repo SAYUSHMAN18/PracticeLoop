@@ -46,3 +46,22 @@ async def test_password_over_72_bytes_gives_friendly_error_not_500(client):
     )
     assert response.status_code == 400
     assert "72 bytes" in response.text
+
+
+async def test_login_with_nonexistent_email_is_a_clean_400_not_a_crash(client):
+    """Regression guard for the authenticate() timing fix: a nonexistent
+    email must still hit the same code path (dummy bcrypt compare) as a
+    wrong password, not short-circuit into a different error or a 500."""
+    response = await client.post(
+        "/login", data={"email": "nobody@example.com", "password": "whatever123"}
+    )
+    assert response.status_code == 400
+    assert "Incorrect email or password" in response.text
+
+
+async def test_responses_carry_baseline_security_headers(client):
+    await signup(client, "headers@example.com")
+    response = await client.get("/dashboard")
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-frame-options"] == "DENY"
+    assert response.headers["referrer-policy"] == "strict-origin-when-cross-origin"

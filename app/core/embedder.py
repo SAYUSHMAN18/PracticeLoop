@@ -36,7 +36,11 @@ async def embed_text_async(text: str) -> list[float]:
 
 def verify_embedding_dimension() -> None:
     model = get_embedding_model()
-    actual = model.get_sentence_embedding_dimension()
+    # get_sentence_embedding_dimension was renamed to get_embedding_dimension
+    # in newer sentence-transformers; pyproject.toml pins no upper bound, so
+    # support whichever name the installed version has.
+    get_dimension = getattr(model, "get_embedding_dimension", None) or model.get_sentence_embedding_dimension
+    actual = get_dimension()
     if actual != EXPECTED_DIMENSION:
         raise RuntimeError(
             f"embedding_model={settings.embedding_model!r} produces {actual}-dim vectors, "

@@ -4,6 +4,12 @@ import asyncpg
 
 from app.core.security import hash_password, verify_password
 
+# A syntactically valid bcrypt hash of an unguessable password, compared
+# against on every login attempt for an email that doesn't exist -- so a
+# nonexistent-email response takes the same bcrypt-bound time as a wrong
+# password for a real one.
+_DUMMY_HASH = "$2b$12$C6UzMDM.H6dfI/f/IKcEeO0j5T6/vE9L8AGVqLC.CplfPfjJx1//G"
+
 
 class EmailAlreadyRegistered(Exception):
     pass
@@ -40,7 +46,13 @@ async def authenticate(pool: asyncpg.Pool, email: str, password: str) -> int:
     row = await pool.fetchrow(
         "SELECT user_id, password_hash FROM users WHERE email = $1", email
     )
-    if row is None or not verify_password(password, row["password_hash"]):
+    # Always run the bcrypt comparison, even for a nonexistent email --
+    # short-circuiting here would let a timing difference reveal which
+    # emails are registered.
+    password_hash = row["password_hash"] if row is not None else _DUMMY_HASH
+    password_ok = verify_password(password, password_hash)
+
+    if row is None or not password_ok:
         raise InvalidCredentials(email)
 
     return row["user_id"]

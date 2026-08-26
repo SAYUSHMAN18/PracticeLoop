@@ -222,7 +222,7 @@ async def review_next_card(
 async def rate_attempt(
     request: Request,
     question_id: int,
-    rating: int = Form(...),
+    rating: int = Form(..., ge=1, le=5),
     feedback: str = Form(""),
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),

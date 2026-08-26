@@ -1,0 +1,85 @@
+from __future__ import annotations
+
+import time
+from collections import defaultdict, deque
+
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
+
+from app.core.config import settings
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Baseline response headers that cost nothing and close off a few
+    classes of attack (clickjacking, MIME sniffing, referrer leakage)."""
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        if settings.app_env == "production":
+            response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+        return response
+
+
+class MaxBodySizeMiddleware(BaseHTTPMiddleware):
+    """Rejects requests whose declared Content-Length exceeds a per-path (or
+    default) cap, before FastAPI buffers the body into memory.
+
+    This trusts the Content-Length header, so a client sending a chunked
+    body with no declared length slips past it -- an acceptable gap for this
+    app's threat model (form/file uploads from ordinary clients always send
+    Content-Length); the resume upload has its own hard byte-counted cap
+    in app/profile/router.py as the real backstop for the largest attack
+    surface.
+    """
+
+    def __init__(self, app, default_max_bytes: int, path_overrides: dict[str, int] | None = None):
+        super().__init__(app)
+        self._default_max_bytes = default_max_bytes
+        self._path_overrides = path_overrides or {}
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        max_bytes = self._path_overrides.get(request.url.path, self._default_max_bytes)
+        content_length = request.headers.get("content-length")
+        if content_length is not None and content_length.isdigit() and int(content_length) > max_bytes:
+            return Response("Request body too large.", status_code=413)
+        return await call_next(request)
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Fixed-window per-IP rate limit on a fixed set of paths (login/signup),
+    to blunt credential-stuffing and signup spam.
+
+    In-memory and per-process: on a multi-worker or multi-replica deployment
+    each process enforces its own window, so the effective limit scales with
+    worker count. That's an acceptable tradeoff for this app's scale; a
+    shared store (e.g. Redis) would be needed to make the limit exact across
+    processes.
+    """
+
+    def __init__(self, app, limits: dict[str, tuple[int, float]]):
+        super().__init__(app)
+        self._limits = limits  # path -> (max_requests, window_seconds)
+        self._hits: dict[tuple[str, str], deque[float]] = defaultdict(deque)
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        limit = self._limits.get(request.url.path)
+        if limit is not None and request.method == "POST":
+            max_requests, window_seconds = limit
+            client_ip = request.client.host if request.client else "unknown"
+            key = (request.url.path, client_ip)
+            now = time.monotonic()
+            hits = self._hits[key]
+
+            while hits and now - hits[0] > window_seconds:
+                hits.popleft()
+
+            if len(hits) >= max_requests:
+                return Response("Too many requests. Try again shortly.", status_code=429)
+
+            hits.append(now)
+
+        return await call_next(request)

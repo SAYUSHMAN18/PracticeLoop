@@ -4,6 +4,8 @@ import asyncio
 import time
 from enum import Enum
 
+from starlette.concurrency import run_in_threadpool
+
 from app.core.config import settings
 from app.core.logging import get_logger
 
@@ -121,15 +123,10 @@ async def _call_gemini(prompt: str, temperature: float) -> str:
     return response.text.strip()
 
 
-async def _call_bedrock(prompt: str, temperature: float) -> str:
+def _invoke_bedrock_sync(prompt: str, temperature: float) -> str:
     import json
 
-    try:
-        import boto3
-    except ImportError as exc:
-        raise RuntimeError(
-            "LLM_PROVIDER=bedrock requires boto3: pip install -e '.[bedrock]'"
-        ) from exc
+    import boto3
 
     model_id = settings.bedrock_model_id.strip()
     if not model_id:
@@ -152,3 +149,16 @@ async def _call_bedrock(prompt: str, temperature: float) -> str:
     if not content or not content[0].get("text"):
         raise RuntimeError("Bedrock returned an empty response.")
     return content[0]["text"].strip()
+
+
+async def _call_bedrock(prompt: str, temperature: float) -> str:
+    try:
+        import boto3  # noqa: F401
+    except ImportError as exc:
+        raise RuntimeError(
+            "LLM_PROVIDER=bedrock requires boto3: pip install -e '.[bedrock]'"
+        ) from exc
+
+    # boto3 is synchronous; running invoke_model directly on the event loop
+    # would block every other in-flight request for the network round trip.
+    return await run_in_threadpool(_invoke_bedrock_sync, prompt, temperature)

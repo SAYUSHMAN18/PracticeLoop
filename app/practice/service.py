@@ -24,6 +24,18 @@ class QuestionNotFound(Exception):
     pass
 
 
+_VALID_DIFFICULTIES = {"easy", "medium", "hard"}
+
+
+def _normalize_difficulty(value: str) -> str:
+    """The manual-entry form is a <select> constrained to the three valid
+    values, but AI-structured and marker-parsed text isn't -- fall back to
+    'medium' rather than let a stray LLM/free-text value hit the DB's
+    difficulty CHECK constraint as an unhandled 500."""
+    candidate = (value or "").strip().lower()
+    return candidate if candidate in _VALID_DIFFICULTIES else "medium"
+
+
 async def create_question(pool: asyncpg.Pool, user_id: int, fields: dict, source: str = "manual") -> int:
     embedding_source = f"{fields['question']}\n{fields.get('topic', '')}".strip()
     embedding = await embed_text_async(embedding_source)
@@ -39,7 +51,7 @@ async def create_question(pool: asyncpg.Pool, user_id: int, fields: dict, source
         fields.get("answer", ""),
         fields.get("example", ""),
         fields.get("topic", ""),
-        fields.get("difficulty", "medium"),
+        _normalize_difficulty(fields.get("difficulty", "medium")),
         fields.get("company", ""),
         fields.get("code_snippet", ""),
         fields.get("language", ""),
@@ -67,7 +79,7 @@ async def update_question(pool: asyncpg.Pool, user_id: int, question_id: int, fi
         fields.get("answer", ""),
         fields.get("example", ""),
         fields.get("topic", ""),
-        fields.get("difficulty", "medium"),
+        _normalize_difficulty(fields.get("difficulty", "medium")),
         fields.get("company", ""),
         fields.get("code_snippet", ""),
         fields.get("language", ""),

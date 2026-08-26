@@ -50,6 +50,10 @@ async def _use_test_database():
         await conn.close()
 
     settings.database_url = _test_dsn()
+    # The login/signup rate limiter is per-IP; httpx's ASGITransport gives
+    # every test the same client IP, so it must be off here or the Nth
+    # signup across the whole test session starts 429ing.
+    settings.disable_rate_limits = True
 
     yield
 

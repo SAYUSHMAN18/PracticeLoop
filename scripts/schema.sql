@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS questions (
   answer       text NOT NULL DEFAULT '',
   example      text NOT NULL DEFAULT '',
   topic        text NOT NULL DEFAULT '',
-  difficulty   text NOT NULL DEFAULT 'medium',   -- easy | medium | hard
+  difficulty   text NOT NULL DEFAULT 'medium' CHECK (difficulty IN ('easy', 'medium', 'hard')),
   company      text NOT NULL DEFAULT '',
   code_snippet text NOT NULL DEFAULT '',
   language     text NOT NULL DEFAULT '',

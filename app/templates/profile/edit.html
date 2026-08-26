@@ -14,6 +14,7 @@
       <p class="muted" style="margin-top:0.5rem;">Current resume text on file: {{ profile.resume_text|length }} characters.</p>
     {% endif %}
     {% if saved %}<p class="success">Saved.</p>{% endif %}
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
     <button type="submit">Save</button>
   </form>
 </div>

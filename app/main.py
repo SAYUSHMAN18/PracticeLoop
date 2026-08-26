@@ -14,6 +14,7 @@ from app.core.db import close_pool, get_pool
 from app.core.deps import LoginRequired
 from app.core.embedder import get_embedding_model, verify_embedding_dimension
 from app.core.logging import configure_logging, get_logger
+from app.core.middleware import MaxBodySizeMiddleware, RateLimitMiddleware, SecurityHeadersMiddleware
 from app.core.security import current_user_id
 from app.core.templates import STATIC_DIR, templates
 from app.dashboard.router import router as dashboard_router
@@ -44,6 +45,21 @@ app.add_middleware(
     https_only=settings.app_env == "production",
     max_age=14 * 24 * 60 * 60,  # 14 days
 )
+app.add_middleware(
+    RateLimitMiddleware,
+    limits={}
+    if settings.disable_rate_limits
+    else {
+        "/login": (10, 60.0),
+        "/signup": (5, 60.0),
+    },
+)
+app.add_middleware(
+    MaxBodySizeMiddleware,
+    default_max_bytes=2 * 1024 * 1024,  # 2MB covers every text-only form
+    path_overrides={"/profile": 11 * 1024 * 1024},  # resume upload's 10MB cap + overhead
+)
+app.add_middleware(SecurityHeadersMiddleware)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.include_router(auth_router)

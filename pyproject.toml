@@ -18,6 +18,14 @@ dependencies = [
     "pypdf>=5.1",
 ]
 
+[tool.setuptools.packages.find]
+# Without this, setuptools' flat-layout auto-discovery sees any top-level
+# directory as a candidate package. That was silently fine while `app` was
+# the only one, but scripts/ and (once the Docker build started copying it
+# in for the starter-deck seed) data/ made discovery ambiguous and the
+# editable install fails outright: "Multiple top-level packages discovered."
+include = ["app*"]
+
 [project.optional-dependencies]
 groq = ["groq>=0.13"]
 gemini = ["google-generativeai>=0.8"]
