@@ -53,7 +53,7 @@ source .venv/bin/activate       # Windows: .venv\Scripts\activate
 
 pip install -e ".[dev,groq]"    # swap `groq` for `gemini` or `bedrock` if using those
 docker compose up -d db         # or point DATABASE_URL at your own Postgres
-python scripts/init_db.py       # applies scripts/schema.sql -- no psql required
+python scripts/migrate.py       # applies migrations/*.sql -- no psql required
 uvicorn app.main:app --reload
 ```
 
@@ -88,12 +88,12 @@ fallback if no LLM key is configured), pgvector semantic search with a real "no 
 a one-card-at-a-time review queue with spaced repetition and streaks, per-topic mastery on the
 dashboard, question editing and deletion, a 30+ question starter deck, and AI study-card
 generation for a topic with no local match. Production hardening: per-IP rate limiting,
-security headers, request size caps, a non-root Docker image, and a health-checked deploy.
+security headers, request size caps, a non-root Docker image, versioned migrations, and a
+health-checked deploy.
 
 Deliberately not built yet: the market-trends scanner, PDF export, an ease-factor-based
 scheduler (see [`docs/spaced-repetition.md`](docs/spaced-repetition.md) for the current
-algorithm's limits), database migrations (schema changes require a fresh database today), and
-any multi-tenant/multi-student support.
+algorithm's limits), and any multi-tenant/multi-student support.
 
 ## Design notes
 

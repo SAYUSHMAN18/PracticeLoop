@@ -3,6 +3,7 @@
 Usage:
     python scripts/seed.py user@example.com
 """
+
 from __future__ import annotations
 
 import asyncio

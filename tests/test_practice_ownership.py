@@ -58,9 +58,7 @@ async def test_user_cannot_edit_or_delete_another_users_question():
     delete_response = await client_b.post(f"/practice/{question_id}/delete")
     assert delete_response.status_code == 404
 
-    still_there = await pool.fetchval(
-        "SELECT question FROM questions WHERE question_id = $1", question_id
-    )
+    still_there = await pool.fetchval("SELECT question FROM questions WHERE question_id = $1", question_id)
     assert still_there == "Victim's question"
 
     await client_a.aclose()
@@ -72,9 +70,7 @@ async def test_owner_can_rate_their_own_question(client):
 
     pool = await get_pool()
     owner = await get_user_by_email(pool, "owner@example.com")
-    question_id = await create_question(
-        pool, owner["user_id"], {"question": "My own question", "topic": ""}
-    )
+    question_id = await create_question(pool, owner["user_id"], {"question": "My own question", "topic": ""})
 
     response = await client.post(f"/practice/review/{question_id}", data={"rating": 4})
     assert response.status_code == 200

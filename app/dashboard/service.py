@@ -6,12 +6,8 @@ import asyncpg
 
 
 async def get_stats(pool: asyncpg.Pool, user_id: int) -> dict:
-    total_questions = await pool.fetchval(
-        "SELECT count(*) FROM questions WHERE user_id = $1", user_id
-    )
-    total_attempts = await pool.fetchval(
-        "SELECT count(*) FROM attempts WHERE user_id = $1", user_id
-    )
+    total_questions = await pool.fetchval("SELECT count(*) FROM questions WHERE user_id = $1", user_id)
+    total_attempts = await pool.fetchval("SELECT count(*) FROM attempts WHERE user_id = $1", user_id)
     due_today = await pool.fetchval(
         """SELECT count(*) FROM questions q
            LEFT JOIN LATERAL (

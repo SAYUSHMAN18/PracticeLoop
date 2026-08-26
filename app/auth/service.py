@@ -43,9 +43,7 @@ async def create_user(pool: asyncpg.Pool, email: str, password: str, name: str) 
 
 
 async def authenticate(pool: asyncpg.Pool, email: str, password: str) -> int:
-    row = await pool.fetchrow(
-        "SELECT user_id, password_hash FROM users WHERE email = $1", email
-    )
+    row = await pool.fetchrow("SELECT user_id, password_hash FROM users WHERE email = $1", email)
     # Always run the bcrypt comparison, even for a nonexistent email --
     # short-circuiting here would let a timing difference reveal which
     # emails are registered.
@@ -59,12 +57,8 @@ async def authenticate(pool: asyncpg.Pool, email: str, password: str) -> int:
 
 
 async def get_user(pool: asyncpg.Pool, user_id: int) -> asyncpg.Record | None:
-    return await pool.fetchrow(
-        "SELECT user_id, email, name FROM users WHERE user_id = $1", user_id
-    )
+    return await pool.fetchrow("SELECT user_id, email, name FROM users WHERE user_id = $1", user_id)
 
 
 async def get_user_by_email(pool: asyncpg.Pool, email: str) -> asyncpg.Record | None:
-    return await pool.fetchrow(
-        "SELECT user_id, email, name FROM users WHERE email = $1", email
-    )
+    return await pool.fetchrow("SELECT user_id, email, name FROM users WHERE email = $1", email)

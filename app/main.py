@@ -77,9 +77,7 @@ async def login_required_handler(request: Request, exc: LoginRequired):
 async def http_exception_handler(request: Request, exc: HTTPException):
     if exc.status_code == 404:
         return templates.TemplateResponse(request, "404.html", {}, status_code=404)
-    return templates.TemplateResponse(
-        request, "error.html", {}, status_code=exc.status_code
-    )
+    return templates.TemplateResponse(request, "error.html", {}, status_code=exc.status_code)
 
 
 @app.exception_handler(Exception)

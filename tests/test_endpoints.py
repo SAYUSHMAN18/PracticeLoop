@@ -122,9 +122,7 @@ async def test_profile_resume_text_upload_is_extracted(client):
     await signup(client, "resume@example.com")
 
     files = {"resume": ("resume.txt", b"Experienced backend engineer with Python.", "text/plain")}
-    response = await client.post(
-        "/profile", data={"target_role": "", "target_companies": ""}, files=files
-    )
+    response = await client.post("/profile", data={"target_role": "", "target_companies": ""}, files=files)
     assert response.status_code == 200
     assert "42 characters" in response.text or "characters" in response.text
 
@@ -134,7 +132,5 @@ async def test_profile_resume_over_size_cap_is_rejected(client):
 
     oversized = b"x" * (10 * 1024 * 1024 + 1)
     files = {"resume": ("resume.txt", oversized, "text/plain")}
-    response = await client.post(
-        "/profile", data={"target_role": "", "target_companies": ""}, files=files
-    )
+    response = await client.post("/profile", data={"target_role": "", "target_companies": ""}, files=files)
     assert response.status_code == 413

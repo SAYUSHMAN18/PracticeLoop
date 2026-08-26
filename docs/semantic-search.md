@@ -48,6 +48,6 @@ an ANN index adds real failure modes for no benefit: `IVFFlat` in particular par
 vectors into `lists` clusters and only searches the nearest few by default — with few rows
 per cluster, it can return *zero* matches for a perfectly good query, silently, with no
 error. This is a real, previously-hit bug in a sibling project's `schema_chunks` table (see
-[`nl2sql`](https://github.com/SAYUSHMAN18/NL2SQL)'s history) and exactly why `scripts/schema.sql`
-here has no `CREATE INDEX ... USING ivfflat` line. Revisit only if this table's row count
+[`nl2sql`](https://github.com/SAYUSHMAN18/NL2SQL)'s history) and exactly why
+`migrations/0001_baseline.sql` here has no `CREATE INDEX ... USING ivfflat` line. Revisit only if this table's row count
 genuinely grows into the tens of thousands.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import asyncpg
@@ -9,8 +10,10 @@ from httpx import ASGITransport, AsyncClient
 from app.core import db as db_module
 from app.core.config import settings
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+from migrate import apply_pending_migrations  # noqa: E402
+
 TEST_DB_NAME = "practiceloop_test"
-SCHEMA_PATH = Path(__file__).resolve().parents[1] / "scripts" / "schema.sql"
 
 
 def _admin_dsn() -> str:
@@ -45,7 +48,7 @@ async def _use_test_database():
 
     conn = await asyncpg.connect(dsn=_test_dsn())
     try:
-        await conn.execute(SCHEMA_PATH.read_text())
+        await apply_pending_migrations(conn)
     finally:
         await conn.close()
 
@@ -87,7 +90,5 @@ async def client():
 async def signup(
     client: AsyncClient, email: str, password: str = "testpassword123", name: str = "Test"
 ) -> None:
-    response = await client.post(
-        "/signup", data={"name": name, "email": email, "password": password}
-    )
+    response = await client.post("/signup", data={"name": name, "email": email, "password": password})
     assert response.status_code == 303, response.text

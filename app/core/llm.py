@@ -71,9 +71,7 @@ async def _call_groq(prompt: str, temperature: float) -> str:
     try:
         from groq import AsyncGroq, RateLimitError
     except ImportError as exc:
-        raise RuntimeError(
-            "LLM_PROVIDER=groq requires the groq package: pip install -e '.[groq]'"
-        ) from exc
+        raise RuntimeError("LLM_PROVIDER=groq requires the groq package: pip install -e '.[groq]'") from exc
 
     api_key = settings.groq_api_key.strip()
     if not api_key:
@@ -155,9 +153,7 @@ async def _call_bedrock(prompt: str, temperature: float) -> str:
     try:
         import boto3  # noqa: F401
     except ImportError as exc:
-        raise RuntimeError(
-            "LLM_PROVIDER=bedrock requires boto3: pip install -e '.[bedrock]'"
-        ) from exc
+        raise RuntimeError("LLM_PROVIDER=bedrock requires boto3: pip install -e '.[bedrock]'") from exc
 
     # boto3 is synchronous; running invoke_model directly on the event loop
     # would block every other in-flight request for the network round trip.

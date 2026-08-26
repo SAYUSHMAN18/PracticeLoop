@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
 COPY pyproject.toml ./
 COPY app ./app
 COPY scripts ./scripts
+COPY migrations ./migrations
 COPY data ./data
 
 # The default torch wheel drags in full CUDA (nvidia-cudnn, triton, cuda-toolkit...)
@@ -37,8 +38,9 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 
 # PORT is honored so this image runs unmodified on host platforms that assign
 # it dynamically (e.g. Render); it falls back to 8000 for docker-compose/bare
-# `docker run`. init_db.py is idempotent (CREATE ... IF NOT EXISTS), so
-# running it on every container start is safe and keeps schema setup the
-# same regardless of which platform the image is deployed to.
-CMD python scripts/init_db.py \
+# `docker run`. migrate.py only applies migrations not yet recorded in
+# schema_migrations, so running it on every container start is safe and
+# keeps schema setup identical across every deploy path -- first boot on a
+# fresh database, a redeploy of a live one, docker-compose, or bare `docker run`.
+CMD python scripts/migrate.py \
     && python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers ${WEB_CONCURRENCY:-1}

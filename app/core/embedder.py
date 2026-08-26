@@ -15,7 +15,7 @@ from app.core.config import settings
 # encode() calls are single small strings, not large batches).
 torch.set_num_threads(1)
 
-# scripts/schema.sql hardcodes `vector(384)` -- verify_embedding_dimension()
+# migrations/0001_baseline.sql hardcodes `vector(384)` -- verify_embedding_dimension()
 # catches a config/schema mismatch at startup instead of deep inside asyncpg
 # on the first insert.
 EXPECTED_DIMENSION = 384
@@ -52,6 +52,6 @@ def verify_embedding_dimension() -> None:
     if actual != EXPECTED_DIMENSION:
         raise RuntimeError(
             f"embedding_model={settings.embedding_model!r} produces {actual}-dim vectors, "
-            f"but scripts/schema.sql declares vector({EXPECTED_DIMENSION}). "
-            f"Update the schema's vector() dimension and re-run it against a fresh database."
+            f"but migrations/0001_baseline.sql declares vector({EXPECTED_DIMENSION}). "
+            f"Add a migration that changes the column's vector() dimension."
         )

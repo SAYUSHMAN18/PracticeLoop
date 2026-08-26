@@ -102,9 +102,7 @@ async def edit_question_form(
     question = await service.get_question(pool, user_id, question_id)
     if question is None:
         raise HTTPException(status_code=404)
-    return templates.TemplateResponse(
-        request, "practice/edit.html", {"q": question, "saved": False}
-    )
+    return templates.TemplateResponse(request, "practice/edit.html", {"q": question, "saved": False})
 
 
 @router.post("/{question_id}/edit")
@@ -129,9 +127,7 @@ async def edit_question(
         raise HTTPException(status_code=404) from exc
 
     updated = await service.get_question(pool, user_id, question_id)
-    return templates.TemplateResponse(
-        request, "practice/edit.html", {"q": updated, "saved": True}
-    )
+    return templates.TemplateResponse(request, "practice/edit.html", {"q": updated, "saved": True})
 
 
 @router.post("/{question_id}/delete")

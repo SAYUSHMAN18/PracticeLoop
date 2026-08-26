@@ -1,3 +1,7 @@
+-- Backfilled as migration 0001 when versioned migrations were introduced --
+-- this is the schema every PracticeLoop database has had since day one, not
+-- a new change. Every later migration builds on top of this file untouched.
+
 CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS users (

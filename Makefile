@@ -6,7 +6,7 @@ setup:
 
 db:
 	docker compose up -d db
-	.venv/bin/python scripts/init_db.py
+	.venv/bin/python scripts/migrate.py
 
 seed:
 	.venv/bin/python scripts/seed.py
@@ -18,5 +18,5 @@ test:
 	.venv/bin/python -m pytest tests/ -q
 
 lint:
-	.venv/bin/ruff check app tests
-	.venv/bin/ruff format --check app tests
+	.venv/bin/ruff check app tests scripts
+	.venv/bin/ruff format --check app tests scripts

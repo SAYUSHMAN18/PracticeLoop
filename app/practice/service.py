@@ -92,9 +92,7 @@ async def delete_question(pool: asyncpg.Pool, user_id: int, question_id: int) ->
     if owned is None:
         raise QuestionNotFound(question_id)
 
-    await pool.execute(
-        "DELETE FROM questions WHERE question_id = $1 AND user_id = $2", question_id, user_id
-    )
+    await pool.execute("DELETE FROM questions WHERE question_id = $1 AND user_id = $2", question_id, user_id)
 
 
 async def list_questions(pool: asyncpg.Pool, user_id: int) -> list[asyncpg.Record]:
@@ -127,9 +125,7 @@ async def search_questions(
         top_k,
         _SEARCH_DISTANCE_THRESHOLD,
     )
-    return [
-        {**dict(r), "match_pct": max(0, round((1 - r["distance"]) * 100))} for r in rows
-    ]
+    return [{**dict(r), "match_pct": max(0, round((1 - r["distance"]) * 100))} for r in rows]
 
 
 async def _previous_interval_days(pool: asyncpg.Pool, user_id: int, question_id: int) -> int | None:
