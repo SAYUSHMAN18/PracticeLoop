@@ -45,7 +45,12 @@ jobs:
           key: ${{ runner.os }}-py311-${{ hashFiles('pyproject.toml') }}
 
       - name: Install dependencies
-        run: pip install -e ".[dev,groq]"
+        # Same CPU-only torch trick as the Dockerfile: installing it first from
+        # PyTorch's own index satisfies sentence-transformers' requirement
+        # without pip ever reaching for the ~2GB CUDA build.
+        run: |
+          pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[dev,groq]"
 
       - name: Lint
         run: |
