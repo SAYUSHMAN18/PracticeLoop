@@ -11,8 +11,8 @@
 </head>
 <body>
   <div class="auth-shell">
+    <div class="auth-bg-blobs" aria-hidden="true"><div class="auth-bg-blobs-inner"></div></div>
     <aside class="auth-visual">
-      <div class="auth-visual-blobs" aria-hidden="true"></div>
       <div class="auth-visual-content">
         <a class="brand" href="/">PracticeLoop</a>
         <h1 class="auth-tagline">Everything your job search needs, in one place.</h1>
@@ -22,6 +22,11 @@
           <li>Track every application from applied to offer</li>
           <li>See exactly which skills your resume claims but can't back up</li>
         </ul>
+        <ul class="auth-stats">
+          <li>80+ CS-fundamentals questions</li>
+          <li>Resume &middot; transcripts &middot; certificates in one vault</li>
+          <li>Every application tracked end to end</li>
+        </ul>
       </div>
     </aside>
     <main class="auth-form-side">
@@ -30,5 +35,27 @@
       </div>
     </main>
   </div>
+  <script>
+    // Subtle parallax on the background glow, following the pointer -- pure
+    // visual flourish, so it's skipped entirely for reduced-motion and for
+    // touch-only devices (no meaningful pointer to follow).
+    (function () {
+      var blobs = document.querySelector(".auth-bg-blobs");
+      if (!blobs) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+
+      var raf = null;
+      document.addEventListener("mousemove", function (e) {
+        if (raf) return;
+        raf = requestAnimationFrame(function () {
+          var xPct = e.clientX / window.innerWidth - 0.5;
+          var yPct = e.clientY / window.innerHeight - 0.5;
+          blobs.style.transform = "translate3d(" + (xPct * -3) + "%, " + (yPct * -3) + "%, 0)";
+          raf = null;
+        });
+      });
+    })();
+  </script>
 </body>
 </html>

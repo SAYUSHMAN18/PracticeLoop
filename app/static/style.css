@@ -396,18 +396,59 @@ details[open] summary { margin-bottom: 0.25rem; }
 /* ---------- auth split screen (login / signup) ---------- */
 
 .auth-shell {
+  position: relative;
+  overflow: hidden;
   min-height: 100vh;
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  background: var(--bg);
+}
+
+/* Spans the whole page (both panes), not just the decorative aside, so the
+   form itself sits on top of the animated glow instead of a flat panel.
+   Two layers so the ambient drift (CSS animation) and the pointer parallax
+   (JS-set transform, see base_auth.html) each own their own transform --
+   a running animation always wins the cascade for a property it targets,
+   so a single shared element would make the parallax invisible. */
+.auth-bg-blobs {
+  /* fixed, not absolute: percentage insets need a definite-height
+     containing block, and .auth-shell only sets min-height -- fixed
+     resolves against the viewport instead, which is always definite. */
+  position: fixed;
+  inset: -25%;
+  z-index: 0;
+  pointer-events: none;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.auth-bg-blobs-inner {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(30% 30% at 20% 24%, color-mix(in srgb, var(--accent) 55%, transparent) 0%, transparent 70%),
+    radial-gradient(26% 26% at 82% 14%, color-mix(in srgb, var(--good) 42%, transparent) 0%, transparent 70%),
+    radial-gradient(34% 34% at 72% 86%, color-mix(in srgb, var(--accent-2) 40%, transparent) 0%, transparent 70%),
+    radial-gradient(24% 24% at 38% 78%, color-mix(in srgb, var(--link) 34%, transparent) 0%, transparent 70%);
+  filter: blur(70px) saturate(1.15);
+  animation: auth-drift 24s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes auth-drift {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  100% { transform: translate3d(-4%, 3%, 0) rotate(8deg) scale(1.1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-bg-blobs { transition: none; }
+  .auth-bg-blobs-inner { animation: none; }
 }
 
 .auth-visual {
   position: relative;
+  z-index: 1;
   overflow: hidden;
   display: flex;
   align-items: center;
   padding: 3rem;
-  background: linear-gradient(165deg, var(--bg-2), var(--bg) 65%);
+  background: linear-gradient(165deg, color-mix(in srgb, var(--bg-2) 55%, transparent), color-mix(in srgb, var(--bg) 25%, transparent) 65%);
   border-right: 1px solid var(--border);
 }
 .auth-visual::before {
@@ -418,24 +459,6 @@ details[open] summary { margin-bottom: 0.25rem; }
   background-size: 24px 24px;
   opacity: 0.5;
   mask-image: radial-gradient(circle at 30% 30%, black, transparent 75%);
-}
-.auth-visual-blobs {
-  position: absolute;
-  inset: -25%;
-  background:
-    radial-gradient(32% 32% at 22% 28%, color-mix(in srgb, var(--accent) 60%, transparent) 0%, transparent 70%),
-    radial-gradient(28% 28% at 78% 18%, color-mix(in srgb, var(--good) 45%, transparent) 0%, transparent 70%),
-    radial-gradient(38% 38% at 68% 82%, color-mix(in srgb, var(--accent-2) 40%, transparent) 0%, transparent 70%);
-  filter: blur(60px) saturate(1.1);
-  animation: auth-drift 22s ease-in-out infinite alternate;
-  will-change: transform;
-}
-@keyframes auth-drift {
-  0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
-  100% { transform: translate3d(-4%, 3%, 0) rotate(8deg) scale(1.08); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .auth-visual-blobs { animation: none; }
 }
 
 .auth-visual-content {
@@ -476,21 +499,51 @@ details[open] summary { margin-bottom: 0.25rem; }
   background: var(--accent);
 }
 
+.auth-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.auth-stats li {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--panel) 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
 .auth-form-side {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem 1.5rem;
-  background: var(--bg);
 }
 .auth-form-inner { width: 100%; max-width: 380px; }
-.auth-form-inner .card { margin-bottom: 0; }
+.auth-form-inner .card {
+  margin-bottom: 0;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  backdrop-filter: blur(22px) saturate(1.3);
+  -webkit-backdrop-filter: blur(22px) saturate(1.3);
+  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  box-shadow: 0 1px 2px hsl(var(--shadow-color) / 0.08), 0 24px 48px -20px hsl(var(--shadow-color) / 0.45);
+}
 
 @media (max-width: 860px) {
   .auth-shell { grid-template-columns: 1fr; }
-  .auth-visual { padding: 2rem 1.5rem; min-height: 200px; border-right: none; border-bottom: 1px solid var(--border); }
+  .auth-visual { padding: 2rem 1.5rem; min-height: 220px; border-right: none; border-bottom: 1px solid var(--border); }
   .auth-tagline { font-size: 1.35rem; margin: 1rem 0; }
   .auth-points { display: none; }
+  .auth-stats { display: none; }
   .auth-form-side { padding: 2rem 1.5rem 3rem; }
 }
 
