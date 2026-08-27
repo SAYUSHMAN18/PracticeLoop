@@ -2,7 +2,7 @@
 {% block title %}Jobs - PracticeLoop{% endblock %}
 {% block content %}
 <h1>Discovered listings</h1>
-<p><a href="/jobs">Listings</a> &middot; <a href="/jobs/applications">Applications</a> &middot; <a href="/jobs/gap-analysis">Skill gap analysis</a> &middot; <a href="/jobs/trends">Market trends</a> &middot; <a href="/jobs/runs">Discovery runs</a></p>
+{% include "jobs/_subnav.html" %}
 <p class="muted">
   Found by the scheduled discovery run against your profile's target role. Fit score is a
   deterministic keyword match against your resume, not a considered judgement -- use it to
@@ -10,10 +10,12 @@
 </p>
 
 {% if not listings %}
-<div class="card">
+<div class="card empty-state">
+  <span class="glyph">🧭</span>
+  <h2>No listings yet</h2>
   <p class="muted">
-    Nothing yet. Set a target role on your <a href="/profile">profile</a> and wait for the
-    next scheduled discovery run, or trigger one manually if you're running this locally.
+    Set a target role on your <a href="/profile">profile</a> and wait for the next
+    scheduled discovery run, or trigger one manually if you're running this locally.
   </p>
 </div>
 {% endif %}

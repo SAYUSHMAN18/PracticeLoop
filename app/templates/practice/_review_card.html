@@ -1,5 +1,8 @@
 {% if not card %}
-  <div class="card"><p class="muted">Nothing due right now. Come back later, or capture a new question.</p></div>
+  <div class="card empty-state">
+    <span class="glyph">🎉</span>
+    <p class="muted">Nothing due right now. Come back later, or capture a new question.</p>
+  </div>
 {% else %}
   <div class="card">
     <p class="muted" style="margin-top:0;">{{ remaining }} remaining in this session</p>

@@ -2,7 +2,7 @@
 {% block title %}Skill gap analysis - PracticeLoop{% endblock %}
 {% block content %}
 <h1>Skill gap analysis</h1>
-<p><a href="/jobs">Listings</a> &middot; <a href="/jobs/applications">Applications</a> &middot; <a href="/jobs/gap-analysis">Skill gap analysis</a> &middot; <a href="/jobs/trends">Market trends</a> &middot; <a href="/jobs/runs">Discovery runs</a></p>
+{% include "jobs/_subnav.html" %}
 <p class="muted">
   Paste a job description. It's diffed against your resume and your actual practice
   history -- not just what's on the resume, but what you've genuinely recalled.
@@ -35,11 +35,11 @@
     {% for gap in gaps %}
       <div class="question-item">
         {% if gap.bucket in ("missing", "untested") %}
-          <label style="display:inline;"><input type="checkbox" name="gap_ids" value="{{ gap.gap_id }}" style="width:auto;display:inline;"> <strong>{{ gap.skill }}</strong></label>
+          <label style="display:flex;align-items:center;gap:0.6rem;"><input type="checkbox" name="gap_ids" value="{{ gap.gap_id }}"> <strong>{{ gap.skill }}</strong></label>
         {% else %}
           <strong>{{ gap.skill }}</strong>
         {% endif %}
-        <span class="tag">{{ gap.bucket }}</span>
+        <span class="tag tag-{{ gap.bucket }}">{{ gap.bucket }}</span>
         <div class="muted">{{ gap.evidence }}</div>
       </div>
     {% endfor %}

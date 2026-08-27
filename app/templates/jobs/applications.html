@@ -2,7 +2,7 @@
 {% block title %}Applications - PracticeLoop{% endblock %}
 {% block content %}
 <h1>Application tracker</h1>
-<p><a href="/jobs">Listings</a> &middot; <a href="/jobs/applications">Applications</a> &middot; <a href="/jobs/gap-analysis">Skill gap analysis</a> &middot; <a href="/jobs/trends">Market trends</a> &middot; <a href="/jobs/runs">Discovery runs</a></p>
+{% include "jobs/_subnav.html" %}
 
 <div class="card">
   <div class="stat-grid">
@@ -50,12 +50,12 @@
   {% for a in applications %}
     <div class="question-item">
       <strong>{{ a.role }}</strong> at {{ a.company }}
-      <span class="tag">{{ a.status }}</span>
+      <span class="tag tag-{{ a.status }}">{{ a.status }}</span>
       {% if a.fit_score is not none %}<span class="tag">{{ a.fit_score }}% fit</span>{% endif %}
       <span class="muted"> &mdash; applied {{ a.applied_at.date() }}</span>
       {% if a.interview_at %}<div class="muted">Interview: {{ a.interview_at }}</div>{% endif %}
       <div><a href="/jobs/applications/{{ a.application_id }}/deck">Company deck &rarr;</a></div>
-      <form method="post" action="/jobs/applications/{{ a.application_id }}/status" class="inline" style="margin-top:0.35rem;">
+      <form method="post" action="/jobs/applications/{{ a.application_id }}/status" class="inline-form">
         <select name="status">
           <option value="applied" {{ "selected" if a.status == "applied" }}>Applied</option>
           <option value="interviewing" {{ "selected" if a.status == "interviewing" }}>Interviewing</option>
@@ -63,12 +63,15 @@
           <option value="rejected" {{ "selected" if a.status == "rejected" }}>Rejected</option>
           <option value="withdrawn" {{ "selected" if a.status == "withdrawn" }}>Withdrawn</option>
         </select>
-        <input type="datetime-local" name="interview_at" style="width:auto;display:inline;" title="Interview date/time (optional)">
-        <button type="submit" class="btn secondary" style="font-size:0.8rem;">Update</button>
+        <input type="datetime-local" name="interview_at" title="Interview date/time (optional)">
+        <button type="submit" class="btn secondary">Update</button>
       </form>
     </div>
   {% else %}
-    <p class="muted">No applications logged yet.</p>
+    <div class="empty-state">
+      <span class="glyph">📭</span>
+      <p class="muted">No applications logged yet.</p>
+    </div>
   {% endfor %}
 </div>
 {% endblock %}

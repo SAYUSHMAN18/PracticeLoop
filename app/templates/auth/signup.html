@@ -10,8 +10,8 @@
     <input type="email" name="email" required>
     <label>Password</label>
     <input type="password" name="password" minlength="8" required>
-    <label style="display:flex;align-items:center;gap:0.5rem;margin-top:1rem;">
-      <input type="checkbox" name="seed_deck" value="1" checked style="width:auto;">
+    <label style="display:flex;align-items:center;gap:0.6rem;margin-top:1rem;">
+      <input type="checkbox" name="seed_deck" value="1" checked>
       <span>Start with a sample deck (30+ DSA/SQL/Python/system-design questions)</span>
     </label>
     {% if error %}<p class="error">{{ error }}</p>{% endif %}

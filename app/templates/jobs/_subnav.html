@@ -1,0 +1,7 @@
+<nav class="subnav">
+  <a href="/jobs" class="{{ 'active' if request.url.path == '/jobs' }}">Listings</a>
+  <a href="/jobs/applications" class="{{ 'active' if request.url.path == '/jobs/applications' }}">Applications</a>
+  <a href="/jobs/gap-analysis" class="{{ 'active' if request.url.path == '/jobs/gap-analysis' }}">Skill gap</a>
+  <a href="/jobs/trends" class="{{ 'active' if request.url.path == '/jobs/trends' }}">Trends</a>
+  <a href="/jobs/runs" class="{{ 'active' if request.url.path == '/jobs/runs' }}">Discovery runs</a>
+</nav>

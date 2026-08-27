@@ -2,7 +2,7 @@
 {% block title %}Market trends - PracticeLoop{% endblock %}
 {% block content %}
 <h1>Market trends</h1>
-<p><a href="/jobs">Listings</a> &middot; <a href="/jobs/applications">Applications</a> &middot; <a href="/jobs/gap-analysis">Skill gap analysis</a> &middot; <a href="/jobs/trends">Market trends</a> &middot; <a href="/jobs/runs">Discovery runs</a></p>
+{% include "jobs/_subnav.html" %}
 <p class="muted">
   Aggregated across every listing discovered on this instance, not just your own -- this is
   the entry point if you have no applications yet: see what's actually asked for, then run a
@@ -20,10 +20,13 @@
   {% endif %}
 
   {% if not trends.top_skills %}
-    <p class="muted">
-      Nothing discovered yet. Set a target role on your <a href="/profile">profile</a> and
-      wait for the next scheduled discovery run.
-    </p>
+    <div class="empty-state">
+      <span class="glyph">📈</span>
+      <p class="muted">
+        Nothing discovered yet. Set a target role on your <a href="/profile">profile</a> and
+        wait for the next scheduled discovery run.
+      </p>
+    </div>
   {% endif %}
 
   {% for skill, count in trends.top_skills %}

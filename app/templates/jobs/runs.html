@@ -2,7 +2,7 @@
 {% block title %}Job runs - PracticeLoop{% endblock %}
 {% block content %}
 <h1>Discovery runs</h1>
-<p><a href="/jobs">Listings</a> &middot; <a href="/jobs/applications">Applications</a> &middot; <a href="/jobs/gap-analysis">Skill gap analysis</a> &middot; <a href="/jobs/trends">Market trends</a> &middot; <a href="/jobs/runs">Discovery runs</a></p>
+{% include "jobs/_subnav.html" %}
 <p class="muted">
   Every scheduled discovery run, whether it succeeded, failed, or found nothing to do. A
   cron job that silently stops looks exactly like a quiet job market -- this page is what
@@ -13,7 +13,7 @@
 <div class="card">
   <div style="display:flex;justify-content:space-between;align-items:center;">
     <strong>Run #{{ run.run_id }}</strong>
-    <span class="tag">{{ run.status }}</span>
+    <span class="tag {{ 'tag-proven' if run.status == 'success' else 'tag-missing' if run.status == 'failed' else 'tag-untested' }}">{{ run.status }}</span>
   </div>
   <p class="muted" style="margin:0.35rem 0 0;">
     Started {{ run.started_at }}{% if run.finished_at %} &middot; finished {{ run.finished_at }}{% endif %}
@@ -25,6 +25,9 @@
   {% if run.error %}<p class="error" style="margin:0.35rem 0 0;">{{ run.error }}</p>{% endif %}
 </div>
 {% else %}
-<div class="card"><p class="muted">No discovery runs yet.</p></div>
+<div class="card empty-state">
+  <span class="glyph">📡</span>
+  <p class="muted">No discovery runs yet.</p>
+</div>
 {% endfor %}
 {% endblock %}
