@@ -8,10 +8,15 @@ from app.practice import router as practice_router
 from tests.conftest import signup
 
 
-async def test_review_queue_shows_typed_answer_form_when_llm_configured(client):
-    """Local test settings load the real .env, which has a real GROQ key --
-    this confirms the default (per the plan) is graded review, not
-    self-rating, whenever an LLM is actually configured."""
+async def test_review_queue_shows_typed_answer_form_when_llm_configured(client, monkeypatch):
+    """Confirms the default (per the plan) is graded review, not
+    self-rating, whenever an LLM is actually configured -- explicitly
+    forced here rather than relying on the ambient environment having a
+    real key, since CI's workflow deliberately doesn't set one (no .env
+    checked in) while local dev usually does. Relying on that ambient
+    state made this test's outcome depend on which environment ran it."""
+    monkeypatch.setattr(practice_router, "llm_is_configured", lambda: True)
+
     await signup(client, "grading-default@example.com")
     await client.post("/practice", data={"question": "What is a mutex?", "answer": "A lock.", "topic": "t"})
 
