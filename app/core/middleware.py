@@ -24,6 +24,27 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class StaticCacheHeadersMiddleware(BaseHTTPMiddleware):
+    """Marks everything under /static as long-lived and immutable.
+
+    Safe specifically because every static asset is referenced with a
+    content-hash query string (see core/templates.py's asset_version) --
+    the URL itself changes whenever the file's content does, so a browser
+    that caches this response forever will still fetch a new one the
+    moment a deploy actually changes the file. Without this, a browser's
+    own heuristic caching was serving a stale style.css against fresh
+    HTML after a deploy (the sidebar shipped with no CSS for it, for
+    exactly this reason) -- this both fixes that and, for anyone who
+    doesn't hit that edge case, saves a repeat visitor the request
+    entirely instead of just skipping the smaller 304 round-trip."""
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+        if request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
+
 class MaxBodySizeMiddleware(BaseHTTPMiddleware):
     """Rejects requests whose declared Content-Length exceeds a per-path (or
     default) cap, before FastAPI buffers the body into memory.

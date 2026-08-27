@@ -14,7 +14,12 @@ from app.core.db import close_pool, get_pool
 from app.core.deps import LoginRequired
 from app.core.embedder import get_embedding_model, verify_embedding_dimension
 from app.core.logging import configure_logging, get_logger
-from app.core.middleware import MaxBodySizeMiddleware, RateLimitMiddleware, SecurityHeadersMiddleware
+from app.core.middleware import (
+    MaxBodySizeMiddleware,
+    RateLimitMiddleware,
+    SecurityHeadersMiddleware,
+    StaticCacheHeadersMiddleware,
+)
 from app.core.security import current_user_id
 from app.core.templates import STATIC_DIR, templates
 from app.dashboard.router import router as dashboard_router
@@ -65,6 +70,7 @@ app.add_middleware(
     },
 )
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(StaticCacheHeadersMiddleware)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.include_router(auth_router)
