@@ -50,7 +50,7 @@
   {% for a in applications %}
     <div class="question-item">
       <strong>{{ a.role }}</strong> at {{ a.company }}
-      <span class="tag tag-{{ a.status }}">{{ a.status }}</span>
+      <span class="tag tag-{{ a.status }}">{{ a.status|capitalize }}</span>
       {% if a.fit_score is not none %}<span class="tag">{{ a.fit_score }}% fit</span>{% endif %}
       <span class="muted"> &mdash; applied {{ a.applied_at.date() }}</span>
       {% if a.interview_at %}<div class="muted">Interview: {{ a.interview_at }}</div>{% endif %}
@@ -69,8 +69,8 @@
     </div>
   {% else %}
     <div class="empty-state">
-      <span class="glyph">📭</span>
-      <p class="muted">No applications logged yet.</p>
+      <h2>No applications logged yet</h2>
+      <p class="muted">Log one above, or track a discovered listing directly.</p>
     </div>
   {% endfor %}
 </div>

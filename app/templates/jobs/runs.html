@@ -13,7 +13,7 @@
 <div class="card">
   <div style="display:flex;justify-content:space-between;align-items:center;">
     <strong>Run #{{ run.run_id }}</strong>
-    <span class="tag {{ 'tag-proven' if run.status == 'success' else 'tag-missing' if run.status == 'failed' else 'tag-untested' }}">{{ run.status }}</span>
+    <span class="tag {{ 'tag-proven' if run.status == 'success' else 'tag-missing' if run.status == 'failed' else 'tag-untested' }}">{{ run.status|capitalize }}</span>
   </div>
   <p class="muted" style="margin:0.35rem 0 0;">
     Started {{ run.started_at }}{% if run.finished_at %} &middot; finished {{ run.finished_at }}{% endif %}
@@ -26,8 +26,8 @@
 </div>
 {% else %}
 <div class="card empty-state">
-  <span class="glyph">📡</span>
-  <p class="muted">No discovery runs yet.</p>
+  <h2>No discovery runs yet</h2>
+  <p class="muted">Runs are triggered on a schedule via GitHub Actions, or manually while developing.</p>
 </div>
 {% endfor %}
 {% endblock %}

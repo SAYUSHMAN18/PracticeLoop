@@ -25,7 +25,9 @@ scheduled a review date, and keep a streak.
   counter and per-topic mastery on the dashboard.
 - **Edit, delete, and organize** your own question bank; every write is scoped to the signed-in
   user.
-- **Start from a 30+ question starter deck** on signup instead of a blank slate.
+- **Start from an 80+ question starter deck** on signup instead of a blank slate — DSA,
+  operating systems, computer networks, DBMS, OOP, Python, SQL, and system design, the
+  breadth of a CS-fundamentals interview loop rather than one narrow slice of it.
 - **Discover jobs on a schedule** against your profile's target role (Adzuna's API, no
   scraping), scored by keyword fit against your resume, and **track applications** through a
   funnel with follow-up and stale-application reminders. Applying itself stays a
@@ -63,7 +65,7 @@ docker compose up
 
 This builds the app image, waits for Postgres to actually accept connections, applies the
 schema, and starts the server. Visit `http://localhost:8000`, sign up (check "start with a
-sample deck" for 30+ ready-to-review questions), and go.
+sample deck" for 80+ ready-to-review questions), and go.
 
 **Without Docker:** requires Python 3.10+ and a local or remote Postgres with the `pgvector`
 extension available (`CREATE EXTENSION vector` must succeed).
@@ -117,7 +119,8 @@ without them, discovery runs happen and get recorded but find nothing.
 Built: capture (manual or AI-structured from pasted text, with a deterministic marker-based
 fallback if no LLM key is configured), pgvector semantic search with a real "no match" state,
 LLM-graded review (self-rating as the fallback) with spaced repetition and streaks, per-topic
-mastery on the dashboard, question editing and deletion, a 30+ question starter deck, and AI
+mastery on the dashboard, question editing and deletion, an 80+ question CS-fundamentals
+starter deck, and AI
 study-card generation for a topic with no local match. Scheduled job discovery (GitHub Actions
 cron, since the free tier has none of its own) with keyword-based fit scoring, a real
 application tracker with funnel stats, JD-vs-actual-recall skill gap analysis, one-click deck

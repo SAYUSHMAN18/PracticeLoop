@@ -97,7 +97,7 @@
       <div style="margin-top:0.35rem;">
         {% if q.topic %}<span class="tag">{{ q.topic }}</span>{% endif %}
         {% if q.company %}<span class="tag">{{ q.company }}</span>{% endif %}
-        <span class="tag">{{ q.difficulty }}</span>
+        <span class="tag">{{ q.difficulty|capitalize }}</span>
         {% if q.source == "ai_generated" %}<span class="tag">AI-generated</span>{% endif %}
         <a href="/practice/{{ q.question_id }}/edit" class="muted" style="margin-left:0.5rem;font-size:0.8rem;">edit</a>
       </div>

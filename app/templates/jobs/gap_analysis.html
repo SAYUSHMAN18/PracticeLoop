@@ -39,7 +39,7 @@
         {% else %}
           <strong>{{ gap.skill }}</strong>
         {% endif %}
-        <span class="tag tag-{{ gap.bucket }}">{{ gap.bucket }}</span>
+        <span class="tag tag-{{ gap.bucket }}">{{ gap.bucket|capitalize }}</span>
         <div class="muted">{{ gap.evidence }}</div>
       </div>
     {% endfor %}

@@ -1,6 +1,6 @@
 {% if not card %}
   <div class="card empty-state">
-    <span class="glyph">🎉</span>
+    <h2>All caught up</h2>
     <p class="muted">Nothing due right now. Come back later, or capture a new question.</p>
   </div>
 {% else %}
@@ -8,7 +8,7 @@
     <p class="muted" style="margin-top:0;">{{ remaining }} remaining in this session</p>
     <div style="margin-bottom:0.5rem;">
       {% if card.topic %}<span class="tag">{{ card.topic }}</span>{% endif %}
-      <span class="tag">{{ card.difficulty }}</span>
+      <span class="tag">{{ card.difficulty|capitalize }}</span>
     </div>
     <strong>{{ card.question }}</strong>
 
