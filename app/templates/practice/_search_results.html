@@ -1,7 +1,7 @@
 {% if query and not results %}
   <p class="muted" style="margin-top:0.75rem;">
     No matches for "{{ query }}".
-    <a href="#" onclick="document.getElementById('f-sc-topic').value={{ query|tojson }}; document.getElementById('f-sc-topic').scrollIntoView({behavior:'smooth'}); return false;">Generate a study card for it?</a>
+    <a href="#" data-topic="{{ query }}" onclick="document.getElementById('f-sc-topic').value=this.dataset.topic; document.getElementById('f-sc-topic').scrollIntoView({behavior:'smooth'}); return false;">Generate a study card for it?</a>
   </p>
 {% endif %}
 {% for r in results %}
@@ -11,7 +11,7 @@
     <div class="muted" style="font-size:0.85rem;">{{ r.answer[:160] }}{% if r.answer|length > 160 %}...{% endif %}</div>
     <div style="margin-top:0.35rem;">
       {% if r.topic %}<span class="tag">{{ r.topic }}</span>{% endif %}
-      <span class="tag">{{ r.difficulty }}</span>
+      <span class="tag">{{ r.difficulty|capitalize }}</span>
     </div>
   </a>
 {% endfor %}

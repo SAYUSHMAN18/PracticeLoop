@@ -83,6 +83,21 @@ async def test_search_with_unrelated_query_shows_no_match(client):
     assert "binary search tree" not in response.text
 
 
+async def test_search_with_no_match_escapes_the_query_in_the_generate_link(client):
+    """Regression test: the "no match, generate a study card?" link used to
+    interpolate the raw query into an inline onclick handler, so a query
+    containing a double quote broke the attribute (and the link) --
+    and would have let a query string inject arbitrary onclick JS.
+    Now the query goes into a plain data-* attribute (auto-escaped like
+    any other Jinja text) and the handler itself contains no interpolation."""
+    await signup(client, "search-escape@example.com")
+    response = await client.get("/practice/search", params={"q": 'test" onmouseover="alert(1)'})
+    assert response.status_code == 200
+    assert 'onmouseover="alert' not in response.text
+    assert "&#34;" in response.text or "&#39;" in response.text or "&quot;" in response.text
+    assert 'data-topic="test&#34; onmouseover=&#34;alert(1)"' in response.text
+
+
 async def test_review_flow_advances_queue_and_records_attempt(client):
     await signup(client, "review@example.com")
     await client.post("/practice", data={"question": "Q1", "answer": "A1", "topic": "t"})
