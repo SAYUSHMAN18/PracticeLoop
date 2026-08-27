@@ -15,6 +15,19 @@
   <a class="btn secondary" href="/practice" style="margin-left:0.75rem;">Capture a question</a>
 </div>
 
+{% if interviews %}
+<div class="card">
+  <h2>Upcoming interviews</h2>
+  {% for item in interviews %}
+    <div class="question-item">
+      <strong>{{ item.application.role }}</strong> at {{ item.application.company }}
+      <span class="tag">{{ item.days_until }} day{{ "s" if item.days_until != 1 }}</span>
+      <div><a href="/jobs/applications/{{ item.application.application_id }}/deck">Review company deck &rarr;</a></div>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 {% if mastery %}
 <div class="card">
   <h2>What to study next</h2>

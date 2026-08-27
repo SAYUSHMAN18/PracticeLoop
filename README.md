@@ -33,6 +33,10 @@ search, self-rate a practice attempt, get scheduled a review date, and keep a st
 - **Turn a diagnosis into a deck** — generate a practice question for each missing or
   untested skill with one click, deduplicated against your existing bank so a similar JD
   doesn't regenerate cards you already have.
+- **Countdown to a tracked interview** on the dashboard, with a company-specific deck (every
+  question tied to that listing's gap-analyzed skills, regardless of when it's normally due)
+  and a post-interview debrief that turns what was actually asked into new practice cards —
+  the highest-signal questions in the whole bank.
 
 ## Stack
 

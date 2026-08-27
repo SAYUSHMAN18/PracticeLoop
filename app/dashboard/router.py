@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
@@ -7,6 +9,7 @@ from app.core.db import get_pool
 from app.core.deps import require_user_id
 from app.core.templates import templates
 from app.dashboard import service
+from app.jobs.interview_prep import upcoming_interviews
 from app.practice.service import streak_days
 
 router = APIRouter()
@@ -21,6 +24,12 @@ async def dashboard(
     stats = await service.get_stats(pool, user_id)
     streak = await streak_days(pool, user_id)
     mastery = await service.topic_mastery(pool, user_id)
+    interviews = [
+        {"application": row, "days_until": (row["interview_at"] - datetime.now(timezone.utc)).days}
+        for row in await upcoming_interviews(pool, user_id)
+    ]
     return templates.TemplateResponse(
-        request, "dashboard/index.html", {"stats": stats, "streak": streak, "mastery": mastery}
+        request,
+        "dashboard/index.html",
+        {"stats": stats, "streak": streak, "mastery": mastery, "interviews": interviews},
     )

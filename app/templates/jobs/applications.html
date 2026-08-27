@@ -53,6 +53,8 @@
       <span class="tag">{{ a.status }}</span>
       {% if a.fit_score is not none %}<span class="tag">{{ a.fit_score }}% fit</span>{% endif %}
       <span class="muted"> &mdash; applied {{ a.applied_at.date() }}</span>
+      {% if a.interview_at %}<div class="muted">Interview: {{ a.interview_at }}</div>{% endif %}
+      <div><a href="/jobs/applications/{{ a.application_id }}/deck">Company deck &rarr;</a></div>
       <form method="post" action="/jobs/applications/{{ a.application_id }}/status" class="inline" style="margin-top:0.35rem;">
         <select name="status">
           <option value="applied" {{ "selected" if a.status == "applied" }}>Applied</option>
@@ -61,6 +63,7 @@
           <option value="rejected" {{ "selected" if a.status == "rejected" }}>Rejected</option>
           <option value="withdrawn" {{ "selected" if a.status == "withdrawn" }}>Withdrawn</option>
         </select>
+        <input type="datetime-local" name="interview_at" style="width:auto;display:inline;" title="Interview date/time (optional)">
         <button type="submit" class="btn secondary" style="font-size:0.8rem;">Update</button>
       </form>
     </div>

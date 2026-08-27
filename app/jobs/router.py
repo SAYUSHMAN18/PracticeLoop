@@ -13,7 +13,7 @@ from app.core.deps import require_user_id
 from app.core.llm_budget import require_llm_budget
 from app.core.logging import get_logger
 from app.core.templates import templates
-from app.jobs import applications, gap_analysis, service
+from app.jobs import applications, gap_analysis, interview_prep, service
 
 logger = get_logger(__name__)
 
@@ -107,13 +107,20 @@ async def applications_page(
 async def update_application_status(
     application_id: int,
     status: Literal["applied", "interviewing", "offer", "rejected", "withdrawn"] = Form(...),
-    interview_at: datetime | None = Form(None),
+    interview_at: str | None = Form(None),
     notes: str | None = Form(None),
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
 ):
+    # A blank <input type="datetime-local"> submits "" (not omitted), and
+    # FastAPI's own `datetime | None` coercion 422s on that rather than
+    # treating it as None -- the common case here is "just change status,
+    # leave the interview date alone", so this has to accept the field
+    # loosely and parse it ourselves.
+    parsed_interview_at = datetime.fromisoformat(interview_at) if interview_at else None
+
     try:
-        await applications.update_status(pool, user_id, application_id, status, interview_at, notes)
+        await applications.update_status(pool, user_id, application_id, status, parsed_interview_at, notes)
     except applications.ApplicationNotFound as exc:
         raise HTTPException(status_code=404) from exc
     return RedirectResponse("/jobs/applications", status_code=303)
@@ -181,3 +188,36 @@ async def generate_deck(
     return templates.TemplateResponse(
         request, "jobs/gap_analysis.html", {"gaps": gaps, "error": None, "deck_message": message}
     )
+
+
+@router.get("/applications/{application_id}/deck", response_class=HTMLResponse)
+async def company_deck_page(
+    request: Request,
+    application_id: int,
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    application = await applications.get_application(pool, user_id, application_id)
+    if application is None:
+        raise HTTPException(status_code=404)
+
+    deck = await interview_prep.get_company_deck(pool, user_id, application_id)
+    return templates.TemplateResponse(
+        request, "jobs/company_deck.html", {"application": application, "deck": deck}
+    )
+
+
+@router.post("/applications/{application_id}/debrief")
+async def submit_debrief(
+    application_id: int,
+    questions_asked: str = Form(...),
+    notes: str = Form(""),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    application = await applications.get_application(pool, user_id, application_id)
+    if application is None:
+        raise HTTPException(status_code=404)
+
+    await interview_prep.log_debrief(pool, user_id, application_id, questions_asked, notes)
+    return RedirectResponse("/jobs/applications", status_code=303)
