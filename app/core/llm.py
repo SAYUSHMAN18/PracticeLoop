@@ -22,6 +22,25 @@ _last_call: float = 0.0
 _lock = asyncio.Lock()
 
 
+def is_configured() -> bool:
+    """Whether generate() can actually be called right now -- used to decide
+    between LLM-graded review and the self-rating fallback (and similar
+    "degrade to something deterministic" branches) without waiting for a
+    call to fail first."""
+    try:
+        provider = LLMProvider(settings.llm_provider.strip().lower())
+    except ValueError:
+        return False
+
+    if provider is LLMProvider.GROQ:
+        return bool(settings.groq_api_key.strip())
+    if provider is LLMProvider.GEMINI:
+        return bool(settings.gemini_api_key.strip())
+    if provider is LLMProvider.BEDROCK:
+        return bool(settings.bedrock_model_id.strip())
+    return False
+
+
 async def _pace() -> None:
     """Serialize outbound LLM calls and keep a conservative request rate."""
     global _last_call

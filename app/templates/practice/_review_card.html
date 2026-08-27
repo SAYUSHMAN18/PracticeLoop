@@ -8,21 +8,32 @@
       <span class="tag">{{ card.difficulty }}</span>
     </div>
     <strong>{{ card.question }}</strong>
-    <details style="margin-top:0.6rem;">
-      <summary style="cursor:pointer;color:var(--accent);">Show answer (space)</summary>
-      <p style="margin-top:0.5rem;">{{ card.answer }}</p>
-      {% if card.example %}<p class="muted">Example: {{ card.example }}</p>{% endif %}
-      {% if card.code_snippet %}<pre style="background:#10131a;padding:0.75rem;border-radius:6px;overflow-x:auto;">{{ card.code_snippet }}</pre>{% endif %}
-    </details>
-    <form hx-post="/practice/review/{{ card.question_id }}" hx-target="#review-card" hx-swap="innerHTML">
-      <label style="margin-top:0.75rem;">How well did you know it? <span class="muted">(keys 1-5)</span></label>
-      <div class="rating-row">
-        <button type="submit" name="rating" value="1" class="rating-btn" data-key="1">1 &mdash; blackout</button>
-        <button type="submit" name="rating" value="2" class="rating-btn" data-key="2">2</button>
-        <button type="submit" name="rating" value="3" class="rating-btn" data-key="3">3</button>
-        <button type="submit" name="rating" value="4" class="rating-btn" data-key="4">4</button>
-        <button type="submit" name="rating" value="5" class="rating-btn" data-key="5">5 &mdash; easy</button>
-      </div>
-    </form>
+
+    {% if can_grade %}
+      <form hx-post="/practice/review/{{ card.question_id }}/grade" hx-target="#review-card" hx-swap="innerHTML" style="margin-top:0.75rem;">
+        <label for="f-answer">Your answer</label>
+        <textarea id="f-answer" name="answer" rows="4" autofocus></textarea>
+        {% if card.example %}<p class="muted">Example context: {{ card.example }}</p>{% endif %}
+        {% if card.code_snippet %}<pre style="background:#10131a;padding:0.75rem;border-radius:6px;overflow-x:auto;">{{ card.code_snippet }}</pre>{% endif %}
+        <button type="submit">Grade my answer</button>
+      </form>
+    {% else %}
+      <details style="margin-top:0.6rem;">
+        <summary style="cursor:pointer;color:var(--accent);">Show answer (space)</summary>
+        <p style="margin-top:0.5rem;">{{ card.answer }}</p>
+        {% if card.example %}<p class="muted">Example: {{ card.example }}</p>{% endif %}
+        {% if card.code_snippet %}<pre style="background:#10131a;padding:0.75rem;border-radius:6px;overflow-x:auto;">{{ card.code_snippet }}</pre>{% endif %}
+      </details>
+      <form hx-post="/practice/review/{{ card.question_id }}" hx-target="#review-card" hx-swap="innerHTML">
+        <label style="margin-top:0.75rem;">How well did you know it? <span class="muted">(keys 1-5)</span></label>
+        <div class="rating-row">
+          <button type="submit" name="rating" value="1" class="rating-btn" data-key="1">1 &mdash; blackout</button>
+          <button type="submit" name="rating" value="2" class="rating-btn" data-key="2">2</button>
+          <button type="submit" name="rating" value="3" class="rating-btn" data-key="3">3</button>
+          <button type="submit" name="rating" value="4" class="rating-btn" data-key="4">4</button>
+          <button type="submit" name="rating" value="5" class="rating-btn" data-key="5">5 &mdash; easy</button>
+        </div>
+      </form>
+    {% endif %}
   </div>
 {% endif %}

@@ -21,7 +21,12 @@ flowchart LR
     subgraph Review
         I[GET /practice/review] --> J[due_for_review:<br/>next_review_at <= today<br/>OR never attempted]
         J --> E
-        K[Rate 1-5] --> L[record_attempt]
+        J --> P{can_grade:<br/>LLM configured AND<br/>question has an answer?}
+        P -->|yes| Q[Type an answer] --> R[grade_answer:<br/>LLM scores 1-5 + feedback]
+        P -->|no| K[Self-rate 1-5]
+        R -->|grading fails| K
+        K --> L[record_attempt]
+        R --> L
         L --> M[spaced_repetition.next_review_date]
         M --> N[(attempts table)]
         L --> O[HTMX swaps in<br/>next card]
@@ -51,6 +56,21 @@ sessions), `llm.py` (the provider-swap LLM client), `embedder.py` (sentence-tran
 This is a deliberately flat "modular monolith" shape, not a hard rule about layers — the
 point is that `practice/service.py` has no idea FastAPI exists, so it's testable and
 reusable on its own.
+
+## Honest grading
+
+A self-rating is unreliable input to a spaced-repetition scheduler -- people rate
+themselves 5 on things they can't actually explain, and the scheduler faithfully believes
+them. `practice/router.py::_can_grade` decides per card whether review shows a typed-answer
+form (graded by `practice/grading.py::grade_answer`, an LLM call scoring 1-5 against the
+stored answer with feedback on what was missed) or falls back to the original self-rate
+form -- and it's `True` by default whenever an LLM is configured and the question has a
+stored answer to grade against, not an opt-in. Three fallback paths, in order: no LLM key
+configured (`core/llm.py::is_configured`), the question has no stored answer, or the
+grading call itself fails at runtime -- a transient LLM hiccup falls back to self-rating for
+that one card rather than losing the typed answer to a 500. Either path ends at the same
+`record_attempt` and the same scheduler; grading only changes what produces the 1-5 rating,
+never how that rating is used afterward.
 
 ## Scheduled job discovery
 

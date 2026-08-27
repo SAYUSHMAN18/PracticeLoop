@@ -2,7 +2,8 @@
 
 A lean, all-Python spaced-practice platform for interview and skill prep. Capture a
 question — typed or pasted and AI-structured — find it again by meaning with semantic
-search, self-rate a practice attempt, get scheduled a review date, and keep a streak.
+search, type an answer and have it graded rather than guessing your own score, get
+scheduled a review date, and keep a streak.
 
 **Live: [practiceloop.onrender.com](https://practiceloop.onrender.com)**
 
@@ -16,8 +17,12 @@ search, self-rate a practice attempt, get scheduled a review date, and keep a st
   generate a fresh one for a topic with no local match yet.
 - **Find it again by meaning**, not just keyword — pgvector semantic search with a real "no
   match" state instead of always returning something plausible-looking but wrong.
-- **Review one card at a time**, self-rate 1–5, and get a spaced-repetition interval based on
-  how it actually went — plus a streak counter and per-topic mastery on the dashboard.
+- **Review one card at a time.** Type your answer and an LLM grades it 1–5 against the
+  stored answer with feedback on what you missed — a self-rating is unreliable input to a
+  scheduler, since it's easy to rate yourself 5 on something you can't actually explain.
+  Falls back to self-rating with no LLM key configured, or for a question with no stored
+  answer to grade against. Either way, a spaced-repetition interval follows, plus a streak
+  counter and per-topic mastery on the dashboard.
 - **Edit, delete, and organize** your own question bank; every write is scoped to the signed-in
   user.
 - **Start from a 30+ question starter deck** on signup instead of a blank slate.
@@ -111,19 +116,21 @@ without them, discovery runs happen and get recorded but find nothing.
 
 Built: capture (manual or AI-structured from pasted text, with a deterministic marker-based
 fallback if no LLM key is configured), pgvector semantic search with a real "no match" state,
-a one-card-at-a-time review queue with spaced repetition and streaks, per-topic mastery on the
-dashboard, question editing and deletion, a 30+ question starter deck, and AI study-card
-generation for a topic with no local match. Scheduled job discovery (GitHub Actions cron,
-since the free tier has none of its own) with keyword-based fit scoring and a real application
-tracker with funnel stats. Production hardening: per-IP rate limiting, a per-user daily LLM
-budget, security headers, request size caps, a non-root Docker image, versioned migrations,
-CI, and a health-checked deploy.
+LLM-graded review (self-rating as the fallback) with spaced repetition and streaks, per-topic
+mastery on the dashboard, question editing and deletion, a 30+ question starter deck, and AI
+study-card generation for a topic with no local match. Scheduled job discovery (GitHub Actions
+cron, since the free tier has none of its own) with keyword-based fit scoring, a real
+application tracker with funnel stats, JD-vs-actual-recall skill gap analysis, one-click deck
+generation from the gaps, interview countdowns with company-specific decks and post-interview
+debriefs, and a market-trends scanner aggregated across every discovered listing. Production
+hardening: per-IP rate limiting, a per-user daily LLM budget, security headers, request size
+caps, a non-root Docker image, versioned migrations, CI, and a health-checked deploy.
 
-Deliberately not built yet: LLM-scored fit (keyword scoring is the whole thing today), the
-market-trends scanner, PDF export, an ease-factor-based scheduler (see
-[`docs/spaced-repetition.md`](docs/spaced-repetition.md) for the current algorithm's limits),
-and any multi-tenant/multi-student support. Also deliberately never built: submitting job
-applications on your behalf, or automating LinkedIn/Naukri from the server — both platforms'
+Deliberately not built yet: LLM-scored job fit (keyword scoring is the whole thing there
+today, unlike gap analysis's skill extraction), PDF export, an ease-factor-based scheduler
+(see [`docs/spaced-repetition.md`](docs/spaced-repetition.md) for the current algorithm's
+limits), and any multi-tenant/multi-student support. Also deliberately never built: submitting
+job applications on your behalf, or automating LinkedIn/Naukri from the server — both platforms'
 terms bar it, and it would mean risking your account to save you a click.
 
 ## Design notes

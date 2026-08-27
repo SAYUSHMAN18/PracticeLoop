@@ -7,13 +7,23 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.core.db import get_pool
 from app.core.deps import require_user_id
+from app.core.llm import is_configured as llm_is_configured
 from app.core.llm_budget import require_llm_budget
 from app.core.logging import get_logger
 from app.core.templates import templates
-from app.practice import extraction, service
+from app.practice import extraction, grading, service
 
 router = APIRouter(prefix="/practice")
 logger = get_logger(__name__)
+
+
+def _can_grade(card) -> bool:
+    """Honest grading needs both an LLM to grade with and something to
+    grade against -- a question saved with no answer (blank on capture,
+    or a marker-parsed paste that never had one) falls back to self-rating
+    even with an LLM configured, since there'd be nothing to compare the
+    typed answer to."""
+    return card is not None and bool(card["answer"]) and llm_is_configured()
 
 
 def _fields_from_form(
@@ -194,11 +204,12 @@ async def review_queue(
     pool=Depends(get_pool),
 ):
     due = await service.due_for_review(pool, user_id)
+    card = due[0] if due else None
     streak = await service.streak_days(pool, user_id)
     return templates.TemplateResponse(
         request,
         "practice/review.html",
-        {"card": due[0] if due else None, "remaining": len(due), "streak": streak},
+        {"card": card, "remaining": len(due), "streak": streak, "can_grade": _can_grade(card)},
     )
 
 
@@ -209,11 +220,12 @@ async def review_next_card(
     pool=Depends(get_pool),
 ):
     due = await service.due_for_review(pool, user_id)
+    card = due[0] if due else None
     streak = await service.streak_days(pool, user_id)
     return templates.TemplateResponse(
         request,
         "practice/_review_card.html",
-        {"card": due[0] if due else None, "remaining": len(due), "streak": streak},
+        {"card": card, "remaining": len(due), "streak": streak, "can_grade": _can_grade(card)},
     )
 
 
@@ -236,4 +248,49 @@ async def rate_attempt(
         request,
         "practice/_review_result.html",
         {"review_date": review_date, "days_until": days_until},
+    )
+
+
+@router.post("/review/{question_id}/grade", response_class=HTMLResponse)
+async def grade_review_answer(
+    request: Request,
+    question_id: int,
+    answer: str = Form(""),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+    _budget: None = Depends(require_llm_budget),
+):
+    question = await service.get_question(pool, user_id, question_id)
+    if question is None:
+        raise HTTPException(status_code=404)
+
+    try:
+        result = await grading.grade_answer(question["question"], question["answer"], answer)
+    except Exception as exc:
+        # A transient grading failure shouldn't break the app's single
+        # most-used flow -- fall back to the plain self-rate card for this
+        # one question rather than a 500 or a lost typed answer.
+        logger.warning("Grading failed, falling back to self-rate: %s", exc)
+        due = await service.due_for_review(pool, user_id)
+        streak = await service.streak_days(pool, user_id)
+        return templates.TemplateResponse(
+            request,
+            "practice/_review_card.html",
+            {"card": question, "remaining": len(due), "streak": streak, "can_grade": False},
+        )
+
+    review_date = await service.record_attempt(
+        pool, user_id, question_id, result["rating"], result["feedback"]
+    )
+    days_until = (review_date - date.today()).days
+    return templates.TemplateResponse(
+        request,
+        "practice/_review_graded_result.html",
+        {
+            "rating": result["rating"],
+            "feedback": result["feedback"],
+            "correct_answer": question["answer"],
+            "review_date": review_date,
+            "days_until": days_until,
+        },
     )
