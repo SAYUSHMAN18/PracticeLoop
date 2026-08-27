@@ -18,6 +18,7 @@ from app.core.middleware import MaxBodySizeMiddleware, RateLimitMiddleware, Secu
 from app.core.security import current_user_id
 from app.core.templates import STATIC_DIR, templates
 from app.dashboard.router import router as dashboard_router
+from app.documents.router import router as documents_router
 from app.jobs.router import router as jobs_router
 from app.practice.router import router as practice_router
 from app.profile.router import router as profile_router
@@ -58,7 +59,10 @@ app.add_middleware(
 app.add_middleware(
     MaxBodySizeMiddleware,
     default_max_bytes=2 * 1024 * 1024,  # 2MB covers every text-only form
-    path_overrides={"/profile": 11 * 1024 * 1024},  # resume upload's 10MB cap + overhead
+    path_overrides={
+        "/profile": 11 * 1024 * 1024,  # resume upload's 10MB cap + overhead
+        "/documents": 11 * 1024 * 1024,  # document upload's 10MB cap + overhead
+    },
 )
 app.add_middleware(SecurityHeadersMiddleware)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -68,6 +72,7 @@ app.include_router(profile_router)
 app.include_router(practice_router)
 app.include_router(dashboard_router)
 app.include_router(jobs_router)
+app.include_router(documents_router)
 
 
 @app.exception_handler(LoginRequired)

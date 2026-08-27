@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Documents - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Your documents</h1>
+<p class="muted">
+  One place for every file a job search or a degree throws at you &mdash; resumes,
+  transcripts, certificates, cover letter drafts. Tag a file <strong>Resume</strong> and it
+  becomes the resume used for job-fit scoring, skill-gap analysis, and JD tailoring, so you
+  never have to paste it in twice.
+</p>
+
+<div class="card">
+  <h2>Upload a document</h2>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <form method="post" action="/documents" enctype="multipart/form-data">
+    <div class="form-row">
+      <div>
+        <label for="f-doc-type">Type</label>
+        <select id="f-doc-type" name="doc_type">
+          {% for value, label in doc_type_labels.items() %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="f-doc-title">Title (optional)</label>
+        <input id="f-doc-title" type="text" name="title" placeholder="e.g. Resume - Backend, Fall 2026">
+      </div>
+    </div>
+    <label for="f-doc-file">File (.pdf or .txt, up to 10MB)</label>
+    <input id="f-doc-file" type="file" name="file" accept=".pdf,.txt" required>
+    <button type="submit">Upload</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Vault ({{ documents|length }})</h2>
+  {% for doc in documents %}
+    <div class="question-item">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:1rem;flex-wrap:wrap;">
+        <div>
+          <span class="tag {{ 'tag-proven' if doc.doc_type == 'resume' else '' }}">{{ doc_type_labels.get(doc.doc_type, doc.doc_type) }}</span>
+          <strong>{{ doc.title }}</strong>
+          <div class="muted" style="font-size:0.82rem;margin-top:0.2rem;">
+            {{ doc.filename }} &middot; {{ doc.size_display }} &middot;
+            uploaded {{ doc.created_at.strftime('%b %d, %Y') }}
+          </div>
+        </div>
+        <div class="inline-form" style="margin-top:0;">
+          <a class="btn secondary" href="/documents/{{ doc.document_id }}/download">Download</a>
+          <form method="post" action="/documents/{{ doc.document_id }}/delete" class="doc-delete-form" data-title="{{ doc.title }}">
+            <button type="submit" class="secondary" style="color:var(--danger);border-color:var(--danger-soft);">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <p class="muted">Nothing uploaded yet &mdash; add your resume above to get started.</p>
+  {% endfor %}
+</div>
+
+<script>
+// Confirms via data-title so nothing user-supplied is ever interpolated
+// into inline JS -- the title goes through normal HTML-attribute
+// autoescaping and is read back with .dataset at click time.
+document.querySelectorAll(".doc-delete-form").forEach(function (form) {
+  form.addEventListener("submit", function (e) {
+    if (!confirm("Delete \"" + form.dataset.title + "\"? This can't be undone.")) {
+      e.preventDefault();
+    }
+  });
+});
+</script>
+{% endblock %}

@@ -52,19 +52,20 @@
   {% if profile.resume_text %}
     <p class="muted" style="margin-top:0;">
       Resume on file &mdash; {{ profile.resume_text|length }} characters
-      {% if profile.target_role %} &middot; targeting <strong>{{ profile.target_role }}</strong>{% endif %}.
+      {% if profile.target_role %} &middot; targeting <strong>{{ profile.target_role }}</strong>{% endif %}
+      &middot; {{ document_count }} file{{ "s" if document_count != 1 }} in your vault.
     </p>
     <div class="hub-links">
-      <a href="/profile">Update resume</a>
+      <a href="/documents">Open document vault</a>
       <a href="/jobs/tailor-resume">Tailor to a JD</a>
       <a href="/jobs/gap-analysis">Check skill gaps</a>
     </div>
   {% else %}
     <p class="muted" style="margin-top:0;">
-      No resume on file yet -- add one to unlock skill-gap analysis, resume tailoring, and
-      better job-fit scoring.
+      No resume on file yet -- upload one to your vault to unlock skill-gap analysis, resume
+      tailoring, and better job-fit scoring. Transcripts and certificates live there too.
     </p>
-    <div class="hub-links"><a href="/profile">Add your resume</a></div>
+    <div class="hub-links"><a href="/documents">Add your resume</a></div>
   {% endif %}
 </div>
 

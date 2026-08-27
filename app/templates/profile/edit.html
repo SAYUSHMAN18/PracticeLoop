@@ -13,6 +13,11 @@
     {% if profile.resume_text %}
       <p class="muted" style="margin-top:0.5rem;">Current resume text on file: {{ profile.resume_text|length }} characters.</p>
     {% endif %}
+    <p class="muted" style="margin-top:0.5rem;">
+      Prefer to keep a full copy on hand (or store transcripts and certificates too)? Use the
+      <a href="/documents">document vault</a> instead -- uploading a file tagged "Resume" there
+      updates this same field automatically.
+    </p>
     {% if saved %}<p class="success">Saved.</p>{% endif %}
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     <button type="submit">Save</button>
