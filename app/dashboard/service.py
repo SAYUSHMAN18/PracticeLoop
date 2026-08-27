@@ -10,12 +10,8 @@ async def get_stats(pool: asyncpg.Pool, user_id: int) -> dict:
     total_attempts = await pool.fetchval("SELECT count(*) FROM attempts WHERE user_id = $1", user_id)
     due_today = await pool.fetchval(
         """SELECT count(*) FROM questions q
-           LEFT JOIN LATERAL (
-               SELECT next_review_at FROM attempts a
-               WHERE a.question_id = q.question_id
-               ORDER BY practiced_at DESC LIMIT 1
-           ) latest ON true
-           WHERE q.user_id = $1 AND (latest.next_review_at IS NULL OR latest.next_review_at <= $2)""",
+           LEFT JOIN card_states cs ON cs.question_id = q.question_id
+           WHERE q.user_id = $1 AND (cs.due IS NULL OR cs.due::date <= $2)""",
         user_id,
         date.today(),
     )

@@ -7,7 +7,7 @@ import asyncpg
 from app.core.embedder import embed_text_async
 from app.core.llm import generate
 from app.practice.extraction import parse_llm_json_fields
-from app.practice.spaced_repetition import next_review_date
+from app.practice.fsrs_scheduler import schedule_review
 
 _QUESTION_COLUMNS = (
     "question_id, user_id, question, answer, example, topic, difficulty, "
@@ -128,18 +128,6 @@ async def search_questions(
     return [{**dict(r), "match_pct": max(0, round((1 - r["distance"]) * 100))} for r in rows]
 
 
-async def _previous_interval_days(pool: asyncpg.Pool, user_id: int, question_id: int) -> int | None:
-    row = await pool.fetchrow(
-        """SELECT practiced_at, next_review_at FROM attempts
-           WHERE question_id = $1 AND user_id = $2 ORDER BY practiced_at DESC LIMIT 1""",
-        question_id,
-        user_id,
-    )
-    if row is None:
-        return None
-    return (row["next_review_at"] - row["practiced_at"].date()).days
-
-
 async def record_attempt(
     pool: asyncpg.Pool, user_id: int, question_id: int, rating: int, feedback: str = ""
 ) -> date:
@@ -147,8 +135,7 @@ async def record_attempt(
     if owned is None:
         raise QuestionNotFound(question_id)
 
-    previous_interval = await _previous_interval_days(pool, user_id, question_id)
-    review_date, _interval = next_review_date(rating, previous_interval)
+    review_date = await schedule_review(pool, user_id, question_id, rating)
 
     await pool.execute(
         """INSERT INTO attempts (question_id, user_id, confidence_rating, feedback, next_review_at)
@@ -165,15 +152,11 @@ async def record_attempt(
 async def due_for_review(pool: asyncpg.Pool, user_id: int, today: date | None = None) -> list[asyncpg.Record]:
     today = today or date.today()
     return await pool.fetch(
-        f"""SELECT {", ".join("q." + c for c in _QUESTION_COLUMNS.split(", "))}, latest.next_review_at
+        f"""SELECT {", ".join("q." + c for c in _QUESTION_COLUMNS.split(", "))}, cs.due AS next_review_at
             FROM questions q
-            LEFT JOIN LATERAL (
-                SELECT next_review_at FROM attempts a
-                WHERE a.question_id = q.question_id
-                ORDER BY practiced_at DESC LIMIT 1
-            ) latest ON true
-            WHERE q.user_id = $1 AND (latest.next_review_at IS NULL OR latest.next_review_at <= $2)
-            ORDER BY latest.next_review_at NULLS FIRST, q.created_at""",
+            LEFT JOIN card_states cs ON cs.question_id = q.question_id
+            WHERE q.user_id = $1 AND (cs.due IS NULL OR cs.due::date <= $2)
+            ORDER BY cs.due NULLS FIRST, q.created_at""",
         user_id,
         today,
     )
