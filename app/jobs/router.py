@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from app.core.config import settings
 from app.core.db import get_pool
-from app.core.deps import require_user_id
+from app.core.deps import inject_current_user, require_user_id
 from app.core.llm import is_configured as llm_is_configured
 from app.core.llm_budget import LLMBudgetExceeded, consume_llm_budget, require_llm_budget
 from app.core.logging import get_logger
@@ -19,7 +19,7 @@ from app.jobs import applications, gap_analysis, interview_prep, market_trends, 
 
 logger = get_logger(__name__)
 
-router = APIRouter(prefix="/jobs")
+router = APIRouter(prefix="/jobs", dependencies=[Depends(inject_current_user)])
 
 
 def _serialize_run(run) -> dict:

@@ -7,14 +7,14 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.core.db import get_pool
-from app.core.deps import require_user_id
+from app.core.deps import inject_current_user, require_user_id
 from app.core.llm import is_configured as llm_is_configured
 from app.core.llm_budget import require_llm_budget
 from app.core.logging import get_logger
 from app.core.templates import templates
 from app.practice import extraction, grading, service
 
-router = APIRouter(prefix="/practice")
+router = APIRouter(prefix="/practice", dependencies=[Depends(inject_current_user)])
 logger = get_logger(__name__)
 
 

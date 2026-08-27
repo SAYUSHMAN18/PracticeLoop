@@ -11,22 +11,73 @@
   <script src="https://unpkg.com/htmx.org@2.0.3"></script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/dashboard">PracticeLoop</a>
-    <nav>
-      <a href="/dashboard">Dashboard</a>
-      <a href="/practice">Practice</a>
-      <a href="/practice/review">Review</a>
-      <a href="/jobs">Jobs</a>
-      <a href="/documents">Documents</a>
-      <a href="/profile">Profile</a>
-      <form action="/logout" method="post" class="inline">
-        <button type="submit" class="link-button">Log out</button>
-      </form>
-    </nav>
-  </header>
-  <main class="container">
-    {% block content %}{% endblock %}
-  </main>
+  {% set cu = request.state.current_user %}
+  <div class="app-shell">
+    <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="/dashboard">PracticeLoop</a>
+
+      {% if cu %}
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" aria-hidden="true">{{ cu.name[0]|upper }}</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name">{{ cu.name }}</div>
+          <div class="sidebar-user-email">{{ cu.email }}</div>
+        </div>
+      </div>
+      {% endif %}
+
+      <nav class="sidebar-nav">
+        <a href="/dashboard" class="{{ 'active' if request.url.path == '/dashboard' }}">Dashboard</a>
+        <a href="/practice" class="{{ 'active' if request.url.path == '/practice' }}">Practice</a>
+        <a href="/practice/review" class="{{ 'active' if request.url.path.startswith('/practice/review') }}">Review</a>
+        <a href="/jobs" class="{{ 'active' if request.url.path.startswith('/jobs') }}">Jobs</a>
+        <a href="/documents" class="{{ 'active' if request.url.path == '/documents' }}">Documents</a>
+        <a href="/profile" class="{{ 'active' if request.url.path == '/profile' }}">Profile</a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <form action="/logout" method="post">
+          <button type="submit" class="link-button">Log out</button>
+        </form>
+      </div>
+    </aside>
+
+    <main class="app-main">
+      <div class="container">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Mobile sidebar drawer: hidden off-canvas by default (see the
+    // max-width: 860px rules in style.css), toggled by the hamburger
+    // button, dismissed by the backdrop or by following a nav link.
+    (function () {
+      var toggle = document.getElementById("sidebar-toggle");
+      var sidebar = document.getElementById("sidebar");
+      var backdrop = document.getElementById("sidebar-backdrop");
+      if (!toggle || !sidebar || !backdrop) return;
+
+      function setOpen(open) {
+        sidebar.classList.toggle("open", open);
+        backdrop.classList.toggle("open", open);
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      }
+
+      toggle.addEventListener("click", function () {
+        setOpen(!sidebar.classList.contains("open"));
+      });
+      backdrop.addEventListener("click", function () { setOpen(false); });
+      sidebar.querySelectorAll("a").forEach(function (a) {
+        a.addEventListener("click", function () { setOpen(false); });
+      });
+    })();
+  </script>
 </body>
 </html>

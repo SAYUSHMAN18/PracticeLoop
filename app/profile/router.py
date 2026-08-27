@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from fastapi.responses import HTMLResponse
 
 from app.core.db import get_pool
-from app.core.deps import require_user_id
+from app.core.deps import inject_current_user, require_user_id
 from app.core.templates import templates
 from app.profile import service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(inject_current_user)])
 
 MAX_RESUME_BYTES = 10 * 1024 * 1024  # 10MB
 

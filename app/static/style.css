@@ -68,23 +68,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   border-radius: 4px;
 }
 
-/* ---------- top bar ---------- */
-
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 1rem 1.75rem;
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--panel) 82%, transparent);
-  backdrop-filter: blur(14px) saturate(1.4);
-  -webkit-backdrop-filter: blur(14px) saturate(1.4);
-}
+/* ---------- brand & buttons (shared by the sidebar and the auth pages) ---------- */
 
 .brand {
   font-family: var(--font-display);
@@ -105,18 +89,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   background: var(--accent);
 }
 
-.topbar nav { display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; }
-.topbar nav a {
-  color: var(--muted);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.92rem;
-  padding: 0.45rem 0.8rem;
-  border-radius: 999px;
-  transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
-}
-.topbar nav a:hover { color: var(--text); background: var(--panel-2); transform: translateY(-1px); }
-
 .link-button {
   background: none; border: none; color: var(--muted); cursor: pointer;
   font: inherit; font-weight: 600; padding: 0.45rem 0.8rem; border-radius: 999px;
@@ -125,7 +97,137 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 .link-button:hover { color: var(--danger); background: var(--danger-soft); }
 .inline { display: inline; margin: 0; }
 
+/* ---------- app shell: left sidebar + main content ---------- */
+
+.app-shell { display: flex; align-items: stretch; min-height: 100vh; }
+
+.sidebar {
+  flex: 0 0 240px;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1.5rem 1rem;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 30;
+}
+.sidebar .brand { padding: 0 0.5rem; margin-bottom: 1.1rem; }
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.5rem;
+  margin-bottom: 1.1rem;
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+.sidebar-avatar {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+.sidebar-user-info { min-width: 0; }
+.sidebar-user-name {
+  font-weight: 700;
+  font-size: 0.86rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-user-email {
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-nav { display: flex; flex-direction: column; gap: 0.1rem; }
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  padding: 0.62rem 0.75rem;
+  border-radius: 8px;
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.92rem;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.sidebar-nav a:hover { color: var(--text); background: var(--panel-2); }
+.sidebar-nav a.active { color: var(--accent-2); background: var(--accent-soft); }
+
+.sidebar-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border); }
+.sidebar-footer .link-button { display: block; width: 100%; text-align: left; border-radius: 8px; padding: 0.62rem 0.75rem; }
+
+.sidebar-toggle {
+  display: none;
+  position: fixed;
+  top: 0.85rem;
+  left: 1rem;
+  z-index: 51;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  margin: 0;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px -6px hsl(var(--shadow-color) / 0.4);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.sidebar-toggle span { width: 18px; height: 2px; background: var(--text); border-radius: 2px; }
+
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.sidebar-backdrop.open { opacity: 1; pointer-events: auto; }
+
+.app-main { flex: 1; min-width: 0; }
+
 .container { max-width: 880px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+@media (max-width: 860px) {
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    height: 100vh;
+    transform: translateX(-100%);
+    box-shadow: 0 0 32px hsl(var(--shadow-color) / 0.35);
+    transition: transform 0.25s ease;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-toggle { display: flex; }
+  .sidebar-backdrop { display: block; }
+  .app-main { padding-top: 3.5rem; }
+}
 
 /* ---------- surfaces ---------- */
 
@@ -389,7 +491,6 @@ details[open] summary { margin-bottom: 0.25rem; }
 
 @media (max-width: 600px) {
   .container { padding: 1.5rem 1.1rem 3rem; }
-  .topbar { padding: 0.85rem 1.1rem; }
   h1 { font-size: 1.6rem; }
 }
 

@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
 from app.core.db import get_pool
-from app.core.deps import require_user_id
+from app.core.deps import inject_current_user, require_user_id
 from app.core.templates import templates
 from app.dashboard import service
 from app.documents.service import list_documents
@@ -15,7 +15,7 @@ from app.jobs.applications import funnel_stats
 from app.jobs.interview_prep import upcoming_interviews
 from app.practice.service import streak_days
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(inject_current_user)])
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
