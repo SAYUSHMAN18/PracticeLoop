@@ -4,12 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}PracticeLoop{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <main class="container">
-    <p class="brand" style="text-align:center;font-size:1.4rem;margin-top:2rem;">PracticeLoop</p>
-    {% block content %}{% endblock %}
+  <main class="container" style="display:flex;align-items:center;min-height:100vh;padding-top:1.5rem;padding-bottom:1.5rem;">
+    <div style="width:100%;">
+      <div style="display:flex;justify-content:center;margin-bottom:2rem;">
+        <a class="brand" href="/" style="font-size:1.5rem;text-decoration:none;">PracticeLoop</a>
+      </div>
+      {% block content %}{% endblock %}
+    </div>
   </main>
 </body>
 </html>
