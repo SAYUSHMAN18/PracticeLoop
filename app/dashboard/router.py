@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Request
@@ -23,16 +24,24 @@ async def dashboard(
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
 ):
-    stats = await service.get_stats(pool, user_id)
-    streak = await streak_days(pool, user_id)
-    mastery = await service.topic_mastery(pool, user_id)
+    # Seven independent reads -- none depends on another's result, so they're
+    # fired concurrently instead of one at a time. Over a real network hop to
+    # the database (as on Render, app and DB are separate services) that's
+    # the difference between one round-trip's worth of latency and seven.
+    stats, streak, mastery, interview_rows, jobs_funnel, profile, documents = await asyncio.gather(
+        service.get_stats(pool, user_id),
+        streak_days(pool, user_id),
+        service.topic_mastery(pool, user_id),
+        upcoming_interviews(pool, user_id),
+        funnel_stats(pool, user_id),
+        pool.fetchrow("SELECT target_role, resume_text FROM profiles WHERE user_id = $1", user_id),
+        list_documents(pool, user_id),
+    )
     interviews = [
         {"application": row, "days_until": (row["interview_at"] - datetime.now(timezone.utc)).days}
-        for row in await upcoming_interviews(pool, user_id)
+        for row in interview_rows
     ]
-    jobs_funnel = await funnel_stats(pool, user_id)
-    profile = await pool.fetchrow("SELECT target_role, resume_text FROM profiles WHERE user_id = $1", user_id)
-    document_count = len(await list_documents(pool, user_id))
+    document_count = len(documents)
     return templates.TemplateResponse(
         request,
         "dashboard/index.html",

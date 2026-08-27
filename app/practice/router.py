@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import date
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -203,9 +204,10 @@ async def review_queue(
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
 ):
-    due = await service.due_for_review(pool, user_id)
+    due, streak = await asyncio.gather(
+        service.due_for_review(pool, user_id), service.streak_days(pool, user_id)
+    )
     card = due[0] if due else None
-    streak = await service.streak_days(pool, user_id)
     return templates.TemplateResponse(
         request,
         "practice/review.html",
@@ -219,9 +221,10 @@ async def review_next_card(
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
 ):
-    due = await service.due_for_review(pool, user_id)
+    due, streak = await asyncio.gather(
+        service.due_for_review(pool, user_id), service.streak_days(pool, user_id)
+    )
     card = due[0] if due else None
-    streak = await service.streak_days(pool, user_id)
     return templates.TemplateResponse(
         request,
         "practice/_review_card.html",
@@ -271,8 +274,9 @@ async def grade_review_answer(
         # most-used flow -- fall back to the plain self-rate card for this
         # one question rather than a 500 or a lost typed answer.
         logger.warning("Grading failed, falling back to self-rate: %s", exc)
-        due = await service.due_for_review(pool, user_id)
-        streak = await service.streak_days(pool, user_id)
+        due, streak = await asyncio.gather(
+            service.due_for_review(pool, user_id), service.streak_days(pool, user_id)
+        )
         return templates.TemplateResponse(
             request,
             "practice/_review_card.html",

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import secrets
 from datetime import datetime
 from typing import Literal
@@ -93,10 +94,12 @@ async def applications_page(
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
 ):
-    apps = await applications.list_applications(pool, user_id)
-    stats = await applications.funnel_stats(pool, user_id)
-    follow_ups = await applications.due_follow_ups(pool, user_id)
-    stale = await applications.stale_applications(pool, user_id)
+    apps, stats, follow_ups, stale = await asyncio.gather(
+        applications.list_applications(pool, user_id),
+        applications.funnel_stats(pool, user_id),
+        applications.due_follow_ups(pool, user_id),
+        applications.stale_applications(pool, user_id),
+    )
     return templates.TemplateResponse(
         request,
         "jobs/applications.html",
