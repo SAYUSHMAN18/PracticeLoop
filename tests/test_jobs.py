@@ -32,6 +32,25 @@ def test_keyword_fit_score_scores_against_listing_vocabulary():
     assert no_match == 0
 
 
+def test_keyword_fit_score_matches_a_word_at_the_end_of_a_sentence():
+    """Regression test: the tokenizer used to leave a trailing "." attached
+    to whatever word ended a sentence, so "...led migration to Kubernetes."
+    tokenized as "kubernetes." and silently failed to match "Kubernetes"
+    (no trailing punctuation) elsewhere -- a real term never ends in ".",
+    so only trailing dots are stripped, not internal ones like "node.js"."""
+    listing = RawListing(
+        source="fake",
+        external_id="3",
+        title="Platform Engineer",
+        company="Acme",
+        location="Remote",
+        description="Experience with Kubernetes is required.",
+        url="https://example.com/job/3",
+    )
+    resume_ending_mid_sentence = "Led the team's migration to Kubernetes."
+    assert keyword_fit_score(listing, resume_ending_mid_sentence) > 0
+
+
 def test_keyword_fit_score_handles_empty_listing_text():
     empty_listing = RawListing(
         source="fake", external_id="2", title="", company="", location="", description="", url=""
