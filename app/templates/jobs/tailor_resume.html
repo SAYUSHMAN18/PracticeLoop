@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Tailor resume - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Tailor your resume to a JD</h1>
+{% include "jobs/_subnav.html" %}
+<p class="muted">
+  Paste a job description. Uses only what's actually true on your resume -- it reorders and
+  reframes your real experience for this JD, and separates what to genuinely learn from what
+  to fabricate (nothing gets fabricated).
+</p>
+
+{% if not has_resume %}
+<div class="card">
+  <p class="error" style="margin-top:0;">
+    You don't have a resume on file yet. <a href="/profile">Add one on your profile</a> first --
+    without it, there's nothing real to tailor.
+  </p>
+</div>
+{% else %}
+<div class="card">
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <form method="post" action="/jobs/tailor-resume"
+        onsubmit="const b=this.querySelector('button[type=submit]'); b.disabled=true; b.innerText='Tailoring...';">
+    <label for="f-tr-jd">Job description</label>
+    <textarea id="f-tr-jd" name="jd_text" rows="8" required>{{ jd_text }}</textarea>
+    <button type="submit">Tailor my resume</button>
+  </form>
+</div>
+{% endif %}
+
+{% if notice %}
+<div class="card">
+  <p class="muted" style="margin:0;">{{ notice }}</p>
+</div>
+{% endif %}
+
+{% if result %}
+<div class="card">
+  <h2>{{ "AI-tailored suggestions" if result.ai_used else "Keyword overlap (no AI configured)" }}</h2>
+
+  {% if result.summary %}
+    <p class="muted" style="margin-top:0;">Suggested summary</p>
+    <p>{{ result.summary }}</p>
+  {% endif %}
+
+  {% if result.bullets %}
+    <p class="muted" style="margin-top:1rem;">Rewritten bullets to lead with</p>
+    <ul style="padding-left:1.2rem;margin:0.35rem 0 0;">
+      {% for bullet in result.bullets %}
+        <li style="margin-bottom:0.4rem;">{{ bullet }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if not result.ai_used %}
+    <p class="muted" style="margin-top:0;">
+      No AI provider is configured on this instance, so here's what a plain keyword diff
+      finds -- emphasize what already overlaps, and treat the gaps as a study list, not a
+      resume-writing shortcut.
+    </p>
+  {% endif %}
+
+  <div style="margin-top:1rem;">
+    <p class="muted" style="margin-bottom:0.4rem;">Already on your resume &mdash; emphasize these</p>
+    {% for kw in result.emphasize %}<span class="tag tag-proven">{{ kw }}</span>{% else %}<span class="muted">Nothing obvious overlapped.</span>{% endfor %}
+  </div>
+
+  <div style="margin-top:1rem;">
+    <p class="muted" style="margin-bottom:0.4rem;">Not on your resume &mdash; genuinely learn or add, don't invent</p>
+    {% for kw in result.gaps %}<span class="tag tag-missing">{{ kw }}</span>{% else %}<span class="muted">No obvious gaps found.</span>{% endfor %}
+  </div>
+
+  <p class="muted" style="margin-top:1rem;">
+    Want to close a gap for real first? Run this JD through
+    <a href="/jobs/gap-analysis">skill gap analysis</a> to generate practice questions for it.
+  </p>
+</div>
+{% endif %}
+{% endblock %}

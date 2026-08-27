@@ -9,6 +9,7 @@ from app.core.db import get_pool
 from app.core.deps import require_user_id
 from app.core.templates import templates
 from app.dashboard import service
+from app.jobs.applications import funnel_stats
 from app.jobs.interview_prep import upcoming_interviews
 from app.practice.service import streak_days
 
@@ -28,8 +29,17 @@ async def dashboard(
         {"application": row, "days_until": (row["interview_at"] - datetime.now(timezone.utc)).days}
         for row in await upcoming_interviews(pool, user_id)
     ]
+    jobs_funnel = await funnel_stats(pool, user_id)
+    profile = await pool.fetchrow("SELECT target_role, resume_text FROM profiles WHERE user_id = $1", user_id)
     return templates.TemplateResponse(
         request,
         "dashboard/index.html",
-        {"stats": stats, "streak": streak, "mastery": mastery, "interviews": interviews},
+        {
+            "stats": stats,
+            "streak": streak,
+            "mastery": mastery,
+            "interviews": interviews,
+            "jobs_funnel": jobs_funnel,
+            "profile": profile,
+        },
     )

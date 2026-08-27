@@ -10,10 +10,11 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from app.core.config import settings
 from app.core.db import get_pool
 from app.core.deps import require_user_id
-from app.core.llm_budget import require_llm_budget
+from app.core.llm import is_configured as llm_is_configured
+from app.core.llm_budget import LLMBudgetExceeded, consume_llm_budget, require_llm_budget
 from app.core.logging import get_logger
 from app.core.templates import templates
-from app.jobs import applications, gap_analysis, interview_prep, market_trends, service
+from app.jobs import applications, gap_analysis, interview_prep, market_trends, resume_tailor, service
 
 logger = get_logger(__name__)
 
@@ -231,3 +232,57 @@ async def trends_page(
 ):
     trends = await market_trends.compute_skill_demand(pool)
     return templates.TemplateResponse(request, "jobs/trends.html", {"trends": trends})
+
+
+@router.get("/tailor-resume", response_class=HTMLResponse)
+async def tailor_resume_page(
+    request: Request,
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    profile = await pool.fetchrow("SELECT resume_text FROM profiles WHERE user_id = $1", user_id)
+    has_resume = bool(profile and profile["resume_text"])
+    return templates.TemplateResponse(
+        request,
+        "jobs/tailor_resume.html",
+        {"result": None, "jd_text": "", "error": None, "notice": None, "has_resume": has_resume},
+    )
+
+
+@router.post("/tailor-resume", response_class=HTMLResponse)
+async def run_tailor_resume(
+    request: Request,
+    jd_text: str = Form(...),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    profile = await pool.fetchrow("SELECT resume_text FROM profiles WHERE user_id = $1", user_id)
+    resume_text = profile["resume_text"] if profile else None
+    if not resume_text:
+        # has_resume=False is what the template actually branches on here --
+        # it shows its own "add a resume first" message in that case, so no
+        # separate error string is needed (or displayed) for this path.
+        return templates.TemplateResponse(
+            request,
+            "jobs/tailor_resume.html",
+            {"result": None, "jd_text": jd_text, "error": None, "notice": None, "has_resume": False},
+            status_code=400,
+        )
+
+    ai_available = llm_is_configured()
+    notice = None
+    if ai_available:
+        try:
+            await consume_llm_budget(pool, user_id)
+        except LLMBudgetExceeded:
+            # Same principle as everywhere else the budget can run out mid-flow:
+            # degrade to the deterministic keyword mode instead of a dead-end 429.
+            ai_available = False
+            notice = "Today's AI generation budget is used up -- showing keyword-overlap suggestions instead."
+
+    result = await resume_tailor.tailor_resume(resume_text, jd_text, ai_available=ai_available)
+    return templates.TemplateResponse(
+        request,
+        "jobs/tailor_resume.html",
+        {"result": result, "jd_text": jd_text, "error": None, "notice": notice, "has_resume": True},
+    )

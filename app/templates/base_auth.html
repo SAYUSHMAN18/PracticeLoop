@@ -10,13 +10,25 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <main class="container" style="display:flex;align-items:center;min-height:100vh;padding-top:1.5rem;padding-bottom:1.5rem;">
-    <div style="width:100%;">
-      <div style="display:flex;justify-content:center;margin-bottom:2rem;">
-        <a class="brand" href="/" style="font-size:1.5rem;text-decoration:none;">PracticeLoop</a>
+  <div class="auth-shell">
+    <aside class="auth-visual">
+      <div class="auth-visual-blobs" aria-hidden="true"></div>
+      <div class="auth-visual-content">
+        <a class="brand" href="/">PracticeLoop</a>
+        <h1 class="auth-tagline">Everything your job search needs, in one place.</h1>
+        <ul class="auth-points">
+          <li>Spaced-repetition practice with honest, AI-graded review</li>
+          <li>Tailor your resume to any job description, no fabrication</li>
+          <li>Track every application from applied to offer</li>
+          <li>See exactly which skills your resume claims but can't back up</li>
+        </ul>
       </div>
-      {% block content %}{% endblock %}
-    </div>
-  </main>
+    </aside>
+    <main class="auth-form-side">
+      <div class="auth-form-inner">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
 </body>
 </html>

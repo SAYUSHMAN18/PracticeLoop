@@ -28,6 +28,46 @@
 </div>
 {% endif %}
 
+<div class="card">
+  <h2>Your job search</h2>
+  {% if jobs_funnel.total %}
+    <div class="stat-grid">
+      <div class="stat"><div class="value">{{ jobs_funnel.total }}</div><div class="label">applications</div></div>
+      <div class="stat"><div class="value">{{ jobs_funnel.interview_rate }}%</div><div class="label">interview rate</div></div>
+      <div class="stat"><div class="value">{{ jobs_funnel.offer_rate }}%</div><div class="label">offer rate</div></div>
+    </div>
+  {% else %}
+    <p class="muted" style="margin-top:0;">No applications logged yet -- track your first one to see your funnel here.</p>
+  {% endif %}
+  <div class="hub-links">
+    <a href="/jobs">Browse discovered listings</a>
+    <a href="/jobs/applications">Application tracker</a>
+    <a href="/jobs/gap-analysis">Skill gap analysis</a>
+    <a href="/jobs/tailor-resume">Tailor resume to a JD</a>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Your documents</h2>
+  {% if profile.resume_text %}
+    <p class="muted" style="margin-top:0;">
+      Resume on file &mdash; {{ profile.resume_text|length }} characters
+      {% if profile.target_role %} &middot; targeting <strong>{{ profile.target_role }}</strong>{% endif %}.
+    </p>
+    <div class="hub-links">
+      <a href="/profile">Update resume</a>
+      <a href="/jobs/tailor-resume">Tailor to a JD</a>
+      <a href="/jobs/gap-analysis">Check skill gaps</a>
+    </div>
+  {% else %}
+    <p class="muted" style="margin-top:0;">
+      No resume on file yet -- add one to unlock skill-gap analysis, resume tailoring, and
+      better job-fit scoring.
+    </p>
+    <div class="hub-links"><a href="/profile">Add your resume</a></div>
+  {% endif %}
+</div>
+
 {% if mastery %}
 <div class="card">
   <h2>What to study next</h2>

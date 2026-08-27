@@ -40,6 +40,11 @@ scheduled a review date, and keep a streak.
 - **Turn a diagnosis into a deck** — generate a practice question for each missing or
   untested skill with one click, deduplicated against your existing bank so a similar JD
   doesn't regenerate cards you already have.
+- **Tailor your resume to that JD** — an LLM reorders and reframes your *real* resume content
+  around what the job description actually wants (a rewritten summary, reordered bullets,
+  what to emphasize), and never fabricates an employer, title, or skill that isn't already
+  there. No LLM key configured? Falls back to the raw keyword-overlap diff instead of a
+  dead end.
 - **Countdown to a tracked interview** on the dashboard, with a company-specific deck (every
   question tied to that listing's gap-analyzed skills, regardless of when it's normally due)
   and a post-interview debrief that turns what was actually asked into new practice cards —
