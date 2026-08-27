@@ -37,6 +37,9 @@ search, self-rate a practice attempt, get scheduled a review date, and keep a st
   question tied to that listing's gap-analyzed skills, regardless of when it's normally due)
   and a post-interview debrief that turns what was actually asked into new practice cards —
   the highest-signal questions in the whole bank.
+- **Market trends** aggregated across every listing discovered on the instance (not just your
+  own) — the entry point if you have no applications yet: see what's actually in demand,
+  honest about sample size, before running a gap analysis against it.
 
 ## Stack
 

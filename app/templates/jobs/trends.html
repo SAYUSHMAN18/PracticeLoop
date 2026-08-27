@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Market trends - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Market trends</h1>
+<p><a href="/jobs">Listings</a> &middot; <a href="/jobs/applications">Applications</a> &middot; <a href="/jobs/gap-analysis">Skill gap analysis</a> &middot; <a href="/jobs/trends">Market trends</a> &middot; <a href="/jobs/runs">Discovery runs</a></p>
+<p class="muted">
+  Aggregated across every listing discovered on this instance, not just your own -- this is
+  the entry point if you have no applications yet: see what's actually asked for, then run a
+  <a href="/jobs/gap-analysis">skill gap analysis</a> against it.
+</p>
+
+<div class="card">
+  {% if trends.small_sample %}
+    <p class="error">
+      Only {{ trends.total_listings }} listing{{ "s" if trends.total_listings != 1 }} discovered so
+      far -- this is a hint, not a finding. Treat it accordingly until more listings come in.
+    </p>
+  {% else %}
+    <p class="muted">Computed from {{ trends.total_listings }} discovered listings.</p>
+  {% endif %}
+
+  {% if not trends.top_skills %}
+    <p class="muted">
+      Nothing discovered yet. Set a target role on your <a href="/profile">profile</a> and
+      wait for the next scheduled discovery run.
+    </p>
+  {% endif %}
+
+  {% for skill, count in trends.top_skills %}
+    <div class="question-item">
+      <strong>{{ skill }}</strong>
+      <span class="tag">{{ count }} listing{{ "s" if count != 1 }}</span>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

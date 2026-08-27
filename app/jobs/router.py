@@ -13,7 +13,7 @@ from app.core.deps import require_user_id
 from app.core.llm_budget import require_llm_budget
 from app.core.logging import get_logger
 from app.core.templates import templates
-from app.jobs import applications, gap_analysis, interview_prep, service
+from app.jobs import applications, gap_analysis, interview_prep, market_trends, service
 
 logger = get_logger(__name__)
 
@@ -221,3 +221,13 @@ async def submit_debrief(
 
     await interview_prep.log_debrief(pool, user_id, application_id, questions_asked, notes)
     return RedirectResponse("/jobs/applications", status_code=303)
+
+
+@router.get("/trends", response_class=HTMLResponse)
+async def trends_page(
+    request: Request,
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    trends = await market_trends.compute_skill_demand(pool)
+    return templates.TemplateResponse(request, "jobs/trends.html", {"trends": trends})
