@@ -2,6 +2,28 @@
 {% block title %}Dashboard - PracticeLoop{% endblock %}
 {% block content %}
 <h1>Dashboard</h1>
+
+{% if goal_days_until is not none %}
+<div class="card">
+  <p class="muted" style="margin:0 0 0.35rem;">Your goal</p>
+  {% if goal_days_until > 0 %}
+    <p style="margin:0;"><strong>{{ goal_days_until }} day{{ "s" if goal_days_until != 1 }}</strong> until {{ goal_type_label }}.</p>
+  {% elif goal_days_until == 0 %}
+    <p style="margin:0;"><strong>Today</strong> is your target date for {{ goal_type_label }}.</p>
+  {% else %}
+    <p style="margin:0;">
+      Your target date for {{ goal_type_label }} was <strong>{{ -goal_days_until }} day{{ "s" if -goal_days_until != 1 }} ago</strong>.
+      <a href="/profile">Update it</a>?
+    </p>
+  {% endif %}
+</div>
+{% elif not has_goal_type %}
+<div class="card empty-state">
+  <h2>No goal set yet</h2>
+  <p class="muted">Give your practice a deadline &mdash; <a href="/profile">set a learning goal</a> and this becomes a countdown instead of an empty card.</p>
+</div>
+{% endif %}
+
 <div class="card">
   <div class="stat-grid">
     <div class="stat"><div class="value">{{ streak }}</div><div class="label">day streak</div></div>

@@ -8,8 +8,42 @@
     <input type="text" name="target_role" value="{{ profile.target_role }}" placeholder="e.g. Backend Engineer">
     <label>Target companies</label>
     <input type="text" name="target_companies" value="{{ profile.target_companies }}" placeholder="e.g. Stripe, Google">
-    <label>Resume (.pdf or .txt) &mdash; optional, replaces the stored text</label>
-    <input type="file" name="resume" accept=".pdf,.txt">
+
+    <h2 style="margin-top:1.5rem;border-top:1px solid var(--border);padding-top:1rem;">Learning goal</h2>
+    <p class="muted" style="margin-top:0;">
+      Set a target and the dashboard counts down to it -- a study plan with no deadline is just a
+      to-do list.
+    </p>
+    <div class="form-row">
+      <div>
+        <label for="f-goal-type">What are you working toward?</label>
+        <select id="f-goal-type" name="goal_type">
+          {% for value, label in goal_type_labels.items() %}
+            <option value="{{ value }}" {{ "selected" if profile.goal_type == value }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="f-target-date">Target date (optional)</label>
+        <input id="f-target-date" type="date" name="target_date" value="{{ profile.target_date }}">
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label for="f-time-budget">Daily study time budget, in minutes (optional)</label>
+        <input id="f-time-budget" type="number" name="daily_time_budget_minutes" min="0" step="5"
+               value="{{ profile.daily_time_budget_minutes if profile.daily_time_budget_minutes is not none else '' }}"
+               placeholder="e.g. 30">
+      </div>
+      <div>
+        <label for="f-timezone">Timezone (optional)</label>
+        <input id="f-timezone" type="text" name="timezone" value="{{ profile.timezone }}" placeholder="e.g. Asia/Kolkata">
+      </div>
+    </div>
+
+    <h2 style="margin-top:1.5rem;border-top:1px solid var(--border);padding-top:1rem;">Resume</h2>
+    <label for="f-resume">Resume (.pdf or .txt) &mdash; optional, replaces the stored text</label>
+    <input id="f-resume" type="file" name="resume" accept=".pdf,.txt">
     {% if profile.resume_text %}
       <p class="muted" style="margin-top:0.5rem;">Current resume text on file: {{ profile.resume_text|length }} characters.</p>
     {% endif %}

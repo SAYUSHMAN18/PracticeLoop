@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
@@ -14,6 +14,7 @@ from app.documents.service import list_documents
 from app.jobs.applications import funnel_stats
 from app.jobs.interview_prep import upcoming_interviews
 from app.practice.service import streak_days
+from app.profile.service import GOAL_TYPE_LABELS
 
 router = APIRouter(dependencies=[Depends(inject_current_user)])
 
@@ -34,7 +35,10 @@ async def dashboard(
         service.topic_mastery(pool, user_id),
         upcoming_interviews(pool, user_id),
         funnel_stats(pool, user_id),
-        pool.fetchrow("SELECT target_role, resume_text FROM profiles WHERE user_id = $1", user_id),
+        pool.fetchrow(
+            "SELECT target_role, resume_text, goal_type, target_date FROM profiles WHERE user_id = $1",
+            user_id,
+        ),
         list_documents(pool, user_id),
     )
     interviews = [
@@ -42,6 +46,12 @@ async def dashboard(
         for row in interview_rows
     ]
     document_count = len(documents)
+
+    goal_days_until = None
+    if profile["target_date"] is not None:
+        goal_days_until = (profile["target_date"] - date.today()).days
+    goal_type_label = GOAL_TYPE_LABELS.get(profile["goal_type"], "").lower() or "your goal"
+
     return templates.TemplateResponse(
         request,
         "dashboard/index.html",
@@ -53,5 +63,8 @@ async def dashboard(
             "jobs_funnel": jobs_funnel,
             "profile": profile,
             "document_count": document_count,
+            "goal_days_until": goal_days_until,
+            "goal_type_label": goal_type_label,
+            "has_goal_type": bool(profile["goal_type"]),
         },
     )

@@ -102,7 +102,15 @@ async def upload_document(
     if doc_type == "resume" and extracted_text:
         profile = await profile_service.get_profile(pool, user_id)
         await profile_service.update_profile(
-            pool, user_id, profile["target_role"], profile["target_companies"], extracted_text
+            pool,
+            user_id,
+            profile["target_role"],
+            profile["target_companies"],
+            extracted_text,
+            goal_type=profile["goal_type"],
+            target_date=profile["target_date"],
+            daily_time_budget_minutes=profile["daily_time_budget_minutes"],
+            timezone=profile["timezone"],
         )
 
     return await _render_index(request, pool, user_id, error=None)
