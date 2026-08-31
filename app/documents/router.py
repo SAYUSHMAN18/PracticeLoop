@@ -7,8 +7,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.core.db import get_pool
 from app.core.deps import inject_current_user, require_user_id
+from app.core.llm import is_configured as llm_is_configured
+from app.core.llm_budget import require_llm_budget
 from app.core.templates import templates
 from app.documents import service
+from app.documents.flashcards import generate_flashcards_from_text
 from app.profile import service as profile_service
 
 router = APIRouter(dependencies=[Depends(inject_current_user)])
@@ -142,3 +145,38 @@ async def delete_document(document_id: int, user_id: int = Depends(require_user_
     except service.DocumentNotFound as exc:
         raise HTTPException(status_code=404) from exc
     return RedirectResponse("/documents", status_code=303)
+
+
+@router.post("/documents/{document_id}/generate-flashcards")
+async def generate_flashcards(
+    request: Request,
+    document_id: int,
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+    _budget: None = Depends(require_llm_budget),
+):
+    """Phase 4.4: turns a document already sitting in the vault into real
+    practice cards -- closes the loop between "I uploaded my notes" and
+    "I can actually study them," instead of a vault that's just storage."""
+    try:
+        document = await service.get_document_for_flashcards(pool, user_id, document_id)
+    except service.DocumentNotFound as exc:
+        raise HTTPException(status_code=404) from exc
+
+    if not document["extracted_text"].strip():
+        return await _render_index(
+            request,
+            pool,
+            user_id,
+            error=f'"{document["title"]}" has no readable text to generate flashcards from.',
+            status_code=400,
+        )
+
+    await generate_flashcards_from_text(
+        pool,
+        user_id,
+        document["extracted_text"],
+        document["title"],
+        ai_available=llm_is_configured(),
+    )
+    return RedirectResponse("/practice", status_code=303)

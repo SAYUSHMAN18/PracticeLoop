@@ -37,9 +37,11 @@ async def create_document(
 
 
 async def list_documents(pool: asyncpg.Pool, user_id: int) -> list[asyncpg.Record]:
-    """Metadata only -- never pulls content_bytes for a list view."""
+    """Metadata only -- never pulls content_bytes (or the full
+    extracted_text, just whether it's non-empty) for a list view."""
     return await pool.fetch(
-        """SELECT document_id, doc_type, title, filename, mime_type, size_bytes, created_at
+        """SELECT document_id, doc_type, title, filename, mime_type, size_bytes, created_at,
+                  (extracted_text != '') AS has_extracted_text
            FROM documents WHERE user_id = $1 ORDER BY created_at DESC""",
         user_id,
     )
@@ -49,6 +51,22 @@ async def get_document_for_download(pool: asyncpg.Pool, user_id: int, document_i
     """Ownership-checked fetch including the actual file bytes."""
     row = await pool.fetchrow(
         """SELECT document_id, filename, mime_type, content_bytes
+           FROM documents WHERE user_id = $1 AND document_id = $2""",
+        user_id,
+        document_id,
+    )
+    if row is None:
+        raise DocumentNotFound(document_id)
+    return row
+
+
+async def get_document_for_flashcards(pool: asyncpg.Pool, user_id: int, document_id: int) -> asyncpg.Record:
+    """Ownership-checked fetch of just what generating flashcards needs --
+    title and extracted text, never the raw file bytes (no reason to pull
+    a multi-MB PDF blob into memory just to read the text already
+    extracted from it at upload time)."""
+    row = await pool.fetchrow(
+        """SELECT document_id, title, extracted_text
            FROM documents WHERE user_id = $1 AND document_id = $2""",
         user_id,
         document_id,

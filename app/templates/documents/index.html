@@ -47,6 +47,11 @@
           </div>
         </div>
         <div class="inline-form" style="margin-top:0;">
+          {% if doc.has_extracted_text %}
+            <form method="post" action="/documents/{{ doc.document_id }}/generate-flashcards">
+              <button type="submit" class="secondary">Generate flashcards</button>
+            </form>
+          {% endif %}
           <a class="btn secondary" href="/documents/{{ doc.document_id }}/download">Download</a>
           <form method="post" action="/documents/{{ doc.document_id }}/delete" class="doc-delete-form" data-title="{{ doc.title }}">
             <button type="submit" class="secondary" style="color:var(--danger);border-color:var(--danger-soft);">Delete</button>
