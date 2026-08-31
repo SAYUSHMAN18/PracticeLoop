@@ -241,6 +241,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   justify-content: center;
   padding: 12vh 1rem 2rem;
 }
+.command-palette-backdrop[hidden] {
+  display: none !important;
+}
 .command-palette {
   width: 100%;
   max-width: 560px;
