@@ -87,3 +87,23 @@ async def test_dashboard_prompts_to_set_a_goal_when_none_is_set(client):
     await signup(client, "goal-dashboard-none@example.com")
     dashboard = await client.get("/dashboard")
     assert "No goal set yet" in dashboard.text
+
+
+async def test_dashboard_shows_goal_type_without_a_countdown_when_no_date_is_set(client):
+    """Regression test: a goal_type saved with no target_date (set once,
+    then the date cleared later, or just never filled in) used to match
+    neither dashboard branch -- goal_days_until was None (no date) and
+    has_goal_type was True, so the card silently rendered nothing at all.
+    Found by manually walking through every goal-state combination live,
+    not by the original tests, which only covered both-set and
+    neither-set."""
+    await signup(client, "goal-type-no-date@example.com")
+    await client.post(
+        "/profile",
+        data={"target_role": "", "target_companies": "", "goal_type": "build_project"},
+    )
+
+    dashboard = await client.get("/dashboard")
+    assert "Working on build a project" in dashboard.text
+    assert "no target date set yet" in dashboard.text
+    assert "No goal set yet" not in dashboard.text

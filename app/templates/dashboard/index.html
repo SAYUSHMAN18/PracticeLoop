@@ -17,7 +17,15 @@
     </p>
   {% endif %}
 </div>
-{% elif not has_goal_type %}
+{% elif has_goal_type %}
+<div class="card">
+  <p class="muted" style="margin:0 0 0.35rem;">Your goal</p>
+  <p style="margin:0;">
+    Working on {{ goal_type_label }} &mdash; no target date set yet.
+    <a href="/profile">Add one</a> to turn this into a countdown.
+  </p>
+</div>
+{% else %}
 <div class="card empty-state">
   <h2>No goal set yet</h2>
   <p class="muted">Give your practice a deadline &mdash; <a href="/profile">set a learning goal</a> and this becomes a countdown instead of an empty card.</p>
