@@ -9,6 +9,7 @@ from app.core.logging import get_logger
 from app.core.security import InvalidPassword, log_in, log_out
 from app.core.templates import templates
 from app.practice.service import seed_starter_deck
+from app.profile.service import needs_onboarding
 
 logger = get_logger(__name__)
 
@@ -53,7 +54,11 @@ async def signup(
             logger.exception("Starter deck seeding failed for new user_id=%s", user_id)
 
     log_in(request, user_id)
-    return RedirectResponse("/dashboard", status_code=303)
+    # A brand-new profile row is always onboarding_completed = false, but
+    # asking anyway (rather than assuming) is what makes this correct even
+    # if that default ever changes.
+    destination = "/welcome" if await needs_onboarding(pool, user_id) else "/dashboard"
+    return RedirectResponse(destination, status_code=303)
 
 
 @router.get("/login", response_class=HTMLResponse)
@@ -79,7 +84,10 @@ async def login(
         )
 
     log_in(request, user_id)
-    return RedirectResponse("/dashboard", status_code=303)
+    # Also catches accounts that existed before onboarding did -- they get
+    # the same one-time prompt on their next login, not just new signups.
+    destination = "/welcome" if await needs_onboarding(pool, user_id) else "/dashboard"
+    return RedirectResponse(destination, status_code=303)
 
 
 @router.post("/logout")

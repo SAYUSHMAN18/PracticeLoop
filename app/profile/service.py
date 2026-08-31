@@ -25,10 +25,24 @@ GOAL_TYPE_LABELS = {
 async def get_profile(pool: asyncpg.Pool, user_id: int) -> asyncpg.Record:
     return await pool.fetchrow(
         """SELECT user_id, target_role, target_companies, resume_text,
-                  goal_type, target_date, daily_time_budget_minutes, timezone
+                  goal_type, target_date, daily_time_budget_minutes, timezone,
+                  onboarding_completed
            FROM profiles WHERE user_id = $1""",
         user_id,
     )
+
+
+async def needs_onboarding(pool: asyncpg.Pool, user_id: int) -> bool:
+    """True for anyone -- brand new or pre-existing -- who's never seen the
+    one-time goal-setting welcome screen. Set-once via mark_onboarded, not
+    re-derived from whether goal fields are empty, so an explicit "skip"
+    actually sticks instead of re-prompting on every login."""
+    completed = await pool.fetchval("SELECT onboarding_completed FROM profiles WHERE user_id = $1", user_id)
+    return not completed
+
+
+async def mark_onboarded(pool: asyncpg.Pool, user_id: int) -> None:
+    await pool.execute("UPDATE profiles SET onboarding_completed = true WHERE user_id = $1", user_id)
 
 
 async def update_profile(

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Welcome - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Welcome to PracticeLoop</h1>
+<p class="muted">
+  One quick question before you start: what are you working toward? This just personalizes
+  your dashboard with a countdown -- you can change or clear it anytime from your
+  <a href="/profile">profile</a>, and skipping costs you nothing.
+</p>
+
+<div class="card">
+  <form method="post" action="/welcome">
+    <label for="f-w-goal-type">What are you working toward?</label>
+    <select id="f-w-goal-type" name="goal_type">
+      {% for value, label in goal_type_labels.items() %}
+        <option value="{{ value }}" {{ "selected" if profile.goal_type == value }}>{{ label }}</option>
+      {% endfor %}
+    </select>
+
+    <div class="form-row">
+      <div>
+        <label for="f-w-target-role">Target role (optional)</label>
+        <input id="f-w-target-role" type="text" name="target_role" value="{{ profile.target_role }}" placeholder="e.g. Backend Engineer">
+      </div>
+      <div>
+        <label for="f-w-target-date">Target date (optional)</label>
+        <input id="f-w-target-date" type="date" name="target_date" value="{{ profile.target_date }}">
+      </div>
+    </div>
+
+    <label for="f-w-time-budget">Daily study time budget, in minutes (optional)</label>
+    <input id="f-w-time-budget" type="number" name="daily_time_budget_minutes" min="0" step="5"
+           value="{{ profile.daily_time_budget_minutes if profile.daily_time_budget_minutes is not none else '' }}"
+           placeholder="e.g. 30">
+
+    <button type="submit">Get started</button>
+  </form>
+  <form method="post" action="/welcome/skip" style="margin-top:0.5rem;">
+    <button type="submit" class="secondary">Skip for now</button>
+  </form>
+</div>
+{% endblock %}
