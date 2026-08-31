@@ -40,6 +40,12 @@
         <input id="f-timezone" type="text" name="timezone" value="{{ profile.timezone }}" placeholder="e.g. Asia/Kolkata">
       </div>
     </div>
+    <label for="f-proficiency">Where are you starting from?</label>
+    <select id="f-proficiency" name="proficiency_level">
+      {% for value, label in proficiency_labels.items() %}
+        <option value="{{ value }}" {{ "selected" if profile.proficiency_level == value }}>{{ label }}</option>
+      {% endfor %}
+    </select>
 
     <h2 style="margin-top:1.5rem;border-top:1px solid var(--border);padding-top:1rem;">Resume</h2>
     <label for="f-resume">Resume (.pdf or .txt) &mdash; optional, replaces the stored text</label>

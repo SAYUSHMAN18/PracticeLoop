@@ -21,12 +21,22 @@ GOAL_TYPE_LABELS = {
     "maintain_knowledge": "Maintain long-term knowledge",
 }
 
+# Phase 2.1 step 6 -- a self-reported starting point, not the full adaptive
+# diagnostic (Phase 5.2, a real assessment feature, not a form field).
+PROFICIENCY_LABELS = {
+    "": "Not set",
+    "beginner": "Just getting started",
+    "some_experience": "Some experience",
+    "intermediate": "Comfortable with the basics",
+    "advanced": "Advanced -- refining and filling gaps",
+}
+
 
 async def get_profile(pool: asyncpg.Pool, user_id: int) -> asyncpg.Record:
     return await pool.fetchrow(
         """SELECT user_id, target_role, target_companies, resume_text,
                   goal_type, target_date, daily_time_budget_minutes, timezone,
-                  onboarding_completed
+                  onboarding_completed, proficiency_level
            FROM profiles WHERE user_id = $1""",
         user_id,
     )
@@ -55,16 +65,18 @@ async def update_profile(
     target_date: date | None = None,
     daily_time_budget_minutes: int | None = None,
     timezone: str = "",
+    proficiency_level: str = "",
 ) -> None:
     # resume_text keeps its existing None-means-"don't touch the stored
-    # text" semantics (the file upload is optional on every save) -- the
-    # newer goal fields are simple always-submitted form values instead,
-    # so they don't need that same two-branch treatment.
+    # text" semantics (the file upload is optional on every save) -- every
+    # other field is a simple always-submitted form value instead, so it
+    # doesn't need that same two-branch treatment.
     if resume_text is None:
         await pool.execute(
             """UPDATE profiles SET
                    target_role = $2, target_companies = $3,
                    goal_type = $4, target_date = $5, daily_time_budget_minutes = $6, timezone = $7,
+                   proficiency_level = $8,
                    updated_at = now()
                WHERE user_id = $1""",
             user_id,
@@ -74,12 +86,14 @@ async def update_profile(
             target_date,
             daily_time_budget_minutes,
             timezone,
+            proficiency_level,
         )
     else:
         await pool.execute(
             """UPDATE profiles SET
                    target_role = $2, target_companies = $3, resume_text = $4,
                    goal_type = $5, target_date = $6, daily_time_budget_minutes = $7, timezone = $8,
+                   proficiency_level = $9,
                    updated_at = now()
                WHERE user_id = $1""",
             user_id,
@@ -90,6 +104,7 @@ async def update_profile(
             target_date,
             daily_time_budget_minutes,
             timezone,
+            proficiency_level,
         )
 
 

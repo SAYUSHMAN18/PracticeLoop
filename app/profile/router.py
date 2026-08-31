@@ -14,10 +14,15 @@ router = APIRouter(dependencies=[Depends(inject_current_user)])
 
 MAX_RESUME_BYTES = 10 * 1024 * 1024  # 10MB
 GOAL_TYPE_LABELS = service.GOAL_TYPE_LABELS
+PROFICIENCY_LABELS = service.PROFICIENCY_LABELS
 
 
 def _parse_goal_type(goal_type: str) -> str:
     return goal_type if goal_type in GOAL_TYPE_LABELS else ""
+
+
+def _parse_proficiency(proficiency_level: str) -> str:
+    return proficiency_level if proficiency_level in PROFICIENCY_LABELS else ""
 
 
 def _parse_target_date(target_date: str) -> date | None:
@@ -48,7 +53,13 @@ async def profile_page(
     return templates.TemplateResponse(
         request,
         "profile/edit.html",
-        {"profile": profile, "saved": False, "error": None, "goal_type_labels": GOAL_TYPE_LABELS},
+        {
+            "profile": profile,
+            "saved": False,
+            "error": None,
+            "goal_type_labels": GOAL_TYPE_LABELS,
+            "proficiency_labels": PROFICIENCY_LABELS,
+        },
     )
 
 
@@ -61,6 +72,7 @@ async def save_profile(
     target_date: str = Form(""),
     daily_time_budget_minutes: str = Form(""),
     timezone: str = Form(""),
+    proficiency_level: str = Form(""),
     resume: UploadFile | None = File(None),
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
@@ -84,6 +96,7 @@ async def save_profile(
                     "saved": False,
                     "error": "Couldn't read that file -- is it a valid PDF or text file?",
                     "goal_type_labels": GOAL_TYPE_LABELS,
+                    "proficiency_labels": PROFICIENCY_LABELS,
                 },
                 status_code=400,
             )
@@ -98,13 +111,20 @@ async def save_profile(
         target_date=_parse_target_date(target_date),
         daily_time_budget_minutes=_parse_time_budget(daily_time_budget_minutes),
         timezone=timezone,
+        proficiency_level=_parse_proficiency(proficiency_level),
     )
 
     profile = await service.get_profile(pool, user_id)
     return templates.TemplateResponse(
         request,
         "profile/edit.html",
-        {"profile": profile, "saved": True, "error": None, "goal_type_labels": GOAL_TYPE_LABELS},
+        {
+            "profile": profile,
+            "saved": True,
+            "error": None,
+            "goal_type_labels": GOAL_TYPE_LABELS,
+            "proficiency_labels": PROFICIENCY_LABELS,
+        },
     )
 
 
@@ -123,7 +143,9 @@ async def welcome_page(
     in under three minutes" completion criteria, not toward it."""
     profile = await service.get_profile(pool, user_id)
     return templates.TemplateResponse(
-        request, "profile/welcome.html", {"profile": profile, "goal_type_labels": GOAL_TYPE_LABELS}
+        request,
+        "profile/welcome.html",
+        {"profile": profile, "goal_type_labels": GOAL_TYPE_LABELS, "proficiency_labels": PROFICIENCY_LABELS},
     )
 
 
@@ -133,6 +155,7 @@ async def save_welcome(
     goal_type: str = Form(""),
     target_date: str = Form(""),
     daily_time_budget_minutes: str = Form(""),
+    proficiency_level: str = Form(""),
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
 ):
@@ -146,6 +169,7 @@ async def save_welcome(
         target_date=_parse_target_date(target_date),
         daily_time_budget_minutes=_parse_time_budget(daily_time_budget_minutes),
         timezone=profile["timezone"],
+        proficiency_level=_parse_proficiency(proficiency_level),
     )
     await service.mark_onboarded(pool, user_id)
     return RedirectResponse("/dashboard", status_code=303)

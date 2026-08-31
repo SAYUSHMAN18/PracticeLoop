@@ -111,6 +111,7 @@ async def upload_document(
             target_date=profile["target_date"],
             daily_time_budget_minutes=profile["daily_time_budget_minutes"],
             timezone=profile["timezone"],
+            proficiency_level=profile["proficiency_level"],
         )
 
     return await _render_index(request, pool, user_id, error=None)

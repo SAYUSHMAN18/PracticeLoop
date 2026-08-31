@@ -33,6 +33,13 @@
            value="{{ profile.daily_time_budget_minutes if profile.daily_time_budget_minutes is not none else '' }}"
            placeholder="e.g. 30">
 
+    <label for="f-w-proficiency">Where are you starting from? (optional)</label>
+    <select id="f-w-proficiency" name="proficiency_level">
+      {% for value, label in proficiency_labels.items() %}
+        <option value="{{ value }}" {{ "selected" if profile.proficiency_level == value }}>{{ label }}</option>
+      {% endfor %}
+    </select>
+
     <button type="submit">Get started</button>
   </form>
   <form method="post" action="/welcome/skip" style="margin-top:0.5rem;">
