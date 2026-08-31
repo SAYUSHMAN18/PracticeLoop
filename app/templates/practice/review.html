@@ -2,7 +2,10 @@
 {% block title %}Review - PracticeLoop{% endblock %}
 {% block content %}
 <h1>Review queue</h1>
-<p class="muted">Current streak: <strong>{{ streak }}</strong> day{{ "s" if streak != 1 }}</p>
+<p class="muted">
+  Current streak: <strong>{{ streak }}</strong> day{{ "s" if streak != 1 }}
+  &middot; <a href="/practice/history">Study history</a>
+</p>
 
 <div id="review-card" aria-live="polite" aria-atomic="true">
   {% include "practice/_review_card.html" %}

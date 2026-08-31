@@ -264,6 +264,29 @@ async def start_plan(
     return RedirectResponse("/practice/review", status_code=303)
 
 
+@router.get("/history", response_class=HTMLResponse)
+async def study_history(
+    request: Request,
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    """Phase 3.3, narrowed to a plain activity log -- see
+    service.study_history for why the fuller calendar/reminders vision
+    isn't built here."""
+    attempts = await service.study_history(pool, user_id)
+
+    days: list[dict] = []
+    by_date: dict = {}
+    for a in attempts:
+        d = a["practiced_at"].date()
+        if d not in by_date:
+            by_date[d] = {"date": d, "attempts": []}
+            days.append(by_date[d])
+        by_date[d]["attempts"].append(a)
+
+    return templates.TemplateResponse(request, "practice/history.html", {"days": days})
+
+
 @router.get("/review", response_class=HTMLResponse)
 async def review_queue(
     request: Request,

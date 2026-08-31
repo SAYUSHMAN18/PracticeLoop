@@ -231,6 +231,25 @@ async def build_daily_plan(pool: asyncpg.Pool, user_id: int) -> list[dict]:
     return plan
 
 
+async def study_history(pool: asyncpg.Pool, user_id: int, limit: int = 200) -> list[asyncpg.Record]:
+    """Phase 3.3, narrowed to what this app can support without the
+    notification/calendar infrastructure (Phase 13) the plan's fuller
+    calendar view depends on: a plain reverse-chronological log of real
+    review activity, grouped by day in the template. Every attempt is
+    already recorded in the attempts table -- this is a read, not new
+    data collection."""
+    return await pool.fetch(
+        """SELECT a.attempt_id, a.practiced_at, a.confidence_rating, a.feedback,
+                  q.question, q.topic, q.question_id
+           FROM attempts a JOIN questions q ON q.question_id = a.question_id
+           WHERE a.user_id = $1
+           ORDER BY a.practiced_at DESC
+           LIMIT $2""",
+        user_id,
+        limit,
+    )
+
+
 async def get_questions_by_ids(
     pool: asyncpg.Pool, user_id: int, question_ids: list[int]
 ) -> list[asyncpg.Record]:

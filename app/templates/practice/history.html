@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Study history - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Study history</h1>
+<p class="muted">Every review you've actually done, most recent first &mdash; the last 200 attempts.</p>
+
+{% if not days %}
+<div class="card empty-state">
+  <h2>Nothing reviewed yet</h2>
+  <p class="muted">Once you start reviewing, each session shows up here.</p>
+</div>
+{% else %}
+  {% for day in days %}
+  <div class="card">
+    <h2>{{ day.date.strftime('%A, %b %d, %Y') }}</h2>
+    <p class="muted" style="margin-top:-0.5rem;">
+      {{ day.attempts|length }} review{{ 's' if day.attempts|length != 1 }}
+    </p>
+    {% for a in day.attempts %}
+      <div class="question-item">
+        {% if a.topic %}<span class="tag">{{ a.topic }}</span>{% endif %}
+        <span class="tag {{ 'tag-proven' if a.confidence_rating >= 4 else 'tag-missing' if a.confidence_rating <= 2 else 'tag-untested' }}">{{ a.confidence_rating }}/5</span>
+        <div style="margin-top:0.3rem;">{{ a.question }}</div>
+        {% if a.feedback %}<div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">{{ a.feedback }}</div>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}
