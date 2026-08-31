@@ -233,22 +233,26 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 12vh;
+  padding: 12vh 1rem 2rem;
 }
 .command-palette {
-  width: min(560px, 92vw);
+  width: 100%;
+  max-width: 560px;
   max-height: 60vh;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 24px 60px -20px hsl(var(--shadow-color) / 0.5);
+  box-shadow: 0 24px 60px -20px hsl(var(--shadow-color) / 0.65);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
 }
 .command-palette input {
   border: none;
