@@ -13,7 +13,7 @@
     (function () {
       try {
         var saved = localStorage.getItem("pl-theme");
-        if (saved === "light" || saved === "dark") {
+        if (saved === "light" || saved === "dark" || saved === "contrast") {
           document.documentElement.setAttribute("data-theme", saved);
         }
       } catch (e) {}
@@ -98,27 +98,28 @@
       });
     })();
 
-    // Three-way theme cycle: system -> light -> dark -> system. "System"
-    // means no saved preference at all, so the prefers-color-scheme media
-    // query in style.css keeps deciding -- this only ever writes an
+    // Four-way theme cycle: system -> light -> dark -> contrast -> system.
+    // "System" means no saved preference at all, so the prefers-color-scheme
+    // media query in style.css keeps deciding -- this only ever writes an
     // explicit override when the visitor picks one.
     (function () {
       var btn = document.getElementById("theme-toggle");
       var label = document.getElementById("theme-toggle-label");
       if (!btn || !label) return;
-      var order = ["system", "light", "dark"];
+      var order = ["system", "light", "dark", "contrast"];
+      var labels = { system: "System", light: "Light", dark: "Dark", contrast: "High contrast" };
 
       function current() {
         try {
           var saved = localStorage.getItem("pl-theme");
-          return saved === "light" || saved === "dark" ? saved : "system";
+          return order.indexOf(saved) > 0 ? saved : "system";
         } catch (e) {
           return "system";
         }
       }
 
       function render(mode) {
-        label.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+        label.textContent = labels[mode];
       }
 
       function apply(mode) {

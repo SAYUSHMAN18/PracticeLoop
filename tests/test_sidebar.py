@@ -51,3 +51,27 @@ async def test_review_card_container_is_an_aria_live_region(client):
     await signup(client, "sidebar-arialive@example.com")
     response = await client.get("/practice/review")
     assert '<div id="review-card" aria-live="polite" aria-atomic="true">' in response.text
+
+
+async def test_theme_toggle_cycles_through_high_contrast(client):
+    """The toggle script's cycle order must include "contrast", not just
+    system/light/dark -- a regression here would silently drop the fourth
+    theme from the UI while leaving the CSS for it dead code."""
+    await signup(client, "sidebar-contrast@example.com")
+    response = await client.get("/dashboard")
+    assert '["system", "light", "dark", "contrast"]' in response.text
+    assert '"High contrast"' in response.text
+
+
+async def test_stylesheet_defines_a_wcag_verified_high_contrast_theme():
+    """Every pair here was checked against the WCAG contrast formula
+    (text-on-bg 21:1, accent-on-white/accent-text-on-accent 7.3:1+) -- this
+    just guards that those exact, verified values stay in place rather than
+    silently drifting to something unchecked."""
+    from app.core.templates import STATIC_DIR
+
+    css = (STATIC_DIR / "style.css").read_text(encoding="utf-8")
+    assert ':root[data-theme="contrast"]' in css
+    assert "--bg: #ffffff;" in css
+    assert "--text: #000000;" in css
+    assert "--border: #000000;" in css

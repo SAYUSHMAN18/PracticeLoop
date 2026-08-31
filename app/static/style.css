@@ -73,6 +73,42 @@
   --shadow-color: 24deg 60% 4%;
 }
 
+/* Every pair below is WCAG-verified, not eyeballed: text-on-bg 21:1,
+   muted-on-bg 11.4:1, accent-text-on-accent (buttons) 7.3:1, accent-on-bg
+   (links/tag text) 7.3:1, both soft-tag pairs 7-8.4:1 -- all clear AAA's
+   7:1 normal-text threshold, not just AA's 4.5:1. Borders are pure black
+   against white (21:1) since this mode's whole point is maximum
+   separation, not the softer low-contrast borders the other two themes
+   use deliberately. Light-only for now; a dark high-contrast variant is
+   a reasonable follow-up if anyone actually needs it, not a default. */
+:root[data-theme="contrast"] {
+  --bg: #ffffff;
+  --bg-2: #f2f2f2;
+  --panel: #ffffff;
+  --panel-2: #ececec;
+  --border: #000000;
+  --text: #000000;
+  --muted: #3a3a3a;
+  --accent: #a3271a;
+  --accent-2: #7a1d12;
+  --accent-soft: #ffe1d4;
+  --accent-text: #ffffff;
+  --link: #0b3d2e;
+  --danger: #8a1f16;
+  --danger-soft: #ffd9d3;
+  --good: #234d19;
+  --good-soft: #deeed4;
+  --input-bg: #ffffff;
+  --shadow-color: 0deg 0% 0%;
+}
+:root[data-theme="contrast"] .card,
+:root[data-theme="contrast"] input,
+:root[data-theme="contrast"] textarea,
+:root[data-theme="contrast"] select {
+  border-width: 2px; /* the thin 1-1.5px borders elsewhere read as too faint at this contrast level */
+}
+:root[data-theme="contrast"] .card { box-shadow: none; } /* soft shadows read as visual noise here, not depth */
+
 * { box-sizing: border-box; }
 
 ::selection { background: var(--accent); color: var(--accent-text); }

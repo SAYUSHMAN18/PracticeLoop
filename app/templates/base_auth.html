@@ -10,7 +10,7 @@
     (function () {
       try {
         var saved = localStorage.getItem("pl-theme");
-        if (saved === "light" || saved === "dark") {
+        if (saved === "light" || saved === "dark" || saved === "contrast") {
           document.documentElement.setAttribute("data-theme", saved);
         }
       } catch (e) {}
