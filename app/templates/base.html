@@ -37,6 +37,11 @@
     <aside class="sidebar" id="sidebar">
       <a class="brand" href="/dashboard">PracticeLoop</a>
 
+      <button type="button" class="command-palette-trigger" id="command-palette-trigger" aria-label="Open command palette">
+        <span>Go to&hellip;</span>
+        <kbd id="command-palette-shortcut-hint">Ctrl K</kbd>
+      </button>
+
       {% if cu %}
       <div class="sidebar-user">
         <div class="sidebar-avatar" aria-hidden="true">{{ cu.name[0]|upper }}</div>
@@ -72,6 +77,129 @@
       </div>
     </main>
   </div>
+
+  <div class="command-palette-backdrop" id="command-palette-backdrop" hidden>
+    <div class="command-palette" role="dialog" aria-modal="true" aria-label="Command palette">
+      <input type="text" id="command-palette-input" placeholder="Go to a page or run an action&hellip;" autocomplete="off" aria-label="Search pages and actions">
+      <ul id="command-palette-results" role="listbox"></ul>
+    </div>
+  </div>
+
+  <script>
+    // Command palette (Phase 1.4): a static, client-side list of every
+    // page and quick action this app has -- no full-text search backend
+    // needed since the whole point is fast keyboard navigation between a
+    // known, small set of destinations, not searching content.
+    (function () {
+      var COMMANDS = [
+        { label: "Dashboard", href: "/dashboard", keywords: "home today" },
+        { label: "Practice question bank", href: "/practice", keywords: "capture questions bank" },
+        { label: "Review queue", href: "/practice/review", keywords: "study review spaced repetition" },
+        { label: "Job listings", href: "/jobs", keywords: "jobs discovery" },
+        { label: "Application tracker", href: "/jobs/applications", keywords: "jobs applications kanban" },
+        { label: "Skill gap analysis", href: "/jobs/gap-analysis", keywords: "jobs gaps jd" },
+        { label: "Tailor resume to a JD", href: "/jobs/tailor-resume", keywords: "jobs resume tailor jd" },
+        { label: "Market trends", href: "/jobs/trends", keywords: "jobs trends demand" },
+        { label: "Discovery runs", href: "/jobs/runs", keywords: "jobs cron runs" },
+        { label: "Document vault", href: "/documents", keywords: "resume transcripts certificates upload" },
+        { label: "Profile & settings", href: "/profile", keywords: "settings goal timezone proficiency" },
+        { label: "Log out", href: "/logout", keywords: "sign out", isForm: true },
+      ];
+
+      var trigger = document.getElementById("command-palette-trigger");
+      var backdrop = document.getElementById("command-palette-backdrop");
+      var input = document.getElementById("command-palette-input");
+      var resultsList = document.getElementById("command-palette-results");
+      var shortcutHint = document.getElementById("command-palette-shortcut-hint");
+      if (!trigger || !backdrop || !input || !resultsList) return;
+
+      if (navigator.platform && navigator.platform.toUpperCase().indexOf("MAC") >= 0) {
+        shortcutHint.textContent = "⌘K";
+      }
+
+      var activeIndex = 0;
+      var visible = [];
+
+      function render(query) {
+        var q = query.trim().toLowerCase();
+        visible = COMMANDS.filter(function (c) {
+          return !q || c.label.toLowerCase().indexOf(q) !== -1 || c.keywords.indexOf(q) !== -1;
+        });
+        activeIndex = 0;
+        resultsList.innerHTML = "";
+        visible.forEach(function (c, i) {
+          var li = document.createElement("li");
+          li.textContent = c.label;
+          li.setAttribute("role", "option");
+          li.className = i === activeIndex ? "active" : "";
+          li.addEventListener("mouseenter", function () { setActive(i); });
+          li.addEventListener("click", function () { activate(c); });
+          resultsList.appendChild(li);
+        });
+      }
+
+      function setActive(i) {
+        activeIndex = i;
+        Array.from(resultsList.children).forEach(function (li, idx) {
+          li.className = idx === activeIndex ? "active" : "";
+        });
+      }
+
+      function activate(command) {
+        if (!command) return;
+        if (command.isForm) {
+          var form = document.createElement("form");
+          form.method = "post";
+          form.action = command.href;
+          document.body.appendChild(form);
+          form.submit();
+        } else {
+          window.location.href = command.href;
+        }
+      }
+
+      function open() {
+        backdrop.hidden = false;
+        input.value = "";
+        render("");
+        input.focus();
+      }
+
+      function close() {
+        backdrop.hidden = true;
+      }
+
+      trigger.addEventListener("click", open);
+      backdrop.addEventListener("click", function (e) {
+        if (e.target === backdrop) close();
+      });
+      input.addEventListener("input", function () { render(input.value); });
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setActive(Math.min(activeIndex + 1, visible.length - 1));
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setActive(Math.max(activeIndex - 1, 0));
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          activate(visible[activeIndex]);
+        } else if (e.key === "Escape") {
+          close();
+        }
+      });
+
+      document.addEventListener("keydown", function (e) {
+        var isShortcut = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k";
+        if (isShortcut) {
+          e.preventDefault();
+          if (backdrop.hidden) open(); else close();
+        } else if (e.key === "Escape" && !backdrop.hidden) {
+          close();
+        }
+      });
+    })();
+  </script>
 
   <script>
     // Mobile sidebar drawer: hidden off-canvas by default (see the
