@@ -4,6 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}PracticeLoop{% endblock %}</title>
+  <script>
+    // Applied before first paint (this is a synchronous, render-blocking
+    // script in <head>) so a saved manual theme choice never flashes the
+    // wrong palette on load. Absence of a saved value leaves data-theme
+    // unset, which is the "follow system" default handled entirely by
+    // style.css's prefers-color-scheme block.
+    (function () {
+      try {
+        var saved = localStorage.getItem("pl-theme");
+        if (saved === "light" || saved === "dark") {
+          document.documentElement.setAttribute("data-theme", saved);
+        }
+      } catch (e) {}
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -11,6 +26,7 @@
   <script src="https://unpkg.com/htmx.org@2.0.3"></script>
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to content</a>
   {% set cu = request.state.current_user %}
   <div class="app-shell">
     <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">
@@ -31,7 +47,7 @@
       </div>
       {% endif %}
 
-      <nav class="sidebar-nav">
+      <nav class="sidebar-nav" aria-label="Main">
         <a href="/dashboard" class="{{ 'active' if request.url.path == '/dashboard' }}">Dashboard</a>
         <a href="/practice" class="{{ 'active' if request.url.path == '/practice' }}">Practice</a>
         <a href="/practice/review" class="{{ 'active' if request.url.path.startswith('/practice/review') }}">Review</a>
@@ -41,13 +57,16 @@
       </nav>
 
       <div class="sidebar-footer">
+        <button type="button" class="link-button" id="theme-toggle" aria-label="Change color theme">
+          Theme: <span id="theme-toggle-label">System</span>
+        </button>
         <form action="/logout" method="post">
           <button type="submit" class="link-button">Log out</button>
         </form>
       </div>
     </aside>
 
-    <main class="app-main">
+    <main class="app-main" id="main-content" tabindex="-1">
       <div class="container">
         {% block content %}{% endblock %}
       </div>
@@ -76,6 +95,47 @@
       backdrop.addEventListener("click", function () { setOpen(false); });
       sidebar.querySelectorAll("a").forEach(function (a) {
         a.addEventListener("click", function () { setOpen(false); });
+      });
+    })();
+
+    // Three-way theme cycle: system -> light -> dark -> system. "System"
+    // means no saved preference at all, so the prefers-color-scheme media
+    // query in style.css keeps deciding -- this only ever writes an
+    // explicit override when the visitor picks one.
+    (function () {
+      var btn = document.getElementById("theme-toggle");
+      var label = document.getElementById("theme-toggle-label");
+      if (!btn || !label) return;
+      var order = ["system", "light", "dark"];
+
+      function current() {
+        try {
+          var saved = localStorage.getItem("pl-theme");
+          return saved === "light" || saved === "dark" ? saved : "system";
+        } catch (e) {
+          return "system";
+        }
+      }
+
+      function render(mode) {
+        label.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+      }
+
+      function apply(mode) {
+        if (mode === "system") {
+          document.documentElement.removeAttribute("data-theme");
+          try { localStorage.removeItem("pl-theme"); } catch (e) {}
+        } else {
+          document.documentElement.setAttribute("data-theme", mode);
+          try { localStorage.setItem("pl-theme", mode); } catch (e) {}
+        }
+        render(mode);
+      }
+
+      render(current());
+      btn.addEventListener("click", function () {
+        var next = order[(order.indexOf(current()) + 1) % order.length];
+        apply(next);
       });
     })();
   </script>

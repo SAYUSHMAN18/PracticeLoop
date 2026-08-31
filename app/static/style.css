@@ -23,8 +23,14 @@
   --font-body: "Inter", -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
 }
 
+/* Dark palette applies when the OS prefers it (guarded so an explicit
+   manual "light" choice below always wins), and again explicitly under
+   [data-theme="dark"] for a manual choice on a light-system visitor --
+   see the theme-toggle script in base.html/base_auth.html. An attribute
+   selector always outranks a bare :root on specificity, so the explicit
+   block below wins regardless of source order or system preference. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #211c16;
     --bg-2: #1a1611;
     --panel: #2b2419;
@@ -44,6 +50,27 @@
     --input-bg: #241f16;
     --shadow-color: 24deg 60% 4%;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #211c16;
+  --bg-2: #1a1611;
+  --panel: #2b2419;
+  --panel-2: #322a1d;
+  --border: #423623;
+  --text: #f2e9d8;
+  --muted: #ab9d84;
+  --accent: #ff7a48;
+  --accent-2: #ff9468;
+  --accent-soft: #4a2e1c;
+  --accent-text: #201005;
+  --link: #8fc2a8;
+  --danger: #ff7a63;
+  --danger-soft: #4a231c;
+  --good: #8fce70;
+  --good-soft: #253a1c;
+  --input-bg: #241f16;
+  --shadow-color: 24deg 60% 4%;
 }
 
 * { box-sizing: border-box; }
@@ -67,6 +94,25 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+/* ---------- accessibility: skip link ---------- */
+
+.skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: -3rem;
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  background: var(--accent);
+  color: var(--accent-text);
+  border-radius: 8px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus { top: 0.5rem; }
+
+#main-content:focus-visible { outline: none; } /* the skip link's destination, not a control -- no focus ring needed */
 
 /* ---------- brand & buttons (shared by the sidebar and the auth pages) ---------- */
 
@@ -173,8 +219,17 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 .sidebar-nav a:hover { color: var(--text); background: var(--panel-2); }
 .sidebar-nav a.active { color: var(--accent-2); background: var(--accent-soft); }
 
-.sidebar-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border); }
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
 .sidebar-footer .link-button { display: block; width: 100%; text-align: left; border-radius: 8px; padding: 0.62rem 0.75rem; }
+.sidebar-footer form { margin: 0; }
+#theme-toggle:hover { color: var(--text); background: var(--panel-2); }
 
 .sidebar-toggle {
   display: none;

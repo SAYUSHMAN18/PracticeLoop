@@ -37,3 +37,17 @@ async def test_sidebar_jobs_link_stays_active_across_every_jobs_subpage(client):
     for path in ("/jobs", "/jobs/applications", "/jobs/gap-analysis", "/jobs/trends", "/jobs/runs"):
         response = await client.get(path)
         assert '<a href="/jobs" class="active">Jobs</a>' in response.text, path
+
+
+async def test_authenticated_pages_have_a_skip_link_and_theme_toggle(client):
+    await signup(client, "sidebar-a11y@example.com")
+    response = await client.get("/dashboard")
+    assert '<a href="#main-content" class="skip-link">Skip to content</a>' in response.text
+    assert 'id="main-content"' in response.text
+    assert 'id="theme-toggle"' in response.text
+
+
+async def test_review_card_container_is_an_aria_live_region(client):
+    await signup(client, "sidebar-arialive@example.com")
+    response = await client.get("/practice/review")
+    assert '<div id="review-card" aria-live="polite" aria-atomic="true">' in response.text

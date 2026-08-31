@@ -4,7 +4,7 @@
 <h1>Review queue</h1>
 <p class="muted">Current streak: <strong>{{ streak }}</strong> day{{ "s" if streak != 1 }}</p>
 
-<div id="review-card">
+<div id="review-card" aria-live="polite" aria-atomic="true">
   {% include "practice/_review_card.html" %}
 </div>
 
