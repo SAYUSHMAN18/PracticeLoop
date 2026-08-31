@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Dashboard - PracticeLoop{% endblock %}
 {% block content %}
-<h1>Dashboard</h1>
+<h1>{{ greeting }}{{ ", " + first_name if first_name else "" }}</h1>
 
 {% if goal_days_until is not none %}
 <div class="card">
@@ -38,6 +38,16 @@
     <div class="stat"><div class="value">{{ stats.total_questions }}</div><div class="label">questions banked</div></div>
     <div class="stat"><div class="value">{{ stats.due_today }}</div><div class="label">due for review</div></div>
     <div class="stat"><div class="value">{{ stats.avg_confidence or "-" }}</div><div class="label">avg confidence</div></div>
+  </div>
+  <div class="heatmap" role="img" aria-label="Practice activity over the last 7 days">
+    {% for day in activity %}
+      {% set ratio = (day.attempt_count / activity_max) if activity_max else 0 %}
+      <div class="heatmap-day"
+           style="--ratio: {{ ratio }};"
+           title="{{ day.day.strftime('%a %b %d') }}: {{ day.attempt_count }} review{{ 's' if day.attempt_count != 1 }}">
+        <span class="heatmap-label">{{ day.day.strftime('%a')[0] }}</span>
+      </div>
+    {% endfor %}
   </div>
 </div>
 <div class="card">
@@ -102,13 +112,25 @@
 {% if mastery %}
 <div class="card">
   <h2>What to study next</h2>
-  <p class="muted">Weakest topics first, by average self-rated confidence.</p>
+  <p class="muted">Weakest topics first, by average self-rated confidence &mdash; low confidence over several attempts outranks a single shaky one.</p>
   {% for m in mastery %}
     <div class="question-item">
       <strong>{{ m.topic }}</strong>
       <span class="muted"> &mdash; {{ m.avg_confidence }} avg confidence over {{ m.attempt_count }} attempt{{ "s" if m.attempt_count != 1 }}</span>
     </div>
   {% endfor %}
+</div>
+{% endif %}
+
+{% if new_concept %}
+<div class="card">
+  <h2>Something new</h2>
+  <p class="muted">Every other card here is about what you've already seen &mdash; this one you haven't touched yet.</p>
+  <div class="question-item">
+    {% if new_concept.topic %}<span class="tag">{{ new_concept.topic }}</span>{% endif %}
+    <div style="margin-top:0.35rem;"><strong>{{ new_concept.question }}</strong></div>
+    <div style="margin-top:0.5rem;"><a href="/practice/review">Review it &rarr;</a></div>
+  </div>
 </div>
 {% endif %}
 {% endblock %}
