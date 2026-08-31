@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Today's plan - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Today's plan</h1>
+<p class="muted">
+  Everything due, plus one pick each from your weakest topic, something you haven't touched yet,
+  and a harder challenge question &mdash; skip built in if any one of them isn't a good fit today.
+</p>
+
+{% if not plan %}
+<div class="card empty-state">
+  <h2>Nothing to plan yet</h2>
+  <p class="muted">Add a few questions first, then come back here.</p>
+</div>
+{% else %}
+<div class="card">
+  <div class="stat-grid">
+    <div class="stat"><div class="value">{{ plan|length }}</div><div class="label">total</div></div>
+    <div class="stat"><div class="value">{{ counts.due or 0 }}</div><div class="label">due</div></div>
+    <div class="stat"><div class="value">{{ (counts.weak or 0) + (counts.new or 0) + (counts.challenge or 0) }}</div><div class="label">extra picks</div></div>
+    <div class="stat"><div class="value">~{{ plan|length * 2 }}</div><div class="label">est. minutes</div></div>
+  </div>
+</div>
+
+<div class="card">
+  {% for item in plan %}
+    <div class="question-item">
+      <span class="tag {{ 'tag-proven' if item.reason == 'due' else 'tag-untested' if item.reason == 'weak' else '' }}">{{ reason_labels[item.reason] }}</span>
+      {% if item.question.topic %}<span class="tag">{{ item.question.topic }}</span>{% endif %}
+      <div style="margin-top:0.35rem;">{{ item.question.question }}</div>
+    </div>
+  {% endfor %}
+</div>
+
+<form method="post" action="/practice/plan/start">
+  <button type="submit">Start today's plan ({{ plan|length }})</button>
+</form>
+{% endif %}
+{% endblock %}

@@ -17,6 +17,9 @@ from app.practice import extraction, grading, service
 router = APIRouter(prefix="/practice", dependencies=[Depends(inject_current_user)])
 logger = get_logger(__name__)
 
+_PLAN_SESSION_KEY = "daily_plan"
+_PLAN_REASON_LABELS = {"due": "Due", "weak": "Weak spot", "new": "New", "challenge": "Challenge"}
+
 
 def _can_grade(card) -> bool:
     """Honest grading needs both an LLM to grade with and something to
@@ -47,6 +50,39 @@ def _fields_from_form(
         "code_snippet": code_snippet,
         "language": language,
     }
+
+
+def _active_plan_ids(request: Request) -> list[int] | None:
+    """None means "no plan started today, use the normal due queue." An
+    empty list is a real, distinct state -- a plan that was started and
+    has since been fully worked through -- so it must not be treated the
+    same as "no plan," or a finished plan would silently fall back to
+    showing every other due card instead of "all caught up.\""""
+    plan = request.session.get(_PLAN_SESSION_KEY)
+    if not plan or plan.get("date") != date.today().isoformat():
+        return None
+    return plan.get("question_ids", [])
+
+
+def _start_plan(request: Request, question_ids: list[int]) -> None:
+    request.session[_PLAN_SESSION_KEY] = {"date": date.today().isoformat(), "question_ids": question_ids}
+
+
+def _remove_from_plan(request: Request, question_id: int) -> None:
+    plan = request.session.get(_PLAN_SESSION_KEY)
+    if plan and plan.get("date") == date.today().isoformat():
+        plan["question_ids"] = [qid for qid in plan.get("question_ids", []) if qid != question_id]
+        request.session[_PLAN_SESSION_KEY] = plan
+
+
+async def _load_queue(request: Request, pool, user_id: int) -> list:
+    """The session's active plan (if one was started today and isn't
+    finished) replaces the normal due-cards query -- same shape either
+    way, a plain list of question records in the order to work through."""
+    plan_ids = _active_plan_ids(request)
+    if plan_ids is not None:
+        return await service.get_questions_by_ids(pool, user_id, plan_ids)
+    return await service.due_for_review(pool, user_id)
 
 
 @router.get("", response_class=HTMLResponse)
@@ -198,6 +234,36 @@ async def study_card(
     return RedirectResponse("/practice", status_code=303)
 
 
+@router.get("/plan", response_class=HTMLResponse)
+async def plan_preview(
+    request: Request,
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    """Phase 3.2's adaptive daily session, previewed before it's started --
+    see service.build_daily_plan for what actually goes into it."""
+    plan = await service.build_daily_plan(pool, user_id)
+    counts: dict[str, int] = {}
+    for item in plan:
+        counts[item["reason"]] = counts.get(item["reason"], 0) + 1
+    return templates.TemplateResponse(
+        request,
+        "practice/plan.html",
+        {"plan": plan, "counts": counts, "reason_labels": _PLAN_REASON_LABELS},
+    )
+
+
+@router.post("/plan/start")
+async def start_plan(
+    request: Request,
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    plan = await service.build_daily_plan(pool, user_id)
+    _start_plan(request, [item["question"]["question_id"] for item in plan])
+    return RedirectResponse("/practice/review", status_code=303)
+
+
 @router.get("/review", response_class=HTMLResponse)
 async def review_queue(
     request: Request,
@@ -205,13 +271,19 @@ async def review_queue(
     pool=Depends(get_pool),
 ):
     due, streak = await asyncio.gather(
-        service.due_for_review(pool, user_id), service.streak_days(pool, user_id)
+        _load_queue(request, pool, user_id), service.streak_days(pool, user_id)
     )
     card = due[0] if due else None
     return templates.TemplateResponse(
         request,
         "practice/review.html",
-        {"card": card, "remaining": len(due), "streak": streak, "can_grade": _can_grade(card)},
+        {
+            "card": card,
+            "remaining": len(due),
+            "streak": streak,
+            "can_grade": _can_grade(card),
+            "in_plan": _active_plan_ids(request) is not None,
+        },
     )
 
 
@@ -222,13 +294,48 @@ async def review_next_card(
     pool=Depends(get_pool),
 ):
     due, streak = await asyncio.gather(
-        service.due_for_review(pool, user_id), service.streak_days(pool, user_id)
+        _load_queue(request, pool, user_id), service.streak_days(pool, user_id)
     )
     card = due[0] if due else None
     return templates.TemplateResponse(
         request,
         "practice/_review_card.html",
-        {"card": card, "remaining": len(due), "streak": streak, "can_grade": _can_grade(card)},
+        {
+            "card": card,
+            "remaining": len(due),
+            "streak": streak,
+            "can_grade": _can_grade(card),
+            "in_plan": _active_plan_ids(request) is not None,
+        },
+    )
+
+
+@router.post("/review/{question_id}/skip", response_class=HTMLResponse)
+async def skip_plan_item(
+    request: Request,
+    question_id: int,
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    """Phase 3.2's "replace an activity" control, in its simplest honest
+    form: drop today's plan down to one item, no attempt recorded, no FSRS
+    schedule touched. Only meaningful mid-plan -- outside of one, there's
+    nothing session-side to remove a card from."""
+    _remove_from_plan(request, question_id)
+    due, streak = await asyncio.gather(
+        _load_queue(request, pool, user_id), service.streak_days(pool, user_id)
+    )
+    card = due[0] if due else None
+    return templates.TemplateResponse(
+        request,
+        "practice/_review_card.html",
+        {
+            "card": card,
+            "remaining": len(due),
+            "streak": streak,
+            "can_grade": _can_grade(card),
+            "in_plan": _active_plan_ids(request) is not None,
+        },
     )
 
 
@@ -246,6 +353,7 @@ async def rate_attempt(
     except service.QuestionNotFound as exc:
         raise HTTPException(status_code=404) from exc
 
+    _remove_from_plan(request, question_id)
     days_until = (review_date - date.today()).days
     return templates.TemplateResponse(
         request,
@@ -272,20 +380,29 @@ async def grade_review_answer(
     except Exception as exc:
         # A transient grading failure shouldn't break the app's single
         # most-used flow -- fall back to the plain self-rate card for this
-        # one question rather than a 500 or a lost typed answer.
+        # one question rather than a 500 or a lost typed answer. The
+        # question stays in the plan (if any) since no attempt was
+        # actually recorded yet.
         logger.warning("Grading failed, falling back to self-rate: %s", exc)
         due, streak = await asyncio.gather(
-            service.due_for_review(pool, user_id), service.streak_days(pool, user_id)
+            _load_queue(request, pool, user_id), service.streak_days(pool, user_id)
         )
         return templates.TemplateResponse(
             request,
             "practice/_review_card.html",
-            {"card": question, "remaining": len(due), "streak": streak, "can_grade": False},
+            {
+                "card": question,
+                "remaining": len(due),
+                "streak": streak,
+                "can_grade": False,
+                "in_plan": _active_plan_ids(request) is not None,
+            },
         )
 
     review_date = await service.record_attempt(
         pool, user_id, question_id, result["rating"], result["feedback"]
     )
+    _remove_from_plan(request, question_id)
     days_until = (review_date - date.today()).days
     return templates.TemplateResponse(
         request,

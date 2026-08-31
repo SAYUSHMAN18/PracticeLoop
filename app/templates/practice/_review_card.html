@@ -1,11 +1,23 @@
 {% if not card %}
   <div class="card empty-state">
-    <h2>All caught up</h2>
-    <p class="muted">Nothing due right now. Come back later, or capture a new question.</p>
+    {% if in_plan %}
+      <h2>Today's plan is complete</h2>
+      <p class="muted">Nice work &mdash; that's everything in today's session. Come back tomorrow for a fresh one.</p>
+    {% else %}
+      <h2>All caught up</h2>
+      <p class="muted">Nothing due right now. Come back later, or capture a new question.</p>
+    {% endif %}
   </div>
 {% else %}
   <div class="card">
-    <p class="muted" style="margin-top:0;">{{ remaining }} remaining in this session</p>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <p class="muted" style="margin:0;">{{ remaining }} remaining in this session</p>
+      {% if in_plan %}
+        <form hx-post="/practice/review/{{ card.question_id }}/skip" hx-target="#review-card" hx-swap="innerHTML" style="margin:0;">
+          <button type="submit" class="link-button" style="padding:0.2rem 0.5rem;font-size:0.8rem;">Skip this one</button>
+        </form>
+      {% endif %}
+    </div>
     <div style="margin-bottom:0.5rem;">
       {% if card.topic %}<span class="tag">{{ card.topic }}</span>{% endif %}
       <span class="tag">{{ card.difficulty|capitalize }}</span>

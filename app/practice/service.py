@@ -162,6 +162,93 @@ async def due_for_review(pool: asyncpg.Pool, user_id: int, today: date | None = 
     )
 
 
+async def build_daily_plan(pool: asyncpg.Pool, user_id: int) -> list[dict]:
+    """Phase 3.2's adaptive daily session: everything actually due, plus up
+    to one pick each from the weakest topic and from hard-difficulty
+    questions -- each labeled with why it's there, each deduplicated
+    against what's already in the list.
+
+    A never-attempted question is *already* correctly included in "due"
+    (a fresh card is due immediately -- due_for_review's cs.due IS NULL
+    branch), so there's no separate, disjoint pool of "new" questions to
+    query for: every never-attempted question is, by construction, always
+    already in this list. Querying for "never attempted AND not already
+    in the list" would always return nothing once at least one exists,
+    and nothing at all otherwise -- dead code either way. Instead, the
+    single oldest never-attempted item already in `due` (due_for_review's
+    own NULLS-FIRST, oldest-first ordering picks it out for us) is
+    relabeled "new" in place, matching what the dashboard's own
+    new-concept card already surfaces.
+
+    Both bonus picks are oldest-first, not random -- deterministic beats
+    random for anything a test (or a confused user comparing two page
+    loads) needs to reason about. Not persisted -- built fresh on every
+    call, so it always reflects current state. Session-scoped state for
+    "which of today's picks has the user already gotten to" lives in the
+    /practice/plan routes, not here; this function only ever answers
+    "what would today's plan be right now.\""""
+    due = await due_for_review(pool, user_id)
+    seen_ids = [q["question_id"] for q in due]
+
+    plan = []
+    labeled_new = False
+    for q in due:
+        if q["next_review_at"] is None and not labeled_new:
+            plan.append({"question": q, "reason": "new"})
+            labeled_new = True
+        else:
+            plan.append({"question": q, "reason": "due"})
+
+    weakest_topic = await pool.fetchval(
+        """SELECT q.topic FROM questions q JOIN attempts a ON a.question_id = q.question_id
+           WHERE q.user_id = $1 AND q.topic != ''
+           GROUP BY q.topic ORDER BY avg(a.confidence_rating) ASC LIMIT 1""",
+        user_id,
+    )
+    if weakest_topic:
+        weak_pick = await pool.fetchrow(
+            f"""SELECT {_QUESTION_COLUMNS} FROM questions
+                WHERE user_id = $1 AND topic = $2 AND question_id != ALL($3::int[])
+                ORDER BY created_at ASC LIMIT 1""",
+            user_id,
+            weakest_topic,
+            seen_ids,
+        )
+        if weak_pick:
+            plan.append({"question": weak_pick, "reason": "weak"})
+            seen_ids.append(weak_pick["question_id"])
+
+    challenge_pick = await pool.fetchrow(
+        f"""SELECT {_QUESTION_COLUMNS} FROM questions
+            WHERE user_id = $1 AND difficulty = 'hard' AND question_id != ALL($2::int[])
+            ORDER BY created_at ASC LIMIT 1""",
+        user_id,
+        seen_ids,
+    )
+    if challenge_pick:
+        plan.append({"question": challenge_pick, "reason": "challenge"})
+
+    return plan
+
+
+async def get_questions_by_ids(
+    pool: asyncpg.Pool, user_id: int, question_ids: list[int]
+) -> list[asyncpg.Record]:
+    """Fetches an ownership-checked set of questions in the exact order
+    given -- used to replay a session-stored daily plan, where the order
+    (due first, then weak/new/challenge) is the point, not just "some
+    order the DB feels like.\""""
+    if not question_ids:
+        return []
+    return await pool.fetch(
+        f"""SELECT {_QUESTION_COLUMNS} FROM questions
+            WHERE user_id = $1 AND question_id = ANY($2::int[])
+            ORDER BY array_position($2::int[], question_id)""",
+        user_id,
+        question_ids,
+    )
+
+
 async def streak_days(pool: asyncpg.Pool, user_id: int) -> int:
     rows = await pool.fetch(
         "SELECT DISTINCT practiced_at::date AS d FROM attempts WHERE user_id = $1 ORDER BY d DESC",
