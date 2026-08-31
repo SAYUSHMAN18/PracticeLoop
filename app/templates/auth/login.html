@@ -5,10 +5,10 @@
   <h1>Welcome back</h1>
   <p class="muted" style="margin-top:-0.3rem;">Pick up your review queue and job search right where you left off.</p>
   <form method="post" action="/login">
-    <label>Email</label>
-    <input type="email" name="email" required autofocus>
-    <label>Password</label>
-    <input type="password" name="password" required>
+    <label for="f-email">Email</label>
+    <input id="f-email" type="email" name="email" required autofocus>
+    <label for="f-password">Password</label>
+    <input id="f-password" type="password" name="password" required>
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     <button type="submit" style="width:100%;justify-content:center;">Log in</button>
   </form>

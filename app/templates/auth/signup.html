@@ -5,12 +5,12 @@
   <h1>Create your account</h1>
   <p class="muted" style="margin-top:-0.3rem;">Practice, resume, and job tracker -- set up in under a minute.</p>
   <form method="post" action="/signup">
-    <label>Name</label>
-    <input type="text" name="name" required autofocus>
-    <label>Email</label>
-    <input type="email" name="email" required>
-    <label>Password</label>
-    <input type="password" name="password" minlength="8" required>
+    <label for="f-name">Name</label>
+    <input id="f-name" type="text" name="name" required autofocus>
+    <label for="f-email">Email</label>
+    <input id="f-email" type="email" name="email" required>
+    <label for="f-password">Password</label>
+    <input id="f-password" type="password" name="password" minlength="8" required>
     <label style="display:flex;align-items:center;gap:0.6rem;margin-top:1rem;">
       <input type="checkbox" name="seed_deck" value="1" checked>
       <span>Start with a sample deck (80+ DSA, OS, networks, DBMS, OOP, Python, SQL &amp; system design questions)</span>

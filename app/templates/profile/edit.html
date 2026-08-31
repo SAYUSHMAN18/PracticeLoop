@@ -4,10 +4,10 @@
 <h1>Your profile</h1>
 <div class="card">
   <form method="post" action="/profile" enctype="multipart/form-data">
-    <label>Target role</label>
-    <input type="text" name="target_role" value="{{ profile.target_role }}" placeholder="e.g. Backend Engineer">
-    <label>Target companies</label>
-    <input type="text" name="target_companies" value="{{ profile.target_companies }}" placeholder="e.g. Stripe, Google">
+    <label for="f-target-role">Target role</label>
+    <input id="f-target-role" type="text" name="target_role" value="{{ profile.target_role }}" placeholder="e.g. Backend Engineer">
+    <label for="f-target-companies">Target companies</label>
+    <input id="f-target-companies" type="text" name="target_companies" value="{{ profile.target_companies }}" placeholder="e.g. Stripe, Google">
 
     <h2 style="margin-top:1.5rem;border-top:1px solid var(--border);padding-top:1rem;">Learning goal</h2>
     <p class="muted" style="margin-top:0;">
