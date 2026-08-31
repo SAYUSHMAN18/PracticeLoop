@@ -48,8 +48,8 @@
     </select>
 
     <h2 style="margin-top:1.5rem;border-top:1px solid var(--border);padding-top:1rem;">Resume</h2>
-    <label for="f-resume">Resume (.pdf or .txt) &mdash; optional, replaces the stored text</label>
-    <input id="f-resume" type="file" name="resume" accept=".pdf,.txt">
+    <label for="f-resume">Resume (.pdf, .docx, .txt, .md, or .csv) &mdash; optional, replaces the stored text</label>
+    <input id="f-resume" type="file" name="resume" accept=".pdf,.docx,.txt,.md,.csv">
     {% if profile.resume_text %}
       <p class="muted" style="margin-top:0.5rem;">Current resume text on file: {{ profile.resume_text|length }} characters.</p>
     {% endif %}

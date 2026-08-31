@@ -79,7 +79,7 @@ async def upload_document(
 
     extracted_text = ""
     try:
-        extracted_text = profile_service.extract_resume_text(file.filename or "upload", content)
+        extracted_text = profile_service.extract_text_from_file(file.filename or "upload", content)
     except Exception:
         extracted_text = ""  # non-text formats (images, scans) just skip extraction; storage still works
 

@@ -108,14 +108,29 @@ async def update_profile(
         )
 
 
-def extract_resume_text(filename: str, content: bytes) -> str:
-    """Deterministic text extraction -- no LLM call needed for this step."""
-    if filename.lower().endswith(".pdf"):
-        from io import BytesIO
+def extract_text_from_file(filename: str, content: bytes) -> str:
+    """Deterministic text extraction -- no LLM call needed for this step.
+    Phase 4.1's supported-sources list also asks for images/OCR and audio/
+    video transcription; those need a real binary (Tesseract) or a
+    transcription service this deploy doesn't have configured, so they're
+    deliberately not here -- PDF, DOCX, and plain text/Markdown/CSV (which
+    are all just text) cover what's realistically extractable with pure
+    Python and no new infrastructure. Shared by both the profile resume
+    upload and the document vault -- one extractor, not two copies."""
+    lower_name = filename.lower()
+    from io import BytesIO
 
+    if lower_name.endswith(".pdf"):
         from pypdf import PdfReader
 
         reader = PdfReader(BytesIO(content))
         return "\n".join(page.extract_text() or "" for page in reader.pages).strip()
 
+    if lower_name.endswith(".docx"):
+        from docx import Document
+
+        doc = Document(BytesIO(content))
+        return "\n".join(p.text for p in doc.paragraphs).strip()
+
+    # .txt, .md, .csv, and anything else are just plain text.
     return content.decode("utf-8", errors="ignore").strip()

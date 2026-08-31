@@ -85,7 +85,7 @@ async def save_profile(
         if len(content) > MAX_RESUME_BYTES:
             raise HTTPException(status_code=413, detail="Resume file is too large (max 10MB).")
         try:
-            resume_text = service.extract_resume_text(resume.filename, content)
+            resume_text = service.extract_text_from_file(resume.filename, content)
         except Exception:
             profile = await service.get_profile(pool, user_id)
             return templates.TemplateResponse(
@@ -94,7 +94,7 @@ async def save_profile(
                 {
                     "profile": profile,
                     "saved": False,
-                    "error": "Couldn't read that file -- is it a valid PDF or text file?",
+                    "error": "Couldn't read that file -- is it a valid PDF, DOCX, or text file?",
                     "goal_type_labels": GOAL_TYPE_LABELS,
                     "proficiency_labels": PROFICIENCY_LABELS,
                 },
