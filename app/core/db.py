@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import asyncpg
 from pgvector.asyncpg import register_vector
 
@@ -10,6 +12,13 @@ _pool: asyncpg.Pool | None = None
 
 async def _init_connection(connection: asyncpg.Connection) -> None:
     await register_vector(connection)
+    # Without this, jsonb columns round-trip as plain str -- every query
+    # site touching one (learning_lessons.content, questions.choices) would
+    # otherwise need its own json.loads/json.dumps. One codec here instead
+    # of that scattered everywhere it's used.
+    await connection.set_type_codec(
+        "jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog", format="text"
+    )
 
 
 async def get_pool() -> asyncpg.Pool:

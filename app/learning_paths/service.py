@@ -6,6 +6,7 @@ import asyncpg
 
 from app.core.json_extraction import extract_first_json_value
 from app.core.llm import generate
+from app.core.llm_budget import consume_llm_budget
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -299,7 +300,7 @@ async def get_path_detail(pool: asyncpg.Pool, user_id: int, path_id: int) -> dic
            JOIN learning_units u ON u.unit_id = l.unit_id
            JOIN learning_modules m ON m.module_id = u.module_id
            WHERE m.path_id = $1
-           ORDER BY l.position""",
+           ORDER BY m.position, u.position, l.position""",
         path_id,
     )
 
@@ -322,12 +323,21 @@ async def get_path_detail(pool: asyncpg.Pool, user_id: int, path_id: int) -> dic
     total_lessons = len(lesson_rows)
     completed_lessons = sum(1 for row in lesson_rows if row["completed_at"] is not None)
 
+    # "Resume" -- the first not-yet-complete lesson in true module/unit/
+    # lesson reading order, or the last lesson if everything's done (so
+    # the button still goes somewhere useful instead of disappearing).
+    resume_lesson_id = next(
+        (row["lesson_id"] for row in lesson_rows if row["completed_at"] is None),
+        lesson_rows[-1]["lesson_id"] if lesson_rows else None,
+    )
+
     return {
         **dict(path),
         "modules": modules,
         "total_lessons": total_lessons,
         "completed_lessons": completed_lessons,
         "progress_percent": round(100 * completed_lessons / total_lessons) if total_lessons else 0,
+        "resume_lesson_id": resume_lesson_id,
     }
 
 
@@ -338,6 +348,152 @@ async def delete_path(pool: asyncpg.Pool, user_id: int, path_id: int) -> None:
     if row is None:
         raise PathNotFound(path_id)
     await pool.execute("DELETE FROM learning_paths WHERE path_id = $1", path_id)
+
+
+_LESSON_CONTENT_PROMPT = """You are writing one short lesson for a learning path.
+
+Path: "{path_title}"
+Module: "{module_title}"
+Unit: "{unit_title}"
+Lesson: "{lesson_title}"
+
+Write the lesson content. Output strict JSON only, no markdown fences, no commentary, in
+exactly this shape:
+{{
+  "concept": "2-4 sentences explaining the concept plainly",
+  "example": "one concrete worked example illustrating it",
+  "checkpoint_question": "one short question to self-check understanding",
+  "checkpoint_answer": "the answer to that question",
+  "summary": "one sentence recapping the key takeaway"
+}}
+"""
+
+
+def _fallback_lesson_content(lesson_title: str) -> dict:
+    """Same honesty call as the path skeleton's own fallback -- no
+    deterministic template can write real subject-matter content for an
+    arbitrary lesson title. Real, structured, clearly-not-AI-tailored
+    content instead of a dead end."""
+    return {
+        "concept": f'This lesson covers "{lesson_title}". Fill in your own notes here, '
+        "or add an LLM provider key so PracticeLoop can draft this for you.",
+        "example": "",
+        "checkpoint_question": f'In your own words, what is the main idea of "{lesson_title}"?',
+        "checkpoint_answer": "There's no AI-suggested answer yet -- write your own.",
+        "summary": "",
+    }
+
+
+def _validate_lesson_content(data: dict, lesson_title: str) -> dict:
+    if not isinstance(data, dict):
+        raise ValueError("not an object")
+    fallback = _fallback_lesson_content(lesson_title)
+    cleaned = {}
+    for key, default in fallback.items():
+        value = data.get(key)
+        cleaned[key] = str(value).strip() if value else default
+    if not cleaned["concept"]:
+        raise ValueError("no concept explanation")
+    return cleaned
+
+
+async def _build_lesson_content(
+    *, path_title: str, module_title: str, unit_title: str, lesson_title: str, ai_available: bool
+) -> dict:
+    if not ai_available:
+        return _fallback_lesson_content(lesson_title)
+
+    try:
+        prompt = _LESSON_CONTENT_PROMPT.format(
+            path_title=path_title, module_title=module_title, unit_title=unit_title, lesson_title=lesson_title
+        )
+        response = await generate(prompt, temperature=0.4)
+        data = json.loads(extract_first_json_value(response))
+        return _validate_lesson_content(data, lesson_title)
+    except Exception:
+        logger.warning("Lesson content generation failed, using the fallback content", exc_info=True)
+        return _fallback_lesson_content(lesson_title)
+
+
+async def get_lesson(
+    pool: asyncpg.Pool, user_id: int, path_id: int, lesson_id: int, *, ai_available: bool
+) -> dict:
+    """Ownership-checked; returns the lesson with its content (generating
+    and caching it on first open) plus its neighbors' ids for prev/next
+    navigation within the path."""
+    row = await pool.fetchrow(
+        """SELECT l.lesson_id, l.title AS lesson_title, l.content, l.completed_at,
+                  u.title AS unit_title, m.title AS module_title, p.path_id, p.title AS path_title
+           FROM learning_lessons l
+           JOIN learning_units u ON u.unit_id = l.unit_id
+           JOIN learning_modules m ON m.module_id = u.module_id
+           JOIN learning_paths p ON p.path_id = m.path_id
+           WHERE l.lesson_id = $1 AND p.path_id = $2 AND p.user_id = $3""",
+        lesson_id,
+        path_id,
+        user_id,
+    )
+    if row is None:
+        raise PathNotFound(path_id)
+
+    content = row["content"]
+    if content is None:
+        # Only a lesson opened for the first time (content is still null)
+        # ever reaches an LLM call -- every later visit reads the cached
+        # column below, so this doesn't gate the whole route behind the
+        # daily budget the way create_path's *always*-one-call route can.
+        # A student who's out of budget still gets the honest fallback
+        # content, not a 429 for opening a lesson.
+        lesson_ai_available = ai_available
+        if lesson_ai_available:
+            try:
+                await consume_llm_budget(pool, user_id)
+            except Exception:
+                logger.info("LLM budget unavailable for lesson content, using the fallback content")
+                lesson_ai_available = False
+
+        content = await _build_lesson_content(
+            path_title=row["path_title"],
+            module_title=row["module_title"],
+            unit_title=row["unit_title"],
+            lesson_title=row["lesson_title"],
+            ai_available=lesson_ai_available,
+        )
+        await pool.execute(
+            "UPDATE learning_lessons SET content = $2 WHERE lesson_id = $1", lesson_id, content
+        )
+    elif isinstance(content, str):
+        # Defensive only: the jsonb type codec (app/core/db.py) round-trips
+        # this as a dict already. Kept in case a connection ever slips
+        # through without it.
+        content = json.loads(content)
+
+    ordered_ids = await pool.fetch(
+        """SELECT l.lesson_id
+           FROM learning_lessons l
+           JOIN learning_units u ON u.unit_id = l.unit_id
+           JOIN learning_modules m ON m.module_id = u.module_id
+           WHERE m.path_id = $1
+           ORDER BY m.position, u.position, l.position""",
+        path_id,
+    )
+    ids = [r["lesson_id"] for r in ordered_ids]
+    index = ids.index(lesson_id)
+    prev_id = ids[index - 1] if index > 0 else None
+    next_id = ids[index + 1] if index < len(ids) - 1 else None
+
+    return {
+        "lesson_id": row["lesson_id"],
+        "title": row["lesson_title"],
+        "completed_at": row["completed_at"],
+        "unit_title": row["unit_title"],
+        "module_title": row["module_title"],
+        "path_id": row["path_id"],
+        "path_title": row["path_title"],
+        "content": content,
+        "prev_lesson_id": prev_id,
+        "next_lesson_id": next_id,
+    }
 
 
 async def toggle_lesson(pool: asyncpg.Pool, user_id: int, path_id: int, lesson_id: int) -> bool:

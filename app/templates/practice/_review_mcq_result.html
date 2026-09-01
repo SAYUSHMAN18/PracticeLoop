@@ -1,0 +1,9 @@
+<div class="card" hx-get="/practice/review/next" hx-trigger="load delay:3000ms" hx-target="#review-card" hx-swap="innerHTML">
+  <p class="{{ 'success' if is_correct else 'error' }}" style="margin:0;">
+    {{ 'Correct!' if is_correct else 'Not quite.' }}
+  </p>
+  {% if not is_correct %}<p class="muted" style="margin-top:0.5rem;">Correct answer: {{ correct_choice }}</p>{% endif %}
+  <p class="success" style="margin-top:0.5rem;">
+    Next review in {{ days_until }} day{{ "s" if days_until != 1 }} ({{ review_date.strftime("%b %d, %Y") }})
+  </p>
+</div>

@@ -24,7 +24,15 @@
     </div>
     <strong>{{ card.question }}</strong>
 
-    {% if can_grade %}
+    {% if card.question_type == 'multiple_choice' %}
+      <form hx-post="/practice/review/{{ card.question_id }}/answer-choice" hx-target="#review-card" hx-swap="innerHTML" style="margin-top:0.75rem;">
+        <div class="rating-row" style="flex-direction:column;align-items:stretch;">
+          {% for choice in card.choices %}
+            <button type="submit" name="selected_index" value="{{ loop.index0 }}" style="flex:none;text-align:left;justify-content:flex-start;">{{ choice }}</button>
+          {% endfor %}
+        </div>
+      </form>
+    {% elif can_grade %}
       <form hx-post="/practice/review/{{ card.question_id }}/grade" hx-target="#review-card" hx-swap="innerHTML" style="margin-top:0.75rem;">
         <label for="f-answer">Your answer</label>
         <textarea id="f-answer" name="answer" rows="4" autofocus></textarea>

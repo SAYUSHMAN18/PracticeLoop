@@ -12,9 +12,16 @@
         {{ path.completed_lessons }} of {{ path.total_lessons }} lessons complete ({{ path.progress_percent }}%)
       </div>
     </div>
-    <form method="post" action="/learning-paths/{{ path.path_id }}/delete" id="path-delete-form" data-title="{{ path.title }}">
-      <button type="submit" class="secondary" style="color:var(--danger);border-color:var(--danger-soft);margin-top:0;">Delete path</button>
-    </form>
+    <div class="inline-form" style="margin-top:0;">
+      {% if path.resume_lesson_id %}
+        <a class="btn" href="/learning-paths/{{ path.path_id }}/lessons/{{ path.resume_lesson_id }}">
+          {{ 'Review path' if path.progress_percent == 100 else 'Resume' }}
+        </a>
+      {% endif %}
+      <form method="post" action="/learning-paths/{{ path.path_id }}/delete" id="path-delete-form" data-title="{{ path.title }}">
+        <button type="submit" class="secondary" style="color:var(--danger);border-color:var(--danger-soft);margin-top:0;">Delete path</button>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -29,12 +36,14 @@
         {% if unit.description %}<div class="muted" style="font-size:0.85rem;margin-top:0.15rem;">{{ unit.description }}</div>{% endif %}
         <div style="margin-top:0.6rem;">
           {% for lesson in unit.lessons %}
-            <form method="post" action="/learning-paths/{{ path.path_id }}/lessons/{{ lesson.lesson_id }}/toggle" style="display:flex;align-items:center;gap:0.55rem;padding:0.35rem 0;">
-              <button type="submit" class="link-button" style="padding:0;margin:0;color:{{ 'var(--good)' if lesson.completed_at else 'var(--muted)' }};" aria-label="{{ 'Mark incomplete' if lesson.completed_at else 'Mark complete' }}: {{ lesson.title }}">
-                {{ '✓' if lesson.completed_at else '○' }}
-              </button>
-              <span style="{{ 'color:var(--muted);text-decoration:line-through;' if lesson.completed_at }}">{{ lesson.title }}</span>
-            </form>
+            <div style="display:flex;align-items:center;gap:0.55rem;padding:0.35rem 0;">
+              <form method="post" action="/learning-paths/{{ path.path_id }}/lessons/{{ lesson.lesson_id }}/toggle" style="margin:0;">
+                <button type="submit" class="link-button" style="padding:0;margin:0;color:{{ 'var(--good)' if lesson.completed_at else 'var(--muted)' }};" aria-label="{{ 'Mark incomplete' if lesson.completed_at else 'Mark complete' }}: {{ lesson.title }}">
+                  {{ '✓' if lesson.completed_at else '○' }}
+                </button>
+              </form>
+              <a href="/learning-paths/{{ path.path_id }}/lessons/{{ lesson.lesson_id }}" style="text-decoration:none;color:{{ 'var(--muted)' if lesson.completed_at else 'var(--text)' }};{{ 'text-decoration:line-through;' if lesson.completed_at }}">{{ lesson.title }}</a>
+            </div>
           {% endfor %}
         </div>
       </div>

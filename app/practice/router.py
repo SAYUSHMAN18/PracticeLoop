@@ -26,8 +26,16 @@ def _can_grade(card) -> bool:
     grade against -- a question saved with no answer (blank on capture,
     or a marker-parsed paste that never had one) falls back to self-rating
     even with an LLM configured, since there'd be nothing to compare the
-    typed answer to."""
-    return card is not None and bool(card["answer"]) and llm_is_configured()
+    typed answer to. Multiple-choice never reaches this path at all --
+    it's graded deterministically, not by the LLM grader -- but is
+    excluded explicitly rather than relying on the template's branch
+    order to make that true."""
+    return (
+        card is not None
+        and card["question_type"] != "multiple_choice"
+        and bool(card["answer"])
+        and llm_is_configured()
+    )
 
 
 def _fields_from_form(
@@ -382,6 +390,38 @@ async def rate_attempt(
         request,
         "practice/_review_result.html",
         {"review_date": review_date, "days_until": days_until},
+    )
+
+
+@router.post("/review/{question_id}/answer-choice", response_class=HTMLResponse)
+async def answer_mcq(
+    request: Request,
+    question_id: int,
+    selected_index: int = Form(...),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    question = await service.get_question(pool, user_id, question_id)
+    if question is None:
+        raise HTTPException(status_code=404)
+
+    try:
+        review_date, is_correct = await service.record_mcq_attempt(pool, user_id, question_id, selected_index)
+    except service.QuestionNotFound as exc:
+        raise HTTPException(status_code=404) from exc
+
+    _remove_from_plan(request, question_id)
+    days_until = (review_date - date.today()).days
+    correct_choice = question["choices"][question["correct_choice_index"]]
+    return templates.TemplateResponse(
+        request,
+        "practice/_review_mcq_result.html",
+        {
+            "is_correct": is_correct,
+            "correct_choice": correct_choice,
+            "review_date": review_date,
+            "days_until": days_until,
+        },
     )
 
 

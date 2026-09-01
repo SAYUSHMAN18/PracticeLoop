@@ -11,7 +11,8 @@ from app.practice.fsrs_scheduler import schedule_review
 
 _QUESTION_COLUMNS = (
     "question_id, user_id, question, answer, example, topic, difficulty, "
-    "company, code_snippet, language, source, created_at"
+    "company, code_snippet, language, source, created_at, "
+    "question_type, choices, correct_choice_index"
 )
 
 # Cosine distance cutoff for "this counts as a match" -- pgvector's <=> ranges
@@ -36,15 +37,31 @@ def _normalize_difficulty(value: str) -> str:
     return candidate if candidate in _VALID_DIFFICULTIES else "medium"
 
 
+_VALID_QUESTION_TYPES = {"free_text", "multiple_choice"}
+
+
 async def create_question(pool: asyncpg.Pool, user_id: int, fields: dict, source: str = "manual") -> int:
+    """`fields["question_type"]` defaults to the original free-text type,
+    so every existing call site (manual capture, AI structuring, marker
+    parsing, flashcard/study-card generation) is unaffected -- only a
+    caller that explicitly asks for "multiple_choice" (Phase 9's
+    diagnostic, Phase 10's quiz modes) needs to pass `choices` and
+    `correct_choice_index` too."""
     embedding_source = f"{fields['question']}\n{fields.get('topic', '')}".strip()
     embedding = await embed_text_async(embedding_source)
+
+    question_type = fields.get("question_type", "free_text")
+    if question_type not in _VALID_QUESTION_TYPES:
+        question_type = "free_text"
+    choices = fields.get("choices") if question_type == "multiple_choice" else None
+    correct_choice_index = fields.get("correct_choice_index") if question_type == "multiple_choice" else None
 
     return await pool.fetchval(
         """INSERT INTO questions
                 (user_id, question, answer, example, topic, difficulty,
-                 company, code_snippet, language, source, embedding)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                 company, code_snippet, language, source, embedding,
+                 question_type, choices, correct_choice_index)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING question_id""",
         user_id,
         fields["question"],
@@ -57,6 +74,9 @@ async def create_question(pool: asyncpg.Pool, user_id: int, fields: dict, source
         fields.get("language", ""),
         source,
         embedding,
+        question_type,
+        choices,
+        correct_choice_index,
     )
 
 
@@ -147,6 +167,32 @@ async def record_attempt(
         review_date,
     )
     return review_date
+
+
+# Deterministic rating for an auto-graded multiple-choice answer -- 4
+# ("Good") for correct rather than 5 ("Easy"), 2 ("Hard") for incorrect
+# rather than 1 ("Again"/blackout): a right or wrong MCQ pick doesn't
+# carry the same certainty as a self-assessed "I knew this cold" or "I
+# drew a total blank," so it lands one notch inside those extremes.
+_MCQ_CORRECT_RATING = 4
+_MCQ_INCORRECT_RATING = 2
+
+
+async def record_mcq_attempt(
+    pool: asyncpg.Pool, user_id: int, question_id: int, selected_index: int
+) -> tuple[date, bool]:
+    """Grades a multiple-choice answer deterministically (no LLM call --
+    the whole point of this question type) and records it through the
+    same FSRS scheduling path free-text answers use, so a mixed deck of
+    both types still gets one coherent review queue instead of two."""
+    question = await get_question(pool, user_id, question_id)
+    if question is None or question["question_type"] != "multiple_choice":
+        raise QuestionNotFound(question_id)
+
+    is_correct = selected_index == question["correct_choice_index"]
+    rating = _MCQ_CORRECT_RATING if is_correct else _MCQ_INCORRECT_RATING
+    review_date = await record_attempt(pool, user_id, question_id, rating)
+    return review_date, is_correct
 
 
 async def due_for_review(pool: asyncpg.Pool, user_id: int, today: date | None = None) -> list[asyncpg.Record]:

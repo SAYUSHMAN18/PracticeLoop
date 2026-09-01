@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ lesson.title }} - PracticeLoop{% endblock %}
+{% block content %}
+<p class="muted" style="margin-bottom:0.3rem;">
+  <a href="/learning-paths/{{ lesson.path_id }}">&larr; {{ lesson.path_title }}</a>
+  &middot; {{ lesson.module_title }} &middot; {{ lesson.unit_title }}
+</p>
+<h1>{{ lesson.title }}</h1>
+
+<div class="card">
+  <h2>Concept</h2>
+  <p>{{ lesson.content.concept }}</p>
+</div>
+
+{% if lesson.content.example %}
+<div class="card">
+  <h2>Example</h2>
+  <p>{{ lesson.content.example }}</p>
+</div>
+{% endif %}
+
+{% if lesson.content.checkpoint_question %}
+<div class="card">
+  <h2>Checkpoint</h2>
+  <p>{{ lesson.content.checkpoint_question }}</p>
+  <details>
+    <summary class="btn secondary" style="display:inline-flex;">Reveal answer</summary>
+    <p class="muted" style="margin-top:0.75rem;">{{ lesson.content.checkpoint_answer }}</p>
+  </details>
+</div>
+{% endif %}
+
+{% if lesson.content.summary %}
+<div class="card">
+  <h2>Summary</h2>
+  <p class="muted">{{ lesson.content.summary }}</p>
+</div>
+{% endif %}
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+    <form method="post" action="/learning-paths/{{ lesson.path_id }}/lessons/{{ lesson.lesson_id }}/toggle">
+      <input type="hidden" name="next" value="/learning-paths/{{ lesson.path_id }}/lessons/{{ lesson.lesson_id }}">
+      <button type="submit" class="{{ 'secondary' if lesson.completed_at }}" style="margin-top:0;">
+        {{ 'Mark incomplete' if lesson.completed_at else '✓ Mark complete' }}
+      </button>
+    </form>
+    <div class="inline-form" style="margin-top:0;">
+      {% if lesson.prev_lesson_id %}
+        <a class="btn secondary" href="/learning-paths/{{ lesson.path_id }}/lessons/{{ lesson.prev_lesson_id }}">&larr; Previous</a>
+      {% endif %}
+      {% if lesson.next_lesson_id %}
+        <a class="btn" href="/learning-paths/{{ lesson.path_id }}/lessons/{{ lesson.next_lesson_id }}">Next &rarr;</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

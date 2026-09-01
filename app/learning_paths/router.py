@@ -63,6 +63,21 @@ async def learning_path_detail(
     return templates.TemplateResponse(request, "learning_paths/detail.html", {"path": path})
 
 
+@router.get("/learning-paths/{path_id}/lessons/{lesson_id}", response_class=HTMLResponse)
+async def lesson_detail(
+    path_id: int,
+    lesson_id: int,
+    request: Request,
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    try:
+        lesson = await service.get_lesson(pool, user_id, path_id, lesson_id, ai_available=llm_is_configured())
+    except service.PathNotFound as exc:
+        raise HTTPException(status_code=404) from exc
+    return templates.TemplateResponse(request, "learning_paths/lesson.html", {"lesson": lesson})
+
+
 @router.post("/learning-paths/{path_id}/delete")
 async def delete_learning_path(path_id: int, user_id: int = Depends(require_user_id), pool=Depends(get_pool)):
     try:
@@ -74,13 +89,25 @@ async def delete_learning_path(path_id: int, user_id: int = Depends(require_user
 
 @router.post("/learning-paths/{path_id}/lessons/{lesson_id}/toggle")
 async def toggle_lesson(
-    path_id: int, lesson_id: int, user_id: int = Depends(require_user_id), pool=Depends(get_pool)
+    path_id: int,
+    lesson_id: int,
+    next: str = Form(""),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
 ):
+    """Toggled both from the path's own lesson-tree view and from a
+    lesson's own page -- `next` sends the student back to whichever one
+    they toggled it from. Constrained to this exact path's own URLs (not
+    an arbitrary redirect target) so a crafted `next` can't be used to
+    bounce a logged-in student somewhere else."""
     try:
         await service.toggle_lesson(pool, user_id, path_id, lesson_id)
     except service.PathNotFound as exc:
         raise HTTPException(status_code=404) from exc
-    return RedirectResponse(f"/learning-paths/{path_id}", status_code=303)
+
+    path_prefix = f"/learning-paths/{path_id}"
+    destination = next if next.startswith(path_prefix + "/") or next == path_prefix else path_prefix
+    return RedirectResponse(destination, status_code=303)
 
 
 @router.get("/subjects", response_class=HTMLResponse)
