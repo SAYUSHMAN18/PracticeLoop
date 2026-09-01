@@ -43,20 +43,44 @@ def _format_size(size_bytes: int) -> str:
     return f"{size_bytes / 1024:.1f} KB"
 
 
-async def _render_index(request: Request, pool, user_id: int, *, error: str | None, status_code: int = 200):
-    rows = await service.list_documents(pool, user_id)
+async def _render_index(
+    request: Request,
+    pool,
+    user_id: int,
+    *,
+    error: str | None,
+    status_code: int = 200,
+    doc_type: str | None = None,
+    favorites_only: bool = False,
+):
+    rows = await service.list_documents(pool, user_id, doc_type=doc_type, favorites_only=favorites_only)
     documents = [{**dict(row), "size_display": _format_size(row["size_bytes"])} for row in rows]
     return templates.TemplateResponse(
         request,
         "documents/index.html",
-        {"documents": documents, "doc_type_labels": DOC_TYPE_LABELS, "error": error},
+        {
+            "documents": documents,
+            "doc_type_labels": DOC_TYPE_LABELS,
+            "error": error,
+            "active_doc_type": doc_type or "",
+            "favorites_only": favorites_only,
+        },
         status_code=status_code,
     )
 
 
 @router.get("/documents", response_class=HTMLResponse)
-async def documents_page(request: Request, user_id: int = Depends(require_user_id), pool=Depends(get_pool)):
-    return await _render_index(request, pool, user_id, error=None)
+async def documents_page(
+    request: Request,
+    doc_type: str = "",
+    favorites: str = "",
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    filter_type = doc_type if doc_type in service.DOC_TYPES else None
+    return await _render_index(
+        request, pool, user_id, error=None, doc_type=filter_type, favorites_only=favorites == "1"
+    )
 
 
 @router.post("/documents")
@@ -136,6 +160,31 @@ async def download_document(
         media_type=mime_type,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.post("/documents/{document_id}/favorite")
+async def favorite_document(
+    document_id: int,
+    doc_type: str = Form(""),
+    favorites: str = Form(""),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    """Toggles is_favorite -- doc_type/favorites are just the current
+    filter state, round-tripped through hidden form fields so toggling a
+    favorite from inside a filtered view doesn't drop the filter."""
+    try:
+        await service.toggle_favorite(pool, user_id, document_id)
+    except service.DocumentNotFound as exc:
+        raise HTTPException(status_code=404) from exc
+
+    query = []
+    if doc_type in service.DOC_TYPES:
+        query.append(f"doc_type={doc_type}")
+    if favorites == "1":
+        query.append("favorites=1")
+    location = "/documents" + ("?" + "&".join(query) if query else "")
+    return RedirectResponse(location, status_code=303)
 
 
 @router.post("/documents/{document_id}/delete")

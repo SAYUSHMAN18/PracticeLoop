@@ -35,10 +35,25 @@
 
 <div class="card">
   <h2>Vault ({{ documents|length }})</h2>
+
+  <nav class="subnav" aria-label="Filter documents">
+    <a href="/documents{{ '?favorites=1' if favorites_only }}" class="{{ 'active' if not active_doc_type }}">All types</a>
+    {% for value, label in doc_type_labels.items() %}
+      <a href="/documents?doc_type={{ value }}{{ '&favorites=1' if favorites_only }}" class="{{ 'active' if active_doc_type == value }}">{{ label }}</a>
+    {% endfor %}
+    <a href="/documents?{{ 'doc_type=' + active_doc_type + '&' if active_doc_type }}favorites={{ '0' if favorites_only else '1' }}" class="{{ 'active' if favorites_only }}">&starf; Favorites</a>
+  </nav>
+
   {% for doc in documents %}
     <div class="question-item">
       <div style="display:flex;justify-content:space-between;align-items:start;gap:1rem;flex-wrap:wrap;">
         <div>
+          <form method="post" action="/documents/{{ doc.document_id }}/favorite" style="display:inline;">
+            <input type="hidden" name="doc_type" value="{{ active_doc_type }}">
+            <input type="hidden" name="favorites" value="{{ '1' if favorites_only else '' }}">
+            <button type="submit" class="link-button" style="padding:0.1rem 0.3rem;font-size:1rem;color:{{ 'var(--accent)' if doc.is_favorite else 'var(--muted)' }};"
+                    aria-label="{{ 'Unfavorite' if doc.is_favorite else 'Favorite' }} {{ doc.title }}">{{ '★' if doc.is_favorite else '☆' }}</button>
+          </form>
           <span class="tag {{ 'tag-proven' if doc.doc_type == 'resume' else '' }}">{{ doc_type_labels.get(doc.doc_type, doc.doc_type) }}</span>
           <strong>{{ doc.title }}</strong>
           <div class="muted" style="font-size:0.82rem;margin-top:0.2rem;">
@@ -60,7 +75,13 @@
       </div>
     </div>
   {% else %}
-    <p class="muted">Nothing uploaded yet &mdash; add your resume above to get started.</p>
+    <p class="muted">
+      {% if active_doc_type or favorites_only %}
+        Nothing matches this filter. <a href="/documents">Clear it</a>?
+      {% else %}
+        Nothing uploaded yet &mdash; add your resume above to get started.
+      {% endif %}
+    </p>
   {% endfor %}
 </div>
 
