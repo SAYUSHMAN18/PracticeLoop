@@ -128,15 +128,16 @@
         <span class="mentor-badge">&#10022; Loop Mentor</span>
         <button type="button" class="icon-button" id="mentor-close" aria-label="Close Loop Mentor panel">&times;</button>
       </div>
-      <div class="mentor-panel-body">
-        <p class="muted">
-          Loop Mentor is arriving in a later phase &mdash; a context-aware AI tutor that sees your
-          current lesson, recent mistakes, and uploaded material, and can explain, quiz, or hint on demand.
-        </p>
-        <p class="muted" style="font-size:0.82rem;">
-          For now: use the search box above to find a question, or reach for the flashcard and
-          resume-tailoring tools already built into Practice and Career Lab.
-        </p>
+      {# A page (e.g. learning_paths/lesson.html) tells the mentor what it's
+         looking at by overriding these two blocks -- same inheritance
+         pattern every template already uses for {% block title %}, just
+         consumed here instead of in <title>. Unset stays "general". #}
+      <div class="mentor-panel-body"
+           id="mentor-panel-body"
+           hx-get="/mentor/conversation?context_type={% block mentor_context_type %}general{% endblock %}&context_id={% block mentor_context_id %}{% endblock %}"
+           hx-trigger="load"
+           hx-swap="innerHTML">
+        <p class="muted">Loading&hellip;</p>
       </div>
     </aside>
     <div class="mentor-backdrop" id="mentor-backdrop"></div>

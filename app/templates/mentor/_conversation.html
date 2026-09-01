@@ -1,0 +1,37 @@
+<div id="mentor-messages" style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:0.75rem;">
+  {% if not messages %}
+    <p class="muted" style="font-size:0.85rem;">
+      Ask about what you're working on, or use a quick action below.
+      {% if not ai_available %}Loop Mentor needs an AI provider configured to reply.{% endif %}
+    </p>
+  {% endif %}
+  {% for m in messages %}
+    <div style="align-self:{{ 'flex-end' if m.role == 'user' else 'flex-start' }};max-width:92%;">
+      <div style="padding:0.55rem 0.75rem;border-radius:10px;font-size:0.87rem;line-height:1.45;
+                  background:{{ 'var(--accent-soft)' if m.role == 'user' else 'var(--mentor-soft)' }};
+                  color:{{ 'var(--accent-2)' if m.role == 'user' else 'var(--text)' }};white-space:pre-wrap;">{{ m.content }}</div>
+      {% if m.is_ai_generated %}
+        <div class="muted" style="font-size:0.68rem;margin-top:0.15rem;">AI-generated &mdash; verify anything important.</div>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.75rem;">
+  {% for action_id, label in [('explain_simply', 'Explain more simply'), ('give_hint', 'Give me a hint'), ('memory_trick', 'Memory trick'), ('study_next', 'What should I study next?')] %}
+    <form hx-post="/mentor/quick-action" hx-target="#mentor-panel-body" hx-swap="innerHTML" style="margin:0;">
+      <input type="hidden" name="action_id" value="{{ action_id }}">
+      <input type="hidden" name="context_type" value="{{ context_type }}">
+      <input type="hidden" name="context_id" value="{{ context_id }}">
+      <button type="submit" class="secondary" style="margin-top:0;padding:0.35rem 0.6rem;font-size:0.76rem;">{{ label }}</button>
+    </form>
+  {% endfor %}
+</div>
+
+<form hx-post="/mentor/message" hx-target="#mentor-panel-body" hx-swap="innerHTML">
+  <input type="hidden" name="context_type" value="{{ context_type }}">
+  <input type="hidden" name="context_id" value="{{ context_id }}">
+  <label for="f-mentor-text" class="visually-hidden">Ask Loop Mentor</label>
+  <textarea id="f-mentor-text" name="text" rows="2" placeholder="Ask Loop Mentor&hellip;" required style="font-size:0.87rem;"></textarea>
+  <button type="submit" style="margin-top:0.5rem;width:100%;">Send</button>
+</form>

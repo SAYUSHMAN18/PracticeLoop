@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ lesson.title }} - PracticeLoop{% endblock %}
+{% block mentor_context_type %}lesson{% endblock %}
+{% block mentor_context_id %}{{ lesson.lesson_id }}{% endblock %}
 {% block content %}
 <p class="muted" style="margin-bottom:0.3rem;">
   <a href="/learning-paths/{{ lesson.path_id }}">&larr; {{ lesson.path_title }}</a>

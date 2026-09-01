@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ path.title }} - PracticeLoop{% endblock %}
+{% block mentor_context_type %}path{% endblock %}
+{% block mentor_context_id %}{{ path.path_id }}{% endblock %}
 {% block content %}
 <p class="muted" style="margin-bottom:0.3rem;"><a href="/learning-paths">&larr; My Learning Paths</a></p>
 <h1>{{ path.title }}</h1>

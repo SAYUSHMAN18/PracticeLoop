@@ -17,10 +17,13 @@ async def test_topbar_has_search_theme_mentor_and_profile_controls(client):
 
 
 async def test_mentor_panel_is_present_with_its_own_landmark(client):
+    """The panel body itself is real chat now (Phase 11) -- HTMX-loaded
+    from /mentor/conversation on page load, not server-rendered text
+    here, so this just checks the landmark and load wiring are present."""
     await signup(client, "shell-mentor@example.com")
     response = await client.get("/dashboard")
     assert '<aside class="mentor-panel" id="mentor-panel" aria-label="Loop Mentor">' in response.text
-    assert "Loop Mentor is arriving in a later phase" in response.text
+    assert 'hx-get="/mentor/conversation?context_type=general' in response.text
 
 
 async def test_a11y_menu_has_all_three_toggles(client):
