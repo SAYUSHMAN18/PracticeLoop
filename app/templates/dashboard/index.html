@@ -113,11 +113,14 @@
 {% if mastery %}
 <div class="card">
   <h2>What to study next</h2>
-  <p class="muted">Weakest topics first, by average self-rated confidence &mdash; low confidence over several attempts outranks a single shaky one.</p>
+  <p class="muted">Weakest topics first &mdash; a blend of recent confidence, question difficulty, and how likely you are to still recall it, not just a raw average.</p>
   {% for m in mastery %}
     <div class="question-item">
-      <strong>{{ m.topic }}</strong>
-      <span class="muted"> &mdash; {{ m.avg_confidence }} avg confidence over {{ m.attempt_count }} attempt{{ "s" if m.attempt_count != 1 }}</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;">
+        <strong>{{ m.topic }}</strong>
+        <span class="tag {{ 'tag-proven' if m.mastery_score >= 70 else '' }}">{{ m.mastery_score }}/100</span>
+      </div>
+      <span class="muted">{{ m.avg_confidence }} avg confidence over {{ m.attempt_count }} attempt{{ "s" if m.attempt_count != 1 }}</span>
     </div>
   {% endfor %}
 </div>

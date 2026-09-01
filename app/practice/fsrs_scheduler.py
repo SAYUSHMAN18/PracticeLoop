@@ -86,8 +86,7 @@ async def retrievability(
     pool: asyncpg.Pool, question_id: int, *, now: datetime | None = None
 ) -> float | None:
     """Current recall-probability estimate (0-1) for a question, or None
-    if it's never been reviewed. Not wired into the UI yet -- available
-    for a future "how likely are you to still remember this" indicator."""
+    if it's never been reviewed."""
     row = await pool.fetchrow(
         "SELECT state, stability, difficulty, due, last_review FROM card_states WHERE question_id = $1",
         question_id,
@@ -96,3 +95,24 @@ async def retrievability(
         return None
     card = _card_from_row(row)
     return _SCHEDULER.get_card_retrievability(card, now or datetime.now(timezone.utc))
+
+
+async def retrievability_bulk(
+    pool: asyncpg.Pool, user_id: int, *, now: datetime | None = None
+) -> dict[int, float]:
+    """Same estimate as retrievability(), for every one of a user's
+    reviewed questions in one query instead of one round-trip per
+    question -- Phase 5.4's mastery score needs this per-topic, and
+    calling the single-question version in a loop would be an N+1 query
+    for anyone with more than a handful of questions."""
+    rows = await pool.fetch(
+        """SELECT question_id, state, stability, difficulty, due, last_review
+           FROM card_states WHERE user_id = $1 AND stability IS NOT NULL""",
+        user_id,
+    )
+    now = now or datetime.now(timezone.utc)
+    result = {}
+    for row in rows:
+        card = _card_from_row(row)
+        result[row["question_id"]] = _SCHEDULER.get_card_retrievability(card, now)
+    return result
