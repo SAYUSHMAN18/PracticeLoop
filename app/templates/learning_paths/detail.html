@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ path.title }} - PracticeLoop{% endblock %}
+{% block content %}
+<p class="muted" style="margin-bottom:0.3rem;"><a href="/learning-paths">&larr; My Learning Paths</a></p>
+<h1>{{ path.title }}</h1>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+    <div style="flex:1;min-width:200px;">
+      <div class="progress-bar"><div class="progress-bar-fill" style="width:{{ path.progress_percent }}%;"></div></div>
+      <div class="muted" style="font-size:0.82rem;margin-top:0.35rem;">
+        {{ path.completed_lessons }} of {{ path.total_lessons }} lessons complete ({{ path.progress_percent }}%)
+      </div>
+    </div>
+    <form method="post" action="/learning-paths/{{ path.path_id }}/delete" id="path-delete-form" data-title="{{ path.title }}">
+      <button type="submit" class="secondary" style="color:var(--danger);border-color:var(--danger-soft);margin-top:0;">Delete path</button>
+    </form>
+  </div>
+</div>
+
+{% for module in path.modules %}
+  <div class="card">
+    <h2>{{ loop.index }}. {{ module.title }}</h2>
+    {% if module.description %}<p class="muted">{{ module.description }}</p>{% endif %}
+
+    {% for unit in module.units %}
+      <div style="margin-top:1.1rem;{{ 'padding-top:1.1rem;border-top:1px solid var(--border);' if not loop.first }}">
+        <strong>{{ unit.title }}</strong>
+        {% if unit.description %}<div class="muted" style="font-size:0.85rem;margin-top:0.15rem;">{{ unit.description }}</div>{% endif %}
+        <div style="margin-top:0.6rem;">
+          {% for lesson in unit.lessons %}
+            <form method="post" action="/learning-paths/{{ path.path_id }}/lessons/{{ lesson.lesson_id }}/toggle" style="display:flex;align-items:center;gap:0.55rem;padding:0.35rem 0;">
+              <button type="submit" class="link-button" style="padding:0;margin:0;color:{{ 'var(--good)' if lesson.completed_at else 'var(--muted)' }};" aria-label="{{ 'Mark incomplete' if lesson.completed_at else 'Mark complete' }}: {{ lesson.title }}">
+                {{ '✓' if lesson.completed_at else '○' }}
+              </button>
+              <span style="{{ 'color:var(--muted);text-decoration:line-through;' if lesson.completed_at }}">{{ lesson.title }}</span>
+            </form>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endfor %}
+
+<script>
+document.getElementById("path-delete-form").addEventListener("submit", function (e) {
+  if (!confirm("Delete \"" + this.dataset.title + "\"? This can't be undone.")) {
+    e.preventDefault();
+  }
+});
+</script>
+{% endblock %}

@@ -3,12 +3,12 @@ import pytest
 from tests.conftest import signup
 
 # One (path, sidebar label, phase heading) tuple per Phase 5 placeholder --
-# the sections the new sidebar links to that Phase 6/9/13/15 haven't built
-# out yet. See app/roadmap/router.py for why these are five literal routes
-# instead of a single "/{section}" catch-all.
+# the sections the new sidebar links to that Phase 9/13/15 haven't built
+# out yet. See app/roadmap/router.py for why these are literal routes
+# instead of a single "/{section}" catch-all. My Learning Paths and
+# Explore Subjects moved out of this list in Phase 6 -- they're real
+# pages now, covered by test_learning_paths.py instead.
 SECTIONS = [
-    ("/learning-paths", "My Learning Paths", "Phase 6"),
-    ("/subjects", "Explore Subjects", "Phase 6"),
     ("/assessments", "Assessments", "Phase 9"),
     ("/projects", "Projects", "Phase 13"),
     ("/progress", "Progress", "Phase 15"),
@@ -30,9 +30,9 @@ async def test_placeholders_stay_in_the_app_shell_not_a_dead_end(client):
     mentor panel and all -- not a bare fragment that drops the student out
     of the shell just because the feature behind it isn't built yet."""
     await signup(client, "roadmap-shell@example.com")
-    response = await client.get("/learning-paths")
+    response = await client.get("/progress")
     assert 'id="mentor-panel"' in response.text
-    assert '<a href="/learning-paths" class="active">My Learning Paths</a>' in response.text
+    assert '<a href="/progress" class="active">Progress</a>' in response.text
     assert '<a href="/dashboard">Back to Home</a>' in response.text
 
 

@@ -25,6 +25,7 @@ from app.core.templates import STATIC_DIR, templates
 from app.dashboard.router import router as dashboard_router
 from app.documents.router import router as documents_router
 from app.jobs.router import router as jobs_router
+from app.learning_paths.router import router as learning_paths_router
 from app.practice.router import router as practice_router
 from app.profile.router import router as profile_router
 from app.roadmap.router import router as roadmap_router
@@ -80,6 +81,7 @@ app.include_router(practice_router)
 app.include_router(dashboard_router)
 app.include_router(jobs_router)
 app.include_router(documents_router)
+app.include_router(learning_paths_router)
 app.include_router(roadmap_router)
 
 

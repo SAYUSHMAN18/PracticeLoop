@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}My Learning Paths - PracticeLoop{% endblock %}
+{% block content %}
+<h1>My Learning Paths</h1>
+<p class="muted">
+  Turn a goal into a structured path of modules, units, and lessons. Not sure where to
+  start? <a href="/subjects">Browse a subject template</a> instead.
+</p>
+
+<div class="card">
+  <h2>Start a new path</h2>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <form method="post" action="/learning-paths">
+    <label for="f-goal">What are you working toward?</label>
+    <input id="f-goal" type="text" name="goal" required maxlength="300"
+           placeholder="e.g. Become job-ready in Python">
+    <button type="submit">Create path</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Your paths ({{ paths|length }})</h2>
+  {% for path in paths %}
+    <div class="question-item">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:1rem;flex-wrap:wrap;">
+        <div style="flex:1;min-width:220px;">
+          <a href="/learning-paths/{{ path.path_id }}" style="font-weight:700;font-size:1.02rem;text-decoration:none;color:var(--text);">{{ path.title }}</a>
+          <div class="muted" style="font-size:0.82rem;margin-top:0.2rem;">
+            {{ path.lesson_count }} lesson{{ 's' if path.lesson_count != 1 }}
+            {% if path.ai_generated %} &middot; AI-generated outline{% endif %}
+          </div>
+          <div style="margin-top:0.6rem;max-width:320px;">
+            <div class="progress-bar"><div class="progress-bar-fill" style="width:{{ path.progress_percent }}%;"></div></div>
+            <div class="muted" style="font-size:0.76rem;margin-top:0.25rem;">{{ path.progress_percent }}% complete</div>
+          </div>
+        </div>
+        <div class="inline-form" style="margin-top:0;">
+          <a class="btn secondary" href="/learning-paths/{{ path.path_id }}">Open</a>
+          <form method="post" action="/learning-paths/{{ path.path_id }}/delete" class="path-delete-form" data-title="{{ path.title }}">
+            <button type="submit" class="secondary" style="color:var(--danger);border-color:var(--danger-soft);">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <p class="muted">No paths yet &mdash; start one above, or pick a template from Explore Subjects.</p>
+  {% endfor %}
+</div>
+
+<script>
+document.querySelectorAll(".path-delete-form").forEach(function (form) {
+  form.addEventListener("submit", function (e) {
+    if (!confirm("Delete \"" + form.dataset.title + "\"? This can't be undone.")) {
+      e.preventDefault();
+    }
+  });
+});
+</script>
+{% endblock %}

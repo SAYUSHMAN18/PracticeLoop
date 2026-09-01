@@ -1048,6 +1048,22 @@ details[open] summary { margin-bottom: 0.25rem; }
   .auth-form-side { padding: 2rem 1.5rem 3rem; }
 }
 
+/* ---------- progress bar (learning paths, and anywhere else a percent-done needs showing) ---------- */
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
 /* ---------- dashboard hub ---------- */
 
 .hub-links { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.9rem; }

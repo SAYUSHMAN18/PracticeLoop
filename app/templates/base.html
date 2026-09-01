@@ -98,7 +98,7 @@
       <nav class="sidebar-nav" aria-label="Main">
         <a href="/dashboard" class="{{ 'active' if request.url.path == '/dashboard' }}">Home</a>
         <a href="/practice/plan" class="{{ 'active' if request.url.path == '/practice/plan' }}">Today</a>
-        <a href="/learning-paths" class="{{ 'active' if request.url.path == '/learning-paths' }}">My Learning Paths</a>
+        <a href="/learning-paths" class="{{ 'active' if request.url.path.startswith('/learning-paths') }}">My Learning Paths</a>
         <a href="/subjects" class="{{ 'active' if request.url.path == '/subjects' }}">Explore Subjects</a>
         <a href="/practice" class="{{ 'active' if request.url.path == '/practice' }}">Practice</a>
         <a href="/practice/review" class="{{ 'active' if request.url.path.startswith('/practice/review') }}">Review</a>

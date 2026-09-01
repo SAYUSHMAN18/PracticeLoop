@@ -8,40 +8,15 @@ from app.core.templates import templates
 
 router = APIRouter(dependencies=[Depends(inject_current_user)])
 
-# Phase 5 (app shell) adds these five sections to the sidebar's new
+# Phase 5 (app shell) added these sections to the sidebar's new
 # information architecture ahead of the phases that actually build them
-# out (Learning Paths/Explore Subjects in Phase 6, Assessments in Phase
-# 9, Projects in Phase 13, Progress in Phase 15). A real destination that
-# says what's coming beats either a dead link or hiding the nav item
-# until the feature exists -- the whole point of shipping the shell
-# first is that the information architecture is visible and navigable
-# from day one, even where the pages behind it are still stubs.
-_LEARNING_PATHS = {
-    "title": "My Learning Paths",
-    "blurb": (
-        "Turn a goal, a syllabus, an uploaded document, or a job description into a "
-        "structured path of modules, units, and lessons -- with progress, mastery, and "
-        "a next recommended action for each one."
-    ),
-    "phase": "Phase 6 — Learning Paths and Course Architecture",
-    "coming": [
-        "Create a path from a goal, subject, syllabus, or document",
-        "Modules → units → lessons, each with a mastery level",
-        "Progress %, estimated completion time, and weak areas per path",
-    ],
-}
-_SUBJECTS = {
-    "title": "Explore Subjects",
-    "blurb": (
-        "Browse existing PracticeLoop templates and subjects to start a learning path from, "
-        "without starting from a blank goal."
-    ),
-    "phase": "Phase 6 — Learning Paths and Course Architecture",
-    "coming": [
-        "A catalog of ready-made subject and exam templates",
-        "One click to turn a template into your own learning path",
-    ],
-}
+# out. A real destination that says what's coming beats either a dead
+# link or hiding the nav item until the feature exists.
+#
+# My Learning Paths and Explore Subjects moved out of this file in
+# Phase 6 -- they're real pages now (app/learning_paths/router.py).
+# Assessments (Phase 9), Projects (Phase 13), and Progress (Phase 15)
+# are still ahead, so they stay here as stubs.
 _ASSESSMENTS = {
     "title": "Assessments",
     "blurb": (
@@ -82,16 +57,6 @@ _PROGRESS = {
         "“Why this was recommended” explanations, not just a suggestion",
     ],
 }
-
-
-@router.get("/learning-paths", response_class=HTMLResponse)
-async def learning_paths(request: Request, user_id: int = Depends(require_user_id)):
-    return templates.TemplateResponse(request, "roadmap/coming_soon.html", _LEARNING_PATHS)
-
-
-@router.get("/subjects", response_class=HTMLResponse)
-async def subjects(request: Request, user_id: int = Depends(require_user_id)):
-    return templates.TemplateResponse(request, "roadmap/coming_soon.html", _SUBJECTS)
 
 
 @router.get("/assessments", response_class=HTMLResponse)

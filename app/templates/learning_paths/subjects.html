@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Explore Subjects - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Explore Subjects</h1>
+<p class="muted">
+  Ready-made starting points -- pick one to generate a learning path instantly, or
+  <a href="/learning-paths">start from your own goal</a> instead.
+</p>
+
+<div class="card">
+  {% for template in templates %}
+    <div class="question-item">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div>
+          <strong>{{ template.title }}</strong>
+          <div class="muted" style="font-size:0.85rem;margin-top:0.2rem;">{{ template.blurb }}</div>
+        </div>
+        <form method="post" action="/subjects/{{ template.id }}/start" style="margin:0;">
+          <button type="submit" style="margin-top:0;">Start this path</button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
