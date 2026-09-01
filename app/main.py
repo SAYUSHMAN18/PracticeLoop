@@ -27,6 +27,7 @@ from app.documents.router import router as documents_router
 from app.jobs.router import router as jobs_router
 from app.practice.router import router as practice_router
 from app.profile.router import router as profile_router
+from app.roadmap.router import router as roadmap_router
 
 logger = get_logger(__name__)
 
@@ -79,6 +80,7 @@ app.include_router(practice_router)
 app.include_router(dashboard_router)
 app.include_router(jobs_router)
 app.include_router(documents_router)
+app.include_router(roadmap_router)
 
 
 @app.exception_handler(LoginRequired)

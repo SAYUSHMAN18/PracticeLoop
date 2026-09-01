@@ -33,7 +33,17 @@ async def test_anonymous_access_redirects_to_login():
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as ac:
-        for path in ("/dashboard", "/practice", "/practice/review", "/profile"):
+        for path in (
+            "/dashboard",
+            "/practice",
+            "/practice/review",
+            "/profile",
+            "/learning-paths",
+            "/subjects",
+            "/assessments",
+            "/projects",
+            "/progress",
+        ):
             response = await ac.get(path)
             assert response.status_code == 303, path
             assert response.headers["location"] == "/login", path

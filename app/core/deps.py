@@ -32,8 +32,17 @@ async def inject_current_user(request: Request, pool=Depends(get_pool)) -> None:
     user_id = current_user_id(request)
     if user_id is None:
         request.state.current_user = None
+        request.state.current_streak = None
         return
 
     from app.auth.service import get_user  # local import: avoids a core -> auth import at module load time
 
     request.state.current_user = await get_user(pool, user_id)
+
+    # The Phase 5 topbar shows the streak on every page, not just the
+    # dashboard -- same "just query it, thread it through gather if it
+    # ever shows up as real latency" tradeoff as the user lookup above.
+    # local import: avoids a core -> practice import at module load time
+    from app.practice.service import streak_days
+
+    request.state.current_streak = await streak_days(pool, user_id)

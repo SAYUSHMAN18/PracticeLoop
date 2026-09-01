@@ -19,6 +19,14 @@
   --shadow-color: 24deg 35% 30%;
   --radius: 16px;
   --radius-lg: 22px;
+  /* Loop Mentor's own accent -- deliberately a hue nothing else in the
+     palette uses (violet, vs. the app's orange/green/red), so the mentor
+     panel and its topbar toggle read as a distinct surface, not another
+     "success" or "brand" color. Contrast-checked the same as every other
+     pair here: 6.3:1 on --bg, 7.4:1 on --panel, 6.1:1 as text on
+     --mentor-soft. */
+  --mentor: #4d3fc0;
+  --mentor-soft: #e8e4fb;
   --font-display: "Space Grotesk", "Inter", -apple-system, Segoe UI, sans-serif;
   --font-body: "Inter", -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
 }
@@ -49,6 +57,9 @@
     --good-soft: #253a1c;
     --input-bg: #241f16;
     --shadow-color: 24deg 60% 4%;
+    /* 7.9:1 on --bg, 7.2:1 on --panel, 6.5:1 as text on --mentor-soft. */
+    --mentor: #b3a6ff;
+    --mentor-soft: #2e2650;
   }
 }
 
@@ -71,6 +82,8 @@
   --good-soft: #253a1c;
   --input-bg: #241f16;
   --shadow-color: 24deg 60% 4%;
+  --mentor: #b3a6ff;
+  --mentor-soft: #2e2650;
 }
 
 /* Every pair below is WCAG-verified, not eyeballed: text-on-bg 21:1,
@@ -100,6 +113,9 @@
   --good-soft: #deeed4;
   --input-bg: #ffffff;
   --shadow-color: 0deg 0% 0%;
+  /* 12.9:1 on --bg, 9.8:1 as text on --mentor-soft. */
+  --mentor: #2c2080;
+  --mentor-soft: #e2ddfa;
 }
 :root[data-theme="contrast"] .card,
 :root[data-theme="contrast"] input,
@@ -110,6 +126,28 @@
 :root[data-theme="contrast"] .card { box-shadow: none; } /* soft shadows read as visual noise here, not depth */
 
 * { box-sizing: border-box; }
+
+/* ---------- accessibility menu toggles (topbar "Aa" menu) ---------- */
+/* Persisted the same way as data-theme/data-mentor: set on <html> by the
+   early <head> script in base.html, before first paint. data-a11y holds
+   a space-separated token list (like a classList) so any subset of the
+   three can be on at once. */
+
+html[data-a11y~="large"] { font-size: 18px; }
+html[data-a11y~="large"] body { font-size: 17.5px; }
+
+html[data-a11y~="dyslexia"] body { font-family: "Lexend", var(--font-body); }
+html[data-a11y~="dyslexia"] h1, html[data-a11y~="dyslexia"] h2 { font-family: "Lexend", var(--font-display); }
+
+/* Overrides prefers-reduced-motion too -- someone whose OS-level setting
+   isn't reduced but who still wants PracticeLoop calmer can ask for it
+   here explicitly. */
+html[data-a11y~="motion"] *, html[data-a11y~="motion"] *::before, html[data-a11y~="motion"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
 
 ::selection { background: var(--accent); color: var(--accent-text); }
 
@@ -179,27 +217,142 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 .link-button:hover { color: var(--danger); background: var(--danger-soft); }
 .inline { display: inline; margin: 0; }
 
-/* ---------- app shell: left sidebar + main content ---------- */
+/* ---------- app shell: topbar + left sidebar + main + mentor panel ---------- */
 
-.app-shell { display: flex; align-items: stretch; min-height: 100vh; }
+/* Desktop: a fixed-height topbar spanning the full width, with the
+   sidebar, main content and mentor panel as three columns underneath it.
+   --mentor-w is a custom property (not a literal 320px in the template
+   rule below) so the "collapsed" state below can override just this one
+   value instead of duplicating the whole grid-template-columns line. */
+.app-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr var(--mentor-w, 320px);
+  grid-template-rows: 64px 1fr;
+  grid-template-areas:
+    "topbar topbar topbar"
+    "sidebar main mentor";
+  min-height: 100vh;
+}
+/* Collapsed/expanded is a persisted preference (see the early <head>
+   script in base.html, same pattern as data-theme) so it's set on
+   <html> before first paint -- no flash of an expanded panel that then
+   immediately collapses once JS runs after the body loads. */
+html[data-mentor="collapsed"] .app-shell { --mentor-w: 0px; }
+
+.topbar {
+  grid-area: topbar;
+  position: sticky;
+  top: 0;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 1.25rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.topbar-left { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+.topbar .brand { font-size: 1.1rem; }
+
+.topbar-search { flex: 1; max-width: 420px; margin: 0 auto 0 1rem; }
+.topbar-search input {
+  padding: 0.5rem 0.85rem;
+  font-size: 0.88rem;
+  border-radius: 999px;
+  background: var(--panel-2);
+}
+
+.topbar-right { display: flex; align-items: center; gap: 0.4rem; margin-left: auto; flex-shrink: 0; }
+
+.topbar-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-2);
+  font-weight: 700;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.icon-button:hover { color: var(--text); background: var(--panel-2); border-color: var(--border); }
+.icon-button[aria-expanded="true"] { color: var(--accent-2); background: var(--accent-soft); }
+#mentor-toggle[aria-expanded="true"] { color: var(--mentor); background: var(--mentor-soft); }
+
+.topbar-menu { position: relative; }
+.topbar-profile { background: none; border: none; margin: 0; padding: 0; cursor: pointer; border-radius: 50%; }
+.topbar-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 40;
+  min-width: 200px;
+  padding: 0.4rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px -12px hsl(var(--shadow-color) / 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.topbar-dropdown[hidden] { display: none; }
+.topbar-dropdown-user { padding: 0.5rem 0.6rem 0.7rem; margin-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+.topbar-dropdown a, .topbar-dropdown button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.6rem;
+  border-radius: 8px;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.87rem;
+  background: none;
+  border: none;
+  margin: 0;
+  cursor: pointer;
+}
+.topbar-dropdown a:hover, .topbar-dropdown button:hover { background: var(--panel-2); }
+.topbar-dropdown button:hover { color: var(--danger); }
+.topbar-dropdown button[data-a11y] { color: var(--text); }
+.topbar-dropdown button[data-a11y]:hover { color: var(--accent-2); background: var(--accent-soft); }
+.topbar-dropdown button[data-a11y].active { color: var(--accent-2); background: var(--accent-soft); }
+.topbar-dropdown button[data-a11y].active::after { content: " \2713"; }
 
 .sidebar {
-  flex: 0 0 240px;
-  width: 240px;
+  grid-area: sidebar;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  padding: 1.5rem 1rem;
+  padding: 1.25rem 1rem;
   border-right: 1px solid var(--border);
   background: var(--panel);
   position: sticky;
-  top: 0;
+  top: 64px;
   align-self: flex-start;
-  height: 100vh;
+  height: calc(100vh - 64px);
   overflow-y: auto;
   z-index: 30;
 }
-.sidebar .brand { padding: 0 0.5rem; margin-bottom: 1.1rem; }
 
 .command-palette-trigger {
   display: flex;
@@ -280,15 +433,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .command-palette li.active { background: var(--accent-soft); color: var(--accent-2); }
 
-.sidebar-user {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.55rem 0.5rem;
-  margin-bottom: 1.1rem;
-  border-radius: 10px;
-  background: var(--panel-2);
-}
+/* Avatar circle -- used both in the topbar's profile-menu trigger and,
+   at one point, the old sidebar-user block it replaced. Kept the class
+   name since nothing about the rule itself is sidebar-specific. */
 .sidebar-avatar {
   flex-shrink: 0;
   width: 34px;
@@ -303,7 +450,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   font-weight: 700;
   font-size: 0.92rem;
 }
-.sidebar-user-info { min-width: 0; }
 .sidebar-user-name {
   font-weight: 700;
   font-size: 0.86rem;
@@ -334,38 +480,22 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 .sidebar-nav a:hover { color: var(--text); background: var(--panel-2); }
 .sidebar-nav a.active { color: var(--accent-2); background: var(--accent-soft); }
 
-.sidebar-footer {
-  margin-top: auto;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-.sidebar-footer .link-button { display: block; width: 100%; text-align: left; border-radius: 8px; padding: 0.62rem 0.75rem; }
-.sidebar-footer form { margin: 0; }
-#theme-toggle:hover { color: var(--text); background: var(--panel-2); }
-
 .sidebar-toggle {
   display: none;
-  position: fixed;
-  top: 0.85rem;
-  left: 1rem;
-  z-index: 51;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   padding: 0;
   margin: 0;
   border-radius: 10px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 12px -6px hsl(var(--shadow-color) / 0.4);
+  background: none;
+  border: 1px solid transparent;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 4px;
   cursor: pointer;
 }
+.sidebar-toggle:hover { background: var(--panel-2); border-color: var(--border); }
 .sidebar-toggle span { width: 18px; height: 2px; background: var(--text); border-radius: 2px; }
 
 .sidebar-backdrop {
@@ -380,15 +510,82 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .sidebar-backdrop.open { opacity: 1; pointer-events: auto; }
 
-.app-main { flex: 1; min-width: 0; }
+.app-main { grid-area: main; min-width: 0; }
 
 .container { max-width: 880px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
 
+/* ---------- Loop Mentor panel ---------- */
+
+.mentor-panel {
+  grid-area: mentor;
+  position: sticky;
+  top: 64px;
+  height: calc(100vh - 64px);
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+/* Collapsing to width: 0 via --mentor-w (see .app-shell.mentor-collapsed
+   above) would otherwise leave the panel's own content forcing the grid
+   track wider than 0 -- clip it so the column can actually shrink away. */
+html[data-mentor="collapsed"] .mentor-panel { overflow: hidden; border-left: none; }
+
+.mentor-panel-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+}
+.mentor-badge {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--mentor);
+  white-space: nowrap;
+}
+.mentor-panel-body { padding: 1.1rem; min-width: 260px; }
+
+.mentor-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.mentor-backdrop.open { opacity: 1; pointer-events: auto; }
+
+@media (max-width: 1200px) {
+  /* Laptop: the mentor panel becomes an overlay drawer instead of a
+     permanent third column, so the main content gets real width back. */
+  .app-shell { grid-template-columns: 240px 1fr 0px; }
+  .mentor-panel {
+    position: fixed;
+    inset: 64px 0 0 auto;
+    width: min(360px, 92vw);
+    height: calc(100vh - 64px);
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    z-index: 46;
+    box-shadow: 0 0 32px hsl(var(--shadow-color) / 0.35);
+  }
+  .mentor-panel.open { transform: translateX(0); }
+  .mentor-backdrop { display: block; }
+}
+
 @media (max-width: 860px) {
+  .app-shell { grid-template-columns: 0px 1fr 0px; }
   .sidebar {
     position: fixed;
-    inset: 0 auto 0 0;
-    height: 100vh;
+    inset: 64px auto 0 0;
+    height: calc(100vh - 64px);
     transform: translateX(-100%);
     box-shadow: 0 0 32px hsl(var(--shadow-color) / 0.35);
     transition: transform 0.25s ease;
@@ -396,7 +593,14 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   .sidebar.open { transform: translateX(0); }
   .sidebar-toggle { display: flex; }
   .sidebar-backdrop { display: block; }
-  .app-main { padding-top: 3.5rem; }
+  .topbar-search { display: none; }
+}
+
+@media (max-width: 600px) {
+  .topbar { padding: 0 0.75rem; gap: 0.4rem; }
+  .topbar .brand span { display: none; } /* icon-style dot survives via .brand::before; the wordmark text hides */
+  .mentor-panel { width: 100%; inset: auto 0 0 0; height: 80vh; transform: translateY(100%); }
+  .mentor-panel.open { transform: translateY(0); }
 }
 
 /* ---------- surfaces ---------- */

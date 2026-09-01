@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - PracticeLoop{% endblock %}
+{% block content %}
+<div class="card empty-state" style="text-align:left;padding:2.25rem;">
+  <span class="tag" style="background:var(--mentor-soft);color:var(--mentor);">{{ phase }}</span>
+  <h1 style="margin-top:0.75rem;">{{ title }}</h1>
+  <p>{{ blurb }}</p>
+  <h2 style="font-size:0.95rem;margin-top:1.5rem;">What's coming</h2>
+  <ul style="margin:0.5rem 0 0;padding-left:1.2rem;">
+    {% for item in coming %}
+      <li class="muted" style="margin-bottom:0.4rem;">{{ item }}</li>
+    {% endfor %}
+  </ul>
+  <div class="hub-links"><a href="/dashboard">Back to Home</a></div>
+</div>
+{% endblock %}

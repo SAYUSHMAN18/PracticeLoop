@@ -6,69 +6,108 @@
   <title>{% block title %}PracticeLoop{% endblock %}</title>
   <script>
     // Applied before first paint (this is a synchronous, render-blocking
-    // script in <head>) so a saved manual theme choice never flashes the
-    // wrong palette on load. Absence of a saved value leaves data-theme
-    // unset, which is the "follow system" default handled entirely by
-    // style.css's prefers-color-scheme block.
+    // script in <head>) so a saved manual theme/mentor/accessibility
+    // choice never flashes the wrong state on load. Absence of a saved
+    // value leaves the attribute unset, which is each feature's own
+    // default handled entirely by style.css.
     (function () {
       try {
-        var saved = localStorage.getItem("pl-theme");
-        if (saved === "light" || saved === "dark" || saved === "contrast") {
-          document.documentElement.setAttribute("data-theme", saved);
+        var theme = localStorage.getItem("pl-theme");
+        if (theme === "light" || theme === "dark" || theme === "contrast") {
+          document.documentElement.setAttribute("data-theme", theme);
+        }
+        if (localStorage.getItem("pl-mentor") === "collapsed") {
+          document.documentElement.setAttribute("data-mentor", "collapsed");
+        }
+        var a11y = localStorage.getItem("pl-a11y");
+        if (a11y) {
+          document.documentElement.setAttribute("data-a11y", a11y);
         }
       } catch (e) {}
     })();
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css?v={{ asset_version }}">
   <script src="https://unpkg.com/htmx.org@2.0.3" defer></script>
 </head>
 <body>
   <a href="#main-content" class="skip-link">Skip to content</a>
   {% set cu = request.state.current_user %}
+  {% set streak = request.state.current_streak %}
   <div class="app-shell">
-    <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">
-      <span></span><span></span><span></span>
-    </button>
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">
+          <span></span><span></span><span></span>
+        </button>
+        <a class="brand" href="/dashboard"><span>PracticeLoop</span></a>
+      </div>
+
+      <form class="topbar-search" action="/practice/search" method="get" role="search">
+        <input type="search" name="q" placeholder="Search your questions&hellip;" aria-label="Search your questions">
+      </form>
+
+      <div class="topbar-right">
+        {% if streak %}
+        <span class="topbar-streak" title="Daily practice streak">&#128293; {{ streak }}</span>
+        {% endif %}
+
+        <div class="topbar-menu">
+          <button type="button" class="icon-button" id="a11y-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="a11y-menu" aria-label="Accessibility options">Aa</button>
+          <div class="topbar-dropdown" id="a11y-menu" hidden role="menu" aria-label="Accessibility options">
+            <button type="button" role="menuitemcheckbox" data-a11y="large">Large text</button>
+            <button type="button" role="menuitemcheckbox" data-a11y="dyslexia">Dyslexia-friendly font</button>
+            <button type="button" role="menuitemcheckbox" data-a11y="motion">Reduce motion</button>
+          </div>
+        </div>
+
+        <button type="button" class="icon-button" id="theme-toggle" aria-label="Change color theme">
+          <span id="theme-toggle-label">Sys</span>
+        </button>
+
+        <button type="button" class="icon-button" id="mentor-toggle" aria-label="Toggle Loop Mentor panel" aria-expanded="true" aria-controls="mentor-panel">&#10022;</button>
+
+        {% if cu %}
+        <div class="topbar-menu">
+          <button type="button" class="topbar-profile" id="profile-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="profile-menu" aria-label="Account menu">
+            <span class="sidebar-avatar" aria-hidden="true">{{ cu.name[0]|upper }}</span>
+          </button>
+          <div class="topbar-dropdown" id="profile-menu" hidden role="menu" aria-label="Account">
+            <div class="topbar-dropdown-user">
+              <div class="sidebar-user-name">{{ cu.name }}</div>
+              <div class="sidebar-user-email">{{ cu.email }}</div>
+            </div>
+            <a href="/profile" role="menuitem">Profile &amp; settings</a>
+            <form action="/logout" method="post"><button type="submit" role="menuitem">Log out</button></form>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </header>
+
     <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
     <aside class="sidebar" id="sidebar">
-      <a class="brand" href="/dashboard">PracticeLoop</a>
-
       <button type="button" class="command-palette-trigger" id="command-palette-trigger" aria-label="Open command palette">
         <span>Go to&hellip;</span>
         <kbd id="command-palette-shortcut-hint">Ctrl K</kbd>
       </button>
 
-      {% if cu %}
-      <div class="sidebar-user">
-        <div class="sidebar-avatar" aria-hidden="true">{{ cu.name[0]|upper }}</div>
-        <div class="sidebar-user-info">
-          <div class="sidebar-user-name">{{ cu.name }}</div>
-          <div class="sidebar-user-email">{{ cu.email }}</div>
-        </div>
-      </div>
-      {% endif %}
-
       <nav class="sidebar-nav" aria-label="Main">
-        <a href="/dashboard" class="{{ 'active' if request.url.path == '/dashboard' }}">Dashboard</a>
+        <a href="/dashboard" class="{{ 'active' if request.url.path == '/dashboard' }}">Home</a>
+        <a href="/practice/plan" class="{{ 'active' if request.url.path == '/practice/plan' }}">Today</a>
+        <a href="/learning-paths" class="{{ 'active' if request.url.path == '/learning-paths' }}">My Learning Paths</a>
+        <a href="/subjects" class="{{ 'active' if request.url.path == '/subjects' }}">Explore Subjects</a>
         <a href="/practice" class="{{ 'active' if request.url.path == '/practice' }}">Practice</a>
         <a href="/practice/review" class="{{ 'active' if request.url.path.startswith('/practice/review') }}">Review</a>
-        <a href="/jobs" class="{{ 'active' if request.url.path.startswith('/jobs') }}">Jobs</a>
-        <a href="/documents" class="{{ 'active' if request.url.path == '/documents' }}">Documents</a>
-        <a href="/profile" class="{{ 'active' if request.url.path == '/profile' }}">Profile</a>
+        <a href="/assessments" class="{{ 'active' if request.url.path == '/assessments' }}">Assessments</a>
+        <a href="/documents" class="{{ 'active' if request.url.path == '/documents' }}">Knowledge Vault</a>
+        <a href="/projects" class="{{ 'active' if request.url.path == '/projects' }}">Projects</a>
+        <a href="/jobs" class="{{ 'active' if request.url.path.startswith('/jobs') }}">Career Lab</a>
+        <a href="/progress" class="{{ 'active' if request.url.path == '/progress' }}">Progress</a>
       </nav>
-
-      <div class="sidebar-footer">
-        <button type="button" class="link-button" id="theme-toggle" aria-label="Change color theme">
-          Theme: <span id="theme-toggle-label">System</span>
-        </button>
-        <form action="/logout" method="post">
-          <button type="submit" class="link-button">Log out</button>
-        </form>
-      </div>
     </aside>
 
     <main class="app-main" id="main-content" tabindex="-1">
@@ -76,6 +115,24 @@
         {% block content %}{% endblock %}
       </div>
     </main>
+
+    <aside class="mentor-panel" id="mentor-panel" aria-label="Loop Mentor">
+      <div class="mentor-panel-header">
+        <span class="mentor-badge">&#10022; Loop Mentor</span>
+        <button type="button" class="icon-button" id="mentor-close" aria-label="Close Loop Mentor panel">&times;</button>
+      </div>
+      <div class="mentor-panel-body">
+        <p class="muted">
+          Loop Mentor is arriving in a later phase &mdash; a context-aware AI tutor that sees your
+          current lesson, recent mistakes, and uploaded material, and can explain, quiz, or hint on demand.
+        </p>
+        <p class="muted" style="font-size:0.82rem;">
+          For now: use the search box above to find a question, or reach for the flashcard and
+          resume-tailoring tools already built into Practice and Career Lab.
+        </p>
+      </div>
+    </aside>
+    <div class="mentor-backdrop" id="mentor-backdrop"></div>
   </div>
 
   <div class="command-palette-backdrop" id="command-palette-backdrop" hidden>
@@ -92,18 +149,23 @@
     // known, small set of destinations, not searching content.
     (function () {
       var COMMANDS = [
-        { label: "Dashboard", href: "/dashboard", keywords: "home today" },
+        { label: "Home", href: "/dashboard", keywords: "dashboard home" },
+        { label: "Today's plan", href: "/practice/plan", keywords: "study plan daily session adaptive today" },
+        { label: "My Learning Paths", href: "/learning-paths", keywords: "courses curriculum roadmap" },
+        { label: "Explore Subjects", href: "/subjects", keywords: "browse catalog subjects" },
         { label: "Practice question bank", href: "/practice", keywords: "capture questions bank" },
-        { label: "Today's plan", href: "/practice/plan", keywords: "study plan daily session adaptive" },
         { label: "Review queue", href: "/practice/review", keywords: "study review spaced repetition" },
         { label: "Study history", href: "/practice/history", keywords: "history log past reviews calendar" },
-        { label: "Job listings", href: "/jobs", keywords: "jobs discovery" },
+        { label: "Assessments", href: "/assessments", keywords: "diagnostic quiz test placement" },
+        { label: "Knowledge Vault", href: "/documents", keywords: "documents resume transcripts certificates upload" },
+        { label: "Projects", href: "/projects", keywords: "portfolio proof" },
+        { label: "Career Lab", href: "/jobs", keywords: "jobs discovery career" },
         { label: "Application tracker", href: "/jobs/applications", keywords: "jobs applications kanban" },
         { label: "Skill gap analysis", href: "/jobs/gap-analysis", keywords: "jobs gaps jd" },
         { label: "Tailor resume to a JD", href: "/jobs/tailor-resume", keywords: "jobs resume tailor jd" },
         { label: "Market trends", href: "/jobs/trends", keywords: "jobs trends demand" },
         { label: "Discovery runs", href: "/jobs/runs", keywords: "jobs cron runs" },
-        { label: "Document vault", href: "/documents", keywords: "resume transcripts certificates upload" },
+        { label: "Progress", href: "/progress", keywords: "analytics mastery history" },
         { label: "Profile & settings", href: "/profile", keywords: "settings goal timezone proficiency" },
         { label: "Log out", href: "/logout", keywords: "sign out", isForm: true },
       ];
@@ -237,7 +299,8 @@
       var label = document.getElementById("theme-toggle-label");
       if (!btn || !label) return;
       var order = ["system", "light", "dark", "contrast"];
-      var labels = { system: "System", light: "Light", dark: "Dark", contrast: "High contrast" };
+      var shortLabels = { system: "Sys", light: "Light", dark: "Dark", contrast: "HC" };
+      var fullLabels = { system: "System", light: "Light", dark: "Dark", contrast: "High contrast" };
 
       function current() {
         try {
@@ -249,7 +312,9 @@
       }
 
       function render(mode) {
-        label.textContent = labels[mode];
+        label.textContent = shortLabels[mode];
+        btn.setAttribute("aria-label", "Change color theme (current: " + fullLabels[mode] + ")");
+        btn.title = "Theme: " + fullLabels[mode];
       }
 
       function apply(mode) {
@@ -268,6 +333,132 @@
         var next = order[(order.indexOf(current()) + 1) % order.length];
         apply(next);
       });
+    })();
+  </script>
+
+  <script>
+    // Topbar dropdowns (accessibility menu, profile menu): each trigger
+    // toggles its own panel; opening one closes any other that's open;
+    // outside clicks and Escape close whichever is open. Small enough
+    // (two menus today) that one generic helper covers both rather than
+    // duplicating the same open/close wiring twice.
+    (function () {
+      var menus = [
+        { trigger: document.getElementById("a11y-menu-trigger"), panel: document.getElementById("a11y-menu") },
+        { trigger: document.getElementById("profile-menu-trigger"), panel: document.getElementById("profile-menu") },
+      ].filter(function (m) { return m.trigger && m.panel; });
+      if (!menus.length) return;
+
+      function closeAll(except) {
+        menus.forEach(function (m) {
+          if (m === except) return;
+          m.panel.hidden = true;
+          m.trigger.setAttribute("aria-expanded", "false");
+        });
+      }
+
+      menus.forEach(function (m) {
+        m.trigger.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var willOpen = m.panel.hidden;
+          closeAll();
+          m.panel.hidden = !willOpen;
+          m.trigger.setAttribute("aria-expanded", willOpen ? "true" : "false");
+          if (willOpen) {
+            var first = m.panel.querySelector("a, button");
+            if (first) first.focus();
+          }
+        });
+      });
+
+      document.addEventListener("click", function () { closeAll(); });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closeAll();
+      });
+    })();
+
+    // Loop Mentor panel: a persisted expanded/collapsed attribute drives
+    // the desktop three-column layout (see html[data-mentor="collapsed"]
+    // in style.css), while the same click also toggles the drawer classes
+    // style.css uses at narrower widths -- harmless no-ops at whichever
+    // width the other mechanism doesn't apply, see the CSS comment above
+    // .mentor-backdrop for why both can toggle together safely.
+    (function () {
+      var toggle = document.getElementById("mentor-toggle");
+      var closeBtn = document.getElementById("mentor-close");
+      var panel = document.getElementById("mentor-panel");
+      var backdrop = document.getElementById("mentor-backdrop");
+      if (!toggle || !panel || !backdrop) return;
+
+      function isCollapsed() {
+        return document.documentElement.getAttribute("data-mentor") === "collapsed";
+      }
+      // The panel/backdrop already default to no "open" class (correct for
+      // both the collapsed and expanded desktop states, since that class
+      // only matters at drawer widths where the panel starts closed either
+      // way) -- only the toggle button's own aria-expanded needs syncing
+      // to whatever the early <head> script already applied.
+      toggle.setAttribute("aria-expanded", isCollapsed() ? "false" : "true");
+
+      function setState(collapsed) {
+        if (collapsed) {
+          document.documentElement.setAttribute("data-mentor", "collapsed");
+          try { localStorage.setItem("pl-mentor", "collapsed"); } catch (e) {}
+        } else {
+          document.documentElement.removeAttribute("data-mentor");
+          try { localStorage.removeItem("pl-mentor"); } catch (e) {}
+        }
+        panel.classList.toggle("open", !collapsed);
+        backdrop.classList.toggle("open", !collapsed);
+        toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      }
+
+      toggle.addEventListener("click", function () { setState(!isCollapsed()); });
+      closeBtn.addEventListener("click", function () { setState(true); });
+      backdrop.addEventListener("click", function () { setState(true); });
+    })();
+
+    // Accessibility options (large text, dyslexia-friendly font, reduced
+    // motion): independent toggles stored as a space-separated token list
+    // in data-a11y, mirroring how a classList would work -- see the
+    // html[data-a11y~="..."] rules in style.css.
+    (function () {
+      var buttons = document.querySelectorAll("#a11y-menu button[data-a11y]");
+      if (!buttons.length) return;
+
+      function current() {
+        var value = document.documentElement.getAttribute("data-a11y") || "";
+        return value.split(" ").filter(Boolean);
+      }
+
+      function render() {
+        var active = current();
+        buttons.forEach(function (b) {
+          var on = active.indexOf(b.dataset.a11y) !== -1;
+          b.classList.toggle("active", on);
+          b.setAttribute("aria-checked", on ? "true" : "false");
+        });
+      }
+
+      function toggle(flag) {
+        var active = current();
+        var i = active.indexOf(flag);
+        if (i === -1) active.push(flag); else active.splice(i, 1);
+        var value = active.join(" ");
+        if (value) {
+          document.documentElement.setAttribute("data-a11y", value);
+          try { localStorage.setItem("pl-a11y", value); } catch (e) {}
+        } else {
+          document.documentElement.removeAttribute("data-a11y");
+          try { localStorage.removeItem("pl-a11y"); } catch (e) {}
+        }
+        render();
+      }
+
+      buttons.forEach(function (b) {
+        b.addEventListener("click", function () { toggle(b.dataset.a11y); });
+      });
+      render();
     })();
   </script>
 </body>

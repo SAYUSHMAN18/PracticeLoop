@@ -14,7 +14,6 @@ from app.dashboard import service
 from app.documents.service import list_documents
 from app.jobs.applications import funnel_stats
 from app.jobs.interview_prep import upcoming_interviews
-from app.practice.service import streak_days
 from app.profile.service import GOAL_TYPE_LABELS
 
 router = APIRouter(dependencies=[Depends(inject_current_user)])
@@ -43,13 +42,15 @@ async def dashboard(
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
 ):
-    # Nine independent reads -- none depends on another's result, so they're
+    # Eight independent reads -- none depends on another's result, so they're
     # fired concurrently instead of one at a time. Over a real network hop to
     # the database (as on Render, app and DB are separate services) that's
-    # the difference between one round-trip's worth of latency and nine.
+    # the difference between one round-trip's worth of latency and eight.
+    # Streak isn't in this batch: inject_current_user (a router-level
+    # dependency, so it's already run) computed it once for the topbar,
+    # and the dashboard just reads that instead of querying it twice.
     (
         stats,
-        streak,
         mastery,
         interview_rows,
         jobs_funnel,
@@ -59,7 +60,6 @@ async def dashboard(
         new_concept,
     ) = await asyncio.gather(
         service.get_stats(pool, user_id),
-        streak_days(pool, user_id),
         service.topic_mastery(pool, user_id),
         upcoming_interviews(pool, user_id),
         funnel_stats(pool, user_id),
@@ -85,6 +85,7 @@ async def dashboard(
 
     cu = request.state.current_user
     first_name = (cu["name"].split()[0] if cu and cu["name"].split() else None) if cu else None
+    streak = request.state.current_streak
     greeting = _time_of_day_greeting(profile["timezone"])
     activity_max = max((day["attempt_count"] for day in activity), default=0)
 
