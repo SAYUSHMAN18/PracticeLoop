@@ -163,8 +163,8 @@ async def create_assignment(
     topic: str,
     due_date,
 ) -> int:
-    await get_classroom_for_teacher(pool, teacher_user_id, classroom_id)  # ownership check
-    return await pool.fetchval(
+    classroom = await get_classroom_for_teacher(pool, teacher_user_id, classroom_id)  # ownership check
+    assignment_id = await pool.fetchval(
         """INSERT INTO assignments (classroom_id, title, description, topic, due_date)
            VALUES ($1, $2, $3, $4, $5) RETURNING assignment_id""",
         classroom_id,
@@ -173,6 +173,18 @@ async def create_assignment(
         topic,
         due_date,
     )
+
+    from app.notifications.service import notify_classroom_members  # local import: avoids a load-time cycle
+
+    await notify_classroom_members(
+        pool,
+        classroom_id,
+        "assignment_created",
+        f"New assignment in {classroom['name']}: {title}",
+        body=description,
+        link="/classrooms",
+    )
+    return assignment_id
 
 
 async def list_assignments_for_classroom(

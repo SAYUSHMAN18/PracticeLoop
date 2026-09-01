@@ -91,6 +91,17 @@ async def accept_invite(pool: asyncpg.Pool, guardian_user_id: int, invite_token:
         row["link_id"],
         guardian_user_id,
     )
+
+    from app.notifications.service import create as create_notification  # avoids a load-time cycle
+
+    guardian_name = await pool.fetchval("SELECT name FROM users WHERE user_id = $1", guardian_user_id)
+    await create_notification(
+        pool,
+        row["student_user_id"],
+        "guardian_accepted",
+        f"{guardian_name} accepted your guardian invite",
+        link="/guardian",
+    )
     return {"student_user_id": row["student_user_id"]}
 
 

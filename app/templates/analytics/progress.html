@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Progress - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Progress</h1>
+<p class="muted">Mastery, retention, and activity across everything you've done -- not just scattered stats.</p>
+
+{% if recommendation %}
+<div class="card">
+  <h2>What to study next</h2>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;">
+    <strong>{{ recommendation.topic }}</strong>
+    <span class="tag {{ 'tag-proven' if recommendation.mastery_score >= 70 else '' }}">{{ recommendation.mastery_score }}/100</span>
+  </div>
+  <p class="muted" style="margin-top:0.5rem;">{{ recommendation.explanation }}</p>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Last 7 days</h2>
+  <div class="heatmap" role="img" aria-label="Practice activity over the last 7 days">
+    {% for day in activity %}
+      {% set ratio = (day.attempt_count / activity_max) if activity_max else 0 %}
+      <div class="heatmap-day" style="--ratio: {{ ratio }};" title="{{ day.day.strftime('%a %b %d') }}: {{ day.attempt_count }} review{{ 's' if day.attempt_count != 1 }}">
+        <span class="heatmap-label">{{ day.day.strftime('%a')[0] }}</span>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <h2>Mastery by topic</h2>
+  {% for m in mastery %}
+    <div class="question-item">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <strong>{{ m.topic }}</strong>
+        <span class="tag {{ 'tag-proven' if m.mastery_score >= 70 else '' }}">{{ m.mastery_score }}/100</span>
+      </div>
+      <span class="muted">{{ m.avg_confidence }} avg confidence over {{ m.attempt_count }} attempt{{ 's' if m.attempt_count != 1 }}</span>
+    </div>
+  {% else %}
+    <p class="muted">No practice activity yet.</p>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>Retention</h2>
+  <p class="muted">FSRS's own current estimate of how likely you are to still recall each topic, right now.</p>
+  {% for r in retention %}
+    <div class="question-item">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <strong>{{ r.topic }}</strong>
+        <span class="tag {{ 'tag-proven' if r.retention_percent >= 70 else '' }}">{{ r.retention_percent }}%</span>
+      </div>
+      <span class="muted">{{ r.question_count }} question{{ 's' if r.question_count != 1 }} reviewed at least once</span>
+    </div>
+  {% else %}
+    <p class="muted">No reviewed questions yet.</p>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>History</h2>
+  {% for event in timeline %}
+    <div class="question-item">
+      <span class="tag">{{ event.kind }}</span>
+      {{ event.text }}
+      <div class="muted" style="font-size:0.78rem;margin-top:0.2rem;">{{ event.at.strftime('%b %d, %Y %I:%M %p') }}</div>
+    </div>
+  {% else %}
+    <p class="muted">Nothing yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

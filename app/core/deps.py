@@ -34,6 +34,7 @@ async def inject_current_user(request: Request, pool=Depends(get_pool)) -> None:
         request.state.current_user = None
         request.state.current_streak = None
         request.state.current_xp = None
+        request.state.unread_notifications = 0
         return
 
     from app.auth.service import get_user  # local import: avoids a core -> auth import at module load time
@@ -52,3 +53,8 @@ async def inject_current_user(request: Request, pool=Depends(get_pool)) -> None:
     from app.gamification.service import get_xp_summary
 
     request.state.current_xp = await get_xp_summary(pool, user_id)
+
+    # Phase 15's notification bell, same topbar-on-every-page treatment.
+    from app.notifications.service import unread_count
+
+    request.state.unread_notifications = await unread_count(pool, user_id)

@@ -318,6 +318,7 @@ html[data-mentor="collapsed"] .app-shell { --mentor-w: 0px; }
 }
 
 .icon-button {
+  position: relative; /* anchors .topbar-badge (the notification unread count) to this button, not its outer .topbar-menu wrapper */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -336,6 +337,22 @@ html[data-mentor="collapsed"] .app-shell { --mentor-w: 0px; }
 .icon-button:hover { color: var(--text); background: var(--panel-2); border-color: var(--border); }
 .icon-button[aria-expanded="true"] { color: var(--accent-2); background: var(--accent-soft); }
 #mentor-toggle[aria-expanded="true"] { color: var(--mentor); background: var(--mentor-soft); }
+
+.topbar-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
 
 .topbar-menu { position: relative; }
 .topbar-profile { background: none; border: none; margin: 0; padding: 0; cursor: pointer; border-radius: 50%; }

@@ -37,6 +37,7 @@
   {% set cu = request.state.current_user %}
   {% set streak = request.state.current_streak %}
   {% set xp = request.state.current_xp %}
+  {% set unread_notifications = request.state.unread_notifications %}
   <div class="app-shell">
     <header class="topbar">
       <div class="topbar-left">
@@ -59,6 +60,19 @@
         {% endif %}
         {% if streak %}
         <span class="topbar-streak" title="Daily practice streak">&#128293; {{ streak }}</span>
+        {% endif %}
+
+        {% if cu %}
+        <div class="topbar-menu">
+          <button type="button" class="icon-button" id="notifications-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="notifications-menu" aria-label="Notifications{{ ' (' + unread_notifications|string + ' unread)' if unread_notifications }}">
+            &#128276;{% if unread_notifications %}<span class="topbar-badge">{{ unread_notifications }}</span>{% endif %}
+          </button>
+          <div class="topbar-dropdown" id="notifications-menu" hidden role="menu" aria-label="Notifications">
+            <div id="notifications-panel" hx-get="/notifications/panel" hx-trigger="notifications-menu-opened from:body" hx-swap="innerHTML">
+              <p class="muted" style="padding:0.3rem 0.6rem;font-size:0.85rem;">Loading&hellip;</p>
+            </div>
+          </div>
+        </div>
         {% endif %}
 
         <div class="topbar-menu">
@@ -352,13 +366,21 @@
   </script>
 
   <script>
-    // Topbar dropdowns (accessibility menu, profile menu): each trigger
-    // toggles its own panel; opening one closes any other that's open;
-    // outside clicks and Escape close whichever is open. Small enough
-    // (two menus today) that one generic helper covers both rather than
-    // duplicating the same open/close wiring twice.
+    // Topbar dropdowns (notifications, accessibility menu, profile menu):
+    // each trigger toggles its own panel; opening one closes any other
+    // that's open; outside clicks and Escape close whichever is open.
+    // One generic helper covers all three rather than duplicating the
+    // same open/close wiring. The notifications panel additionally fires
+    // a named DOM event on open (loadEvent) -- its own hx-trigger in the
+    // template listens for that, so the list only loads the first time
+    // it's actually opened, not on every page load.
     (function () {
       var menus = [
+        {
+          trigger: document.getElementById("notifications-menu-trigger"),
+          panel: document.getElementById("notifications-menu"),
+          loadEvent: "notifications-menu-opened",
+        },
         { trigger: document.getElementById("a11y-menu-trigger"), panel: document.getElementById("a11y-menu") },
         { trigger: document.getElementById("profile-menu-trigger"), panel: document.getElementById("profile-menu") },
       ].filter(function (m) { return m.trigger && m.panel; });
@@ -380,6 +402,7 @@
           m.panel.hidden = !willOpen;
           m.trigger.setAttribute("aria-expanded", willOpen ? "true" : "false");
           if (willOpen) {
+            if (m.loadEvent) document.body.dispatchEvent(new CustomEvent(m.loadEvent));
             var first = m.panel.querySelector("a, button");
             if (first) first.focus();
           }

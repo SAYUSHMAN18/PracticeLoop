@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.analytics.router import router as analytics_router
 from app.assessments.router import router as assessments_router
 from app.auth.router import router as auth_router
 from app.classrooms.router import router as classrooms_router
@@ -31,10 +32,10 @@ from app.jobs.router import router as jobs_router
 from app.labs.router import router as labs_router
 from app.learning_paths.router import router as learning_paths_router
 from app.mentor.router import router as mentor_router
+from app.notifications.router import router as notifications_router
 from app.practice.router import router as practice_router
 from app.profile.router import router as profile_router
 from app.projects.router import router as projects_router
-from app.roadmap.router import router as roadmap_router
 
 logger = get_logger(__name__)
 
@@ -94,7 +95,8 @@ app.include_router(labs_router)
 app.include_router(projects_router)
 app.include_router(classrooms_router)
 app.include_router(guardian_router)
-app.include_router(roadmap_router)
+app.include_router(notifications_router)
+app.include_router(analytics_router)
 
 
 @app.exception_handler(LoginRequired)
