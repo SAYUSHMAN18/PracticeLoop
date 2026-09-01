@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Domain Labs - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Domain Labs</h1>
+<p class="muted">
+  Focused tools for specific kinds of work. <a href="/jobs">Career Lab</a> (resume tailoring,
+  skill-gap analysis, market trends) already lives under its own section.
+</p>
+
+<div class="card">
+  <div class="question-item">
+    <strong>Math Lab</strong>
+    <div class="muted" style="font-size:0.85rem;margin-top:0.2rem;">Solve an equation for x, step by step.</div>
+    <div class="hub-links"><a href="/labs/math">Open Math Lab</a></div>
+  </div>
+  <div class="question-item">
+    <strong>Writing Lab</strong>
+    <div class="muted" style="font-size:0.85rem;margin-top:0.2rem;">Paste an essay, cover letter, or short answer for feedback.</div>
+    <div class="hub-links"><a href="/labs/writing">Open Writing Lab</a></div>
+  </div>
+</div>
+{% endblock %}

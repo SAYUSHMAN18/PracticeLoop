@@ -19,6 +19,7 @@ dependencies = [
     "python-docx>=1.1",
     "httpx>=0.27",
     "fsrs>=6.0",
+    "sympy>=1.13",  # Math Lab (Phase 12): symbolic equation solving/verification
 ]
 
 [tool.setuptools.packages.find]
