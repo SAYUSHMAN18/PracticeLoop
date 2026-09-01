@@ -6,6 +6,7 @@ import asyncpg
 
 from app.core.json_extraction import extract_first_json_value
 from app.core.llm import generate
+from app.gamification.service import award_xp
 
 # Fixed-length, not the plan's adaptive-difficulty-mid-quiz version --
 # generated up front with a spread of difficulty (see the prompt below)
@@ -14,6 +15,7 @@ from app.core.llm import generate
 # a handful of if/else difficulty tiers.
 QUESTION_COUNT = 8
 _MAX_CHOICES = 6
+_XP_DIAGNOSTIC = 20  # a flat completion reward -- this is a placement test, not a "get it right" quiz
 
 _DIAGNOSTIC_PROMPT = """Write a {count}-question multiple-choice diagnostic quiz for this
 topic: "{topic}"
@@ -157,6 +159,11 @@ async def record_attempt(
                 user_id,
                 level,
             )
+            # award_xp takes anything with asyncpg's execute() -- a
+            # Connection works the same as a Pool here, and doing it
+            # inside this same transaction means the XP and the result
+            # it's for are always persisted together.
+            await award_xp(conn, user_id, "diagnostic", attempt_id, _XP_DIAGNOSTIC)
 
     return {"attempt_id": attempt_id, "proficiency_result": level}
 

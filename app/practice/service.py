@@ -6,6 +6,7 @@ import asyncpg
 
 from app.core.embedder import embed_text_async
 from app.core.llm import generate
+from app.gamification.service import award_xp
 from app.practice.extraction import parse_llm_json_fields
 from app.practice.fsrs_scheduler import schedule_review
 
@@ -122,6 +123,39 @@ async def list_questions(pool: asyncpg.Pool, user_id: int) -> list[asyncpg.Recor
     )
 
 
+async def list_topics(pool: asyncpg.Pool, user_id: int) -> list[str]:
+    """Distinct, non-blank topics in this user's own bank -- populates
+    Quiz Arena's topic picker without a separate topics table."""
+    rows = await pool.fetch(
+        "SELECT DISTINCT topic FROM questions WHERE user_id = $1 AND topic != '' ORDER BY topic",
+        user_id,
+    )
+    return [r["topic"] for r in rows]
+
+
+async def get_quiz_questions(
+    pool: asyncpg.Pool, user_id: int, *, topic: str | None, count: int
+) -> list[asyncpg.Record]:
+    """Quiz Arena's question pool -- unlike the FSRS review queue, this
+    draws from the *whole* bank regardless of due date (a deliberate
+    replay-anything mode, not spaced review), random order, optionally
+    narrowed to one topic."""
+    if topic:
+        return await pool.fetch(
+            f"""SELECT {_QUESTION_COLUMNS} FROM questions
+                WHERE user_id = $1 AND topic = $2
+                ORDER BY random() LIMIT $3""",
+            user_id,
+            topic,
+            count,
+        )
+    return await pool.fetch(
+        f"SELECT {_QUESTION_COLUMNS} FROM questions WHERE user_id = $1 ORDER BY random() LIMIT $2",
+        user_id,
+        count,
+    )
+
+
 async def get_question(pool: asyncpg.Pool, user_id: int, question_id: int) -> asyncpg.Record | None:
     return await pool.fetchrow(
         f"SELECT {_QUESTION_COLUMNS} FROM questions WHERE user_id = $1 AND question_id = $2",
@@ -148,6 +182,19 @@ async def search_questions(
     return [{**dict(r), "match_pct": max(0, round((1 - r["distance"]) * 100))} for r in rows]
 
 
+_XP_STRONG_RECALL = 10  # rating 4-5 ("good"/"easy")
+_XP_OKAY_RECALL = 6  # rating 3 ("good enough")
+_XP_WEAK_RECALL = 3  # rating 1-2 -- still a real attempt, just a smaller reward than a solid recall
+
+
+def _attempt_xp(rating: int) -> int:
+    if rating >= 4:
+        return _XP_STRONG_RECALL
+    if rating == 3:
+        return _XP_OKAY_RECALL
+    return _XP_WEAK_RECALL
+
+
 async def record_attempt(
     pool: asyncpg.Pool, user_id: int, question_id: int, rating: int, feedback: str = ""
 ) -> date:
@@ -157,15 +204,22 @@ async def record_attempt(
 
     review_date = await schedule_review(pool, user_id, question_id, rating)
 
-    await pool.execute(
+    attempt_id = await pool.fetchval(
         """INSERT INTO attempts (question_id, user_id, confidence_rating, feedback, next_review_at)
-           VALUES ($1, $2, $3, $4, $5)""",
+           VALUES ($1, $2, $3, $4, $5)
+           RETURNING attempt_id""",
         question_id,
         user_id,
         rating,
         feedback,
         review_date,
     )
+    # A fresh attempt always gets a fresh attempt_id, so award_xp's own
+    # (user_id, source_type, source_id) uniqueness never dedupes real,
+    # repeated practice -- only a genuinely duplicate event (a retried
+    # request re-inserting the same row) could ever collide, and that
+    # can't happen here since each INSERT makes a new id.
+    await award_xp(pool, user_id, "practice_attempt", attempt_id, _attempt_xp(rating))
     return review_date
 
 

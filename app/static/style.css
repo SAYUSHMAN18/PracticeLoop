@@ -277,6 +277,32 @@ html[data-mentor="collapsed"] .app-shell { --mentor-w: 0px; }
   white-space: nowrap;
 }
 
+.topbar-xp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: var(--mentor-soft);
+  color: var(--mentor);
+  font-weight: 700;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.topbar-xp-bar {
+  width: 36px;
+  height: 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mentor) 22%, transparent);
+  overflow: hidden;
+}
+.topbar-xp-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--mentor);
+}
+
 .icon-button {
   display: inline-flex;
   align-items: center;

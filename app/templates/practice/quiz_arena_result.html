@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Quiz Arena result - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Quiz complete</h1>
+
+<div class="card">
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="value">{{ correct }}/{{ total }}</div>
+      <div class="label">Scored well (4-5, or correct)</div>
+    </div>
+    <div class="stat">
+      <div class="value">{{ (100 * correct / total)|round|int if total else 0 }}%</div>
+      <div class="label">Score</div>
+    </div>
+  </div>
+  <div class="hub-links">
+    <a href="/practice/quiz-arena">Play again</a>
+    <a href="/practice/review">Go to review queue</a>
+  </div>
+</div>
+{% endblock %}

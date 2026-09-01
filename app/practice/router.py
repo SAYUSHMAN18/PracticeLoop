@@ -20,6 +20,13 @@ logger = get_logger(__name__)
 _PLAN_SESSION_KEY = "daily_plan"
 _PLAN_REASON_LABELS = {"due": "Due", "weak": "Weak spot", "new": "New", "challenge": "Challenge"}
 
+# Phase 10's Quiz Arena: a replay-anything batch quiz over the whole
+# question bank (not just what's due), separate from the FSRS review
+# queue above -- same session-scoped-state pattern as the daily plan,
+# since a quiz-in-progress isn't meant to be durable either.
+_QUIZ_ARENA_SESSION_KEY = "quiz_arena"
+_QUIZ_ARENA_COUNTS = (5, 10, 15, 20)
+
 
 def _can_grade(card) -> bool:
     """Honest grading needs both an LLM to grade with and something to
@@ -477,4 +484,125 @@ async def grade_review_answer(
             "review_date": review_date,
             "days_until": days_until,
         },
+    )
+
+
+@router.get("/quiz-arena", response_class=HTMLResponse)
+async def quiz_arena_start(
+    request: Request,
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    topics = await service.list_topics(pool, user_id)
+    return templates.TemplateResponse(
+        request,
+        "practice/quiz_arena_start.html",
+        {"topics": topics, "counts": _QUIZ_ARENA_COUNTS, "error": None},
+    )
+
+
+@router.post("/quiz-arena/start")
+async def quiz_arena_begin(
+    request: Request,
+    topic: str = Form(""),
+    count: int = Form(10),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    count = count if count in _QUIZ_ARENA_COUNTS else 10
+    questions = await service.get_quiz_questions(pool, user_id, topic=topic or None, count=count)
+    if not questions:
+        topics = await service.list_topics(pool, user_id)
+        return templates.TemplateResponse(
+            request,
+            "practice/quiz_arena_start.html",
+            {
+                "topics": topics,
+                "counts": _QUIZ_ARENA_COUNTS,
+                "error": 'No questions match that topic yet -- capture some first, or try "All topics."',
+            },
+            status_code=400,
+        )
+
+    request.session[_QUIZ_ARENA_SESSION_KEY] = {
+        "question_ids": [q["question_id"] for q in questions],
+        "index": 0,
+        "correct": 0,
+    }
+    return RedirectResponse("/practice/quiz-arena/play", status_code=303)
+
+
+@router.get("/quiz-arena/play", response_class=HTMLResponse)
+async def quiz_arena_play(
+    request: Request,
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    state = request.session.get(_QUIZ_ARENA_SESSION_KEY)
+    if not state:
+        return RedirectResponse("/practice/quiz-arena", status_code=303)
+    if state["index"] >= len(state["question_ids"]):
+        return RedirectResponse("/practice/quiz-arena/result", status_code=303)
+
+    question_id = state["question_ids"][state["index"]]
+    question = await service.get_question(pool, user_id, question_id)
+    if question is None:
+        # Deleted mid-quiz (from another tab, say) -- skip it rather than
+        # error out of the whole session.
+        state["index"] += 1
+        request.session[_QUIZ_ARENA_SESSION_KEY] = state
+        return RedirectResponse("/practice/quiz-arena/play", status_code=303)
+
+    return templates.TemplateResponse(
+        request,
+        "practice/quiz_arena_play.html",
+        {
+            "question": question,
+            "position": state["index"] + 1,
+            "total": len(state["question_ids"]),
+        },
+    )
+
+
+@router.post("/quiz-arena/answer")
+async def quiz_arena_answer(
+    request: Request,
+    selected_index: int | None = Form(None),
+    rating: int | None = Form(None),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    state = request.session.get(_QUIZ_ARENA_SESSION_KEY)
+    if not state or state["index"] >= len(state["question_ids"]):
+        return RedirectResponse("/practice/quiz-arena", status_code=303)
+
+    question_id = state["question_ids"][state["index"]]
+    question = await service.get_question(pool, user_id, question_id)
+    correct = False
+    if question is not None:
+        if question["question_type"] == "multiple_choice" and selected_index is not None:
+            _, correct = await service.record_mcq_attempt(pool, user_id, question_id, selected_index)
+        elif rating is not None:
+            await service.record_attempt(pool, user_id, question_id, rating)
+            correct = rating >= 4
+
+    state["correct"] += 1 if correct else 0
+    state["index"] += 1
+    request.session[_QUIZ_ARENA_SESSION_KEY] = state
+    return RedirectResponse("/practice/quiz-arena/play", status_code=303)
+
+
+@router.get("/quiz-arena/result", response_class=HTMLResponse)
+async def quiz_arena_result(request: Request, user_id: int = Depends(require_user_id)):
+    state = request.session.get(_QUIZ_ARENA_SESSION_KEY)
+    if not state:
+        return RedirectResponse("/practice/quiz-arena", status_code=303)
+
+    total = len(state["question_ids"])
+    correct = state["correct"]
+    del request.session[_QUIZ_ARENA_SESSION_KEY]
+    return templates.TemplateResponse(
+        request,
+        "practice/quiz_arena_result.html",
+        {"correct": correct, "total": total},
     )

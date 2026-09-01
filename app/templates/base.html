@@ -36,6 +36,7 @@
   <a href="#main-content" class="skip-link">Skip to content</a>
   {% set cu = request.state.current_user %}
   {% set streak = request.state.current_streak %}
+  {% set xp = request.state.current_xp %}
   <div class="app-shell">
     <header class="topbar">
       <div class="topbar-left">
@@ -50,6 +51,12 @@
       </form>
 
       <div class="topbar-right">
+        {% if xp and xp.total_xp %}
+        <span class="topbar-xp" title="Level {{ xp.level }} &mdash; {{ xp.xp_into_level }}/{{ xp.xp_for_next_level }} XP to next level">
+          Lv {{ xp.level }}
+          <span class="topbar-xp-bar"><span class="topbar-xp-bar-fill" style="width:{{ xp.level_progress_percent }}%;"></span></span>
+        </span>
+        {% endif %}
         {% if streak %}
         <span class="topbar-streak" title="Daily practice streak">&#128293; {{ streak }}</span>
         {% endif %}
@@ -154,6 +161,7 @@
         { label: "My Learning Paths", href: "/learning-paths", keywords: "courses curriculum roadmap" },
         { label: "Explore Subjects", href: "/subjects", keywords: "browse catalog subjects" },
         { label: "Practice question bank", href: "/practice", keywords: "capture questions bank" },
+        { label: "Quiz Arena", href: "/practice/quiz-arena", keywords: "game quiz arena batch xp" },
         { label: "Review queue", href: "/practice/review", keywords: "study review spaced repetition" },
         { label: "Study history", href: "/practice/history", keywords: "history log past reviews calendar" },
         { label: "Assessments", href: "/assessments", keywords: "diagnostic quiz test placement" },

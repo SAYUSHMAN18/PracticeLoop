@@ -33,6 +33,7 @@ async def inject_current_user(request: Request, pool=Depends(get_pool)) -> None:
     if user_id is None:
         request.state.current_user = None
         request.state.current_streak = None
+        request.state.current_xp = None
         return
 
     from app.auth.service import get_user  # local import: avoids a core -> auth import at module load time
@@ -46,3 +47,8 @@ async def inject_current_user(request: Request, pool=Depends(get_pool)) -> None:
     from app.practice.service import streak_days
 
     request.state.current_streak = await streak_days(pool, user_id)
+
+    # Phase 10's XP/level badge, same topbar-on-every-page treatment.
+    from app.gamification.service import get_xp_summary
+
+    request.state.current_xp = await get_xp_summary(pool, user_id)

@@ -8,8 +8,11 @@ from app.core.json_extraction import extract_first_json_value
 from app.core.llm import generate
 from app.core.llm_budget import consume_llm_budget
 from app.core.logging import get_logger
+from app.gamification.service import award_xp
 
 logger = get_logger(__name__)
+
+_XP_LESSON_COMPLETE = 15
 
 # Curated starting points for the Explore Subjects page -- Phase 6's
 # "existing PracticeLoop template" source type. Straight from the plan's
@@ -516,4 +519,11 @@ async def toggle_lesson(pool: asyncpg.Pool, user_id: int, path_id: int, lesson_i
     )
     if row is None:
         raise PathNotFound(path_id)
-    return row["completed_at"] is not None
+
+    completed = row["completed_at"] is not None
+    if completed:
+        # Idempotent on lesson_id -- toggling a lesson off and back on
+        # again re-completes it (real, useful behavior) without granting
+        # XP a second time for the same lesson.
+        await award_xp(pool, user_id, "lesson_complete", lesson_id, _XP_LESSON_COMPLETE)
+    return completed

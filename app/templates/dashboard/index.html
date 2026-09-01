@@ -137,4 +137,21 @@
   </div>
 </div>
 {% endif %}
+
+{% if badges %}
+<div class="card">
+  <h2>Badges</h2>
+  <p class="muted">Milestones for real learning activity &mdash; not clicks.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:0.6rem;margin-top:0.6rem;">
+    {% for badge in badges %}
+      <div title="{{ badge.description }}" style="text-align:center;width:88px;opacity:{{ '1' if badge.earned else '0.4' }};">
+        <div style="width:52px;height:52px;margin:0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;background:{{ 'var(--good-soft)' if badge.earned else 'var(--panel-2)' }};color:{{ 'var(--good)' if badge.earned else 'var(--muted)' }};">
+          {{ '🏆' if badge.earned else '🔒' }}
+        </div>
+        <div style="font-size:0.72rem;font-weight:700;margin-top:0.35rem;">{{ badge.label }}</div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 {% endblock %}

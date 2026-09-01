@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Quiz Arena - PracticeLoop{% endblock %}
+{% block content %}
+<p class="muted">Question {{ position }} of {{ total }}</p>
+<div class="progress-bar" style="max-width:320px;margin-bottom:1.25rem;">
+  <div class="progress-bar-fill" style="width:{{ (100 * (position - 1) / total)|round|int }}%;"></div>
+</div>
+
+<div class="card">
+  <div style="margin-bottom:0.5rem;">
+    {% if question.topic %}<span class="tag">{{ question.topic }}</span>{% endif %}
+    <span class="tag">{{ question.difficulty|capitalize }}</span>
+  </div>
+  <strong>{{ question.question }}</strong>
+
+  {% if question.question_type == 'multiple_choice' %}
+    <form method="post" action="/practice/quiz-arena/answer" style="margin-top:0.75rem;">
+      <div class="rating-row" style="flex-direction:column;align-items:stretch;">
+        {% for choice in question.choices %}
+          <button type="submit" name="selected_index" value="{{ loop.index0 }}" style="flex:none;text-align:left;justify-content:flex-start;">{{ choice }}</button>
+        {% endfor %}
+      </div>
+    </form>
+  {% else %}
+    <details style="margin-top:0.6rem;">
+      <summary style="cursor:pointer;color:var(--accent);">Show answer</summary>
+      <p style="margin-top:0.5rem;">{{ question.answer }}</p>
+    </details>
+    <form method="post" action="/practice/quiz-arena/answer">
+      <label style="margin-top:0.75rem;">How well did you know it?</label>
+      <div class="rating-row">
+        <button type="submit" name="rating" value="1">1 &mdash; blackout</button>
+        <button type="submit" name="rating" value="2">2</button>
+        <button type="submit" name="rating" value="3">3</button>
+        <button type="submit" name="rating" value="4">4</button>
+        <button type="submit" name="rating" value="5">5 &mdash; easy</button>
+      </div>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

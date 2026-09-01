@@ -12,6 +12,7 @@ from app.core.deps import inject_current_user, require_user_id
 from app.core.templates import templates
 from app.dashboard import service
 from app.documents.service import list_documents
+from app.gamification.service import get_badges
 from app.jobs.applications import funnel_stats
 from app.jobs.interview_prep import upcoming_interviews
 from app.profile.service import GOAL_TYPE_LABELS
@@ -42,13 +43,16 @@ async def dashboard(
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
 ):
-    # Eight independent reads -- none depends on another's result, so they're
-    # fired concurrently instead of one at a time. Over a real network hop to
-    # the database (as on Render, app and DB are separate services) that's
-    # the difference between one round-trip's worth of latency and eight.
     # Streak isn't in this batch: inject_current_user (a router-level
     # dependency, so it's already run) computed it once for the topbar,
-    # and the dashboard just reads that instead of querying it twice.
+    # and both the dashboard and get_badges below read that instead of
+    # querying it again.
+    streak = request.state.current_streak
+
+    # Nine independent reads -- none depends on another's result, so they're
+    # fired concurrently instead of one at a time. Over a real network hop to
+    # the database (as on Render, app and DB are separate services) that's
+    # the difference between one round-trip's worth of latency and nine.
     (
         stats,
         mastery,
@@ -58,6 +62,7 @@ async def dashboard(
         documents,
         activity,
         new_concept,
+        badges,
     ) = await asyncio.gather(
         service.get_stats(pool, user_id),
         service.topic_mastery(pool, user_id),
@@ -71,6 +76,7 @@ async def dashboard(
         list_documents(pool, user_id),
         service.activity_last_7_days(pool, user_id),
         service.new_concept_recommendation(pool, user_id),
+        get_badges(pool, user_id, streak_days=streak or 0),
     )
     interviews = [
         {"application": row, "days_until": (row["interview_at"] - datetime.now(timezone.utc)).days}
@@ -85,7 +91,6 @@ async def dashboard(
 
     cu = request.state.current_user
     first_name = (cu["name"].split()[0] if cu and cu["name"].split() else None) if cu else None
-    streak = request.state.current_streak
     greeting = _time_of_day_greeting(profile["timezone"])
     activity_max = max((day["attempt_count"] for day in activity), default=0)
 
@@ -108,5 +113,6 @@ async def dashboard(
             "activity": activity,
             "activity_max": activity_max,
             "new_concept": new_concept,
+            "badges": badges,
         },
     )
