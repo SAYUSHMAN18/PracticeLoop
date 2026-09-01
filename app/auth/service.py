@@ -57,8 +57,23 @@ async def authenticate(pool: asyncpg.Pool, email: str, password: str) -> int:
 
 
 async def get_user(pool: asyncpg.Pool, user_id: int) -> asyncpg.Record | None:
-    return await pool.fetchrow("SELECT user_id, email, name FROM users WHERE user_id = $1", user_id)
+    return await pool.fetchrow("SELECT user_id, email, name, role FROM users WHERE user_id = $1", user_id)
 
 
 async def get_user_by_email(pool: asyncpg.Pool, email: str) -> asyncpg.Record | None:
-    return await pool.fetchrow("SELECT user_id, email, name FROM users WHERE email = $1", email)
+    return await pool.fetchrow("SELECT user_id, email, name, role FROM users WHERE email = $1", email)
+
+
+_VALID_ROLES = {"student", "teacher"}
+
+
+async def set_role(pool: asyncpg.Pool, user_id: int, role: str) -> None:
+    """Self-declared, not verified -- there's no institutional identity
+    check behind "teacher" here, matching this app's personal-scale
+    single-tenant-plus-explicit-consent model. It only unlocks the
+    classroom-creation UI; it never grants access to anyone else's data
+    by itself (every cross-user view is gated by a join code or an
+    accepted guardian invite, not by role)."""
+    if role not in _VALID_ROLES:
+        raise ValueError(f"invalid role: {role!r}")
+    await pool.execute("UPDATE users SET role = $2 WHERE user_id = $1", user_id, role)

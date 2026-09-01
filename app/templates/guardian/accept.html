@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Accept guardian invite - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Guardian invite</h1>
+
+<div class="card">
+  {% if preview.status == 'pending' %}
+    <p>{{ preview.student_name }} invited you to see a summary of their progress on PracticeLoop --
+       streak, level, and paths completed. You won't see their practice content, mentor
+       conversations, or diagnostic details.</p>
+    <form method="post" action="/guardian/accept/{{ invite_token }}">
+      <button type="submit">Accept</button>
+    </form>
+  {% elif preview.status == 'accepted' %}
+    <p class="muted">This invite has already been accepted.</p>
+  {% else %}
+    <p class="muted">This invite has been revoked.</p>
+  {% endif %}
+</div>
+{% endblock %}

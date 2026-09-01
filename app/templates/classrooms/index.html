@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Classrooms - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Classrooms</h1>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+{% if is_teacher %}
+<div class="card">
+  <h2>Your classrooms</h2>
+  <form method="post" action="/classrooms" class="inline-form">
+    <input type="text" name="name" required maxlength="120" placeholder="Classroom name">
+    <button type="submit">Create classroom</button>
+  </form>
+  {% for classroom in owned %}
+    <div class="question-item">
+      <a href="/classrooms/{{ classroom.classroom_id }}" style="color:var(--text);text-decoration:none;font-weight:700;">{{ classroom.name }}</a>
+      <div class="muted" style="font-size:0.82rem;margin-top:0.2rem;">{{ classroom.student_count }} student{{ 's' if classroom.student_count != 1 }} &middot; join code {{ classroom.join_code }}</div>
+    </div>
+  {% else %}
+    <p class="muted">No classrooms yet.</p>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Join a classroom</h2>
+  <form method="post" action="/classrooms/join" class="inline-form">
+    <input type="text" name="join_code" required maxlength="10" placeholder="Join code" style="text-transform:uppercase;">
+    <button type="submit">Join</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Classrooms you've joined</h2>
+  {% for classroom in joined %}
+    <div class="question-item">
+      <strong>{{ classroom.name }}</strong>
+      <div class="muted" style="font-size:0.82rem;margin-top:0.2rem;">Taught by {{ classroom.teacher_name }}</div>
+    </div>
+  {% else %}
+    <p class="muted">Not in any classrooms yet.</p>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>Your assignments</h2>
+  {% for a in assignments %}
+    <div class="question-item">
+      <strong>{{ a.title }}</strong>
+      <span class="tag">{{ a.classroom_name }}</span>
+      {% if a.due_date %}<span class="muted" style="font-size:0.82rem;"> &middot; due {{ a.due_date.strftime('%b %d, %Y') }}</span>{% endif %}
+      {% if a.description %}<div class="muted" style="font-size:0.85rem;margin-top:0.3rem;">{{ a.description }}</div>{% endif %}
+      {% if a.topic %}<div class="hub-links"><a href="/assessments">Take a diagnostic on {{ a.topic }}</a></div>{% endif %}
+    </div>
+  {% else %}
+    <p class="muted">No assignments yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

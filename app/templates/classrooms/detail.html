@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ classroom.name }} - PracticeLoop{% endblock %}
+{% block content %}
+<p class="muted" style="margin-bottom:0.3rem;"><a href="/classrooms">&larr; Classrooms</a></p>
+<h1>{{ classroom.name }}</h1>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+    <div>
+      <span class="muted">Join code</span>
+      <div style="font-size:1.4rem;font-weight:700;letter-spacing:0.1em;">{{ classroom.join_code }}</div>
+    </div>
+    <form method="post" action="/classrooms/{{ classroom.classroom_id }}/delete" id="classroom-delete-form" data-title="{{ classroom.name }}">
+      <button type="submit" class="secondary" style="color:var(--danger);border-color:var(--danger-soft);margin-top:0;">Delete classroom</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Roster ({{ roster|length }})</h2>
+  {% for student in roster %}
+    <div class="question-item">
+      <strong>{{ student.name }}</strong>
+      <span class="muted" style="font-size:0.82rem;"> &middot; {{ student.email }}</span>
+      <div class="muted" style="font-size:0.82rem;margin-top:0.2rem;">
+        Lv {{ student.level }} ({{ student.total_xp }} XP) &middot; {{ student.streak }}-day streak &middot; {{ student.completed_paths }} path{{ 's' if student.completed_paths != 1 }} completed
+      </div>
+    </div>
+  {% else %}
+    <p class="muted">No students have joined yet -- share the join code above.</p>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>Assign work</h2>
+  <form method="post" action="/classrooms/{{ classroom.classroom_id }}/assignments">
+    <label for="f-title">Title</label>
+    <input id="f-title" type="text" name="title" required maxlength="200">
+    <label for="f-description">Description (optional)</label>
+    <textarea id="f-description" name="description" rows="3"></textarea>
+    <div class="form-row">
+      <div>
+        <label for="f-topic">Diagnostic topic (optional)</label>
+        <input id="f-topic" type="text" name="topic" placeholder="e.g. Photosynthesis">
+      </div>
+      <div>
+        <label for="f-due">Due date (optional)</label>
+        <input id="f-due" type="date" name="due_date">
+      </div>
+    </div>
+    <button type="submit">Assign</button>
+  </form>
+
+  {% for a in assignments %}
+    <div class="question-item">
+      <strong>{{ a.title }}</strong>
+      {% if a.due_date %}<span class="muted" style="font-size:0.82rem;"> &middot; due {{ a.due_date.strftime('%b %d, %Y') }}</span>{% endif %}
+      {% if a.description %}<div class="muted" style="font-size:0.85rem;margin-top:0.3rem;">{{ a.description }}</div>{% endif %}
+    </div>
+  {% else %}
+    <p class="muted">No assignments yet.</p>
+  {% endfor %}
+</div>
+
+<script>
+document.getElementById("classroom-delete-form").addEventListener("submit", function (e) {
+  if (!confirm("Delete \"" + this.dataset.title + "\"? This can't be undone.")) {
+    e.preventDefault();
+  }
+});
+</script>
+{% endblock %}

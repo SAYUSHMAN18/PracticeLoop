@@ -5,6 +5,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from app.auth.service import set_role
 from app.core.db import get_pool
 from app.core.deps import inject_current_user, require_user_id
 from app.core.templates import templates
@@ -61,6 +62,23 @@ async def profile_page(
             "proficiency_labels": PROFICIENCY_LABELS,
         },
     )
+
+
+@router.post("/profile/role")
+async def change_role(
+    role: str = Form(...),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    """Self-declared -- see auth/service.py's set_role for why that's
+    fine at this app's scale. "teacher" only unlocks /classrooms's
+    create-a-classroom form; it never grants access to anyone else's
+    data by itself."""
+    try:
+        await set_role(pool, user_id, role)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Not a valid role.") from exc
+    return RedirectResponse("/profile", status_code=303)
 
 
 @router.post("/profile")

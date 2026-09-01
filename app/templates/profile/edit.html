@@ -2,6 +2,23 @@
 {% block title %}Profile - PracticeLoop{% endblock %}
 {% block content %}
 <h1>Your profile</h1>
+
+<div class="card">
+  <h2>Role</h2>
+  <p class="muted">Self-declared -- teacher mode just unlocks classroom creation, it doesn't need verification at this scale.</p>
+  <form method="post" action="/profile/role">
+    <select name="role">
+      <option value="student" {{ 'selected' if request.state.current_user.role == 'student' }}>Student</option>
+      <option value="teacher" {{ 'selected' if request.state.current_user.role == 'teacher' }}>Teacher</option>
+    </select>
+    <button type="submit" class="secondary">Save role</button>
+  </form>
+  <div class="hub-links">
+    <a href="/classrooms">{{ 'Manage your classrooms' if request.state.current_user.role == 'teacher' else 'Join a classroom' }}</a>
+    <a href="/guardian">Guardian access</a>
+  </div>
+</div>
+
 <div class="card">
   <form method="post" action="/profile" enctype="multipart/form-data">
     <label for="f-target-role">Target role</label>

@@ -10,6 +10,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.assessments.router import router as assessments_router
 from app.auth.router import router as auth_router
+from app.classrooms.router import router as classrooms_router
 from app.core.config import settings, verify_production_config
 from app.core.db import close_pool, get_pool
 from app.core.deps import LoginRequired
@@ -25,6 +26,7 @@ from app.core.security import current_user_id
 from app.core.templates import STATIC_DIR, templates
 from app.dashboard.router import router as dashboard_router
 from app.documents.router import router as documents_router
+from app.guardian.router import router as guardian_router
 from app.jobs.router import router as jobs_router
 from app.labs.router import router as labs_router
 from app.learning_paths.router import router as learning_paths_router
@@ -90,6 +92,8 @@ app.include_router(assessments_router)
 app.include_router(mentor_router)
 app.include_router(labs_router)
 app.include_router(projects_router)
+app.include_router(classrooms_router)
+app.include_router(guardian_router)
 app.include_router(roadmap_router)
 
 

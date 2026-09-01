@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Guardian access - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Guardian access</h1>
+<p class="muted">
+  Invite a parent or guardian to see a summary of your progress -- streak, level, and paths
+  completed, never your practice content, mentor conversations, or diagnostic details.
+</p>
+
+<div class="card">
+  <h2>Invite a guardian</h2>
+  <form method="post" action="/guardian/invite">
+    <button type="submit">Generate an invite link</button>
+  </form>
+  {% for invite in invites %}
+    <div class="question-item">
+      {% if invite.status == 'pending' %}
+        <span class="tag">Pending</span>
+        <div class="muted" style="font-size:0.82rem;margin-top:0.4rem;word-break:break-all;">{{ request.base_url }}guardian/accept/{{ invite.invite_token }}</div>
+        <form method="post" action="/guardian/invite/{{ invite.link_id }}/revoke" style="margin-top:0.4rem;">
+          <button type="submit" class="secondary" style="margin-top:0;font-size:0.8rem;padding:0.35rem 0.6rem;">Revoke</button>
+        </form>
+      {% elif invite.status == 'accepted' %}
+        <span class="tag tag-proven">Accepted by {{ invite.guardian_name }}</span>
+        <form method="post" action="/guardian/invite/{{ invite.link_id }}/revoke" style="margin-top:0.4rem;">
+          <button type="submit" class="secondary" style="margin-top:0;font-size:0.8rem;padding:0.35rem 0.6rem;color:var(--danger);">Revoke access</button>
+        </form>
+      {% else %}
+        <span class="tag tag-missing">Revoked</span>
+      {% endif %}
+    </div>
+  {% else %}
+    <p class="muted">No invites yet.</p>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>Students you guard</h2>
+  {% for student in students %}
+    <div class="question-item">
+      <strong>{{ student.name }}</strong>
+      <div class="muted" style="font-size:0.82rem;margin-top:0.2rem;">
+        Lv {{ student.level }} ({{ student.total_xp }} XP) &middot; {{ student.streak }}-day streak &middot; {{ student.completed_paths }} path{{ 's' if student.completed_paths != 1 }} completed
+      </div>
+    </div>
+  {% else %}
+    <p class="muted">You're not a guardian for anyone yet -- someone needs to send you an invite link.</p>
+  {% endfor %}
+</div>
+{% endblock %}
