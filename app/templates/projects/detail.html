@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}{{ project.title }} - PracticeLoop{% endblock %}
+{% block content %}
+<p class="muted" style="margin-bottom:0.3rem;"><a href="/projects">&larr; Projects</a></p>
+<h1>{{ project.title }}</h1>
+<span class="tag {{ 'tag-proven' if project.status == 'submitted' else '' }}">{{ 'Submitted' if project.status == 'submitted' else 'In progress' }}</span>
+
+<div class="card">
+  <p>{{ project.brief }}</p>
+</div>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+    <div style="flex:1;min-width:200px;">
+      <div class="progress-bar"><div class="progress-bar-fill" style="width:{{ project.progress_percent }}%;"></div></div>
+      <div class="muted" style="font-size:0.82rem;margin-top:0.35rem;">{{ project.completed_milestones }} of {{ project.total_milestones }} milestones complete</div>
+    </div>
+    <form method="post" action="/projects/{{ project.project_id }}/delete" id="project-delete-form" data-title="{{ project.title }}">
+      <button type="submit" class="secondary" style="color:var(--danger);border-color:var(--danger-soft);margin-top:0;">Delete project</button>
+    </form>
+  </div>
+
+  <h2 style="margin-top:1.25rem;">Milestones</h2>
+  {% for milestone in project.milestones %}
+    <div style="display:flex;align-items:center;gap:0.55rem;padding:0.35rem 0;">
+      <form method="post" action="/projects/{{ project.project_id }}/milestones/{{ milestone.milestone_id }}/toggle" style="margin:0;">
+        <button type="submit" class="link-button" style="padding:0;margin:0;color:{{ 'var(--good)' if milestone.completed_at else 'var(--muted)' }};" aria-label="{{ 'Mark incomplete' if milestone.completed_at else 'Mark complete' }}: {{ milestone.title }}">
+          {{ '✓' if milestone.completed_at else '○' }}
+        </button>
+      </form>
+      <span style="{{ 'color:var(--muted);text-decoration:line-through;' if milestone.completed_at }}">{{ milestone.title }}</span>
+    </div>
+  {% endfor %}
+</div>
+
+{% if project.status == 'submitted' %}
+  <div class="card">
+    <h2>Your submission</h2>
+    <p style="white-space:pre-wrap;">{{ project.submission_text }}</p>
+    {% if project.submission_link %}<p><a href="{{ project.submission_link }}" target="_blank" rel="noopener noreferrer">{{ project.submission_link }}</a></p>{% endif %}
+  </div>
+
+  {% if project.feedback %}
+    <div class="card">
+      <h2>Feedback</h2>
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="value">{{ project.feedback.completeness_score }}/5</div>
+          <div class="label">Completeness</div>
+        </div>
+        <div class="stat">
+          <div class="value">{{ project.feedback.quality_score }}/5</div>
+          <div class="label">Quality</div>
+        </div>
+      </div>
+      {% if project.feedback.summary %}<p style="margin-top:1rem;">{{ project.feedback.summary }}</p>{% endif %}
+      {% if project.feedback.strengths %}
+        <h2 style="margin-top:1.25rem;font-size:0.95rem;">Strengths</h2>
+        <ul style="margin:0.4rem 0 0;padding-left:1.2rem;">
+          {% for item in project.feedback.strengths %}<li class="muted" style="margin-bottom:0.3rem;">{{ item }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+      {% if project.feedback.improvements %}
+        <h2 style="margin-top:1.25rem;font-size:0.95rem;">To improve</h2>
+        <ul style="margin:0.4rem 0 0;padding-left:1.2rem;">
+          {% for item in project.feedback.improvements %}<li class="muted" style="margin-bottom:0.3rem;">{{ item }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="card">
+      <p class="muted">No AI feedback was available when this was submitted -- configure an AI provider and resubmit if you'd like a review.</p>
+    </div>
+  {% endif %}
+{% else %}
+  <div class="card">
+    <h2>Submit your project</h2>
+    <form method="post" action="/projects/{{ project.project_id }}/submit">
+      <label for="f-submission">What did you build?</label>
+      <textarea id="f-submission" name="submission_text" rows="6" required placeholder="Describe what you built, how it works, and any decisions you made."></textarea>
+      <label for="f-link">Link (optional)</label>
+      <input id="f-link" type="url" name="submission_link" placeholder="https://github.com/you/project">
+      <button type="submit">Submit for feedback</button>
+    </form>
+  </div>
+{% endif %}
+
+<script>
+document.getElementById("project-delete-form").addEventListener("submit", function (e) {
+  if (!confirm("Delete \"" + this.dataset.title + "\"? This can't be undone.")) {
+    e.preventDefault();
+  }
+});
+</script>
+{% endblock %}

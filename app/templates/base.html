@@ -111,7 +111,7 @@
         <a href="/practice/review" class="{{ 'active' if request.url.path.startswith('/practice/review') }}">Review</a>
         <a href="/assessments" class="{{ 'active' if request.url.path.startswith('/assessments') }}">Assessments</a>
         <a href="/documents" class="{{ 'active' if request.url.path == '/documents' }}">Knowledge Vault</a>
-        <a href="/projects" class="{{ 'active' if request.url.path == '/projects' }}">Projects</a>
+        <a href="/projects" class="{{ 'active' if request.url.path.startswith('/projects') }}">Projects</a>
         <a href="/jobs" class="{{ 'active' if request.url.path.startswith('/jobs') }}">Career Lab</a>
         <a href="/labs" class="{{ 'active' if request.url.path.startswith('/labs') }}">Labs</a>
         <a href="/progress" class="{{ 'active' if request.url.path == '/progress' }}">Progress</a>
@@ -169,6 +169,7 @@
         { label: "Assessments", href: "/assessments", keywords: "diagnostic quiz test placement" },
         { label: "Knowledge Vault", href: "/documents", keywords: "documents resume transcripts certificates upload" },
         { label: "Projects", href: "/projects", keywords: "portfolio proof" },
+        { label: "Portfolio", href: "/portfolio", keywords: "projects proof badges skills" },
         { label: "Career Lab", href: "/jobs", keywords: "jobs discovery career" },
         { label: "Math Lab", href: "/labs/math", keywords: "labs equation solve algebra" },
         { label: "Writing Lab", href: "/labs/writing", keywords: "labs essay feedback grammar" },

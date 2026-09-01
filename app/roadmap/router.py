@@ -13,24 +13,10 @@ router = APIRouter(dependencies=[Depends(inject_current_user)])
 # out. A real destination that says what's coming beats either a dead
 # link or hiding the nav item until the feature exists.
 #
-# My Learning Paths, Explore Subjects (Phase 6), and Assessments
-# (Phase 9) moved out of this file once they became real pages --
-# app/learning_paths/router.py and app/assessments/router.py. Projects
-# (Phase 13) and Progress (Phase 15) are still ahead, so they stay here
-# as stubs.
-_PROJECTS = {
-    "title": "Projects",
-    "blurb": (
-        "Guided and independent projects with rubrics, milestones, and mentor feedback -- "
-        "real output beyond a mastery score."
-    ),
-    "phase": "Phase 13 — Projects and Proof of Learning",
-    "coming": [
-        "Guided projects tied to a learning path's units",
-        "Milestones, rubric-based feedback, and a final submission",
-        "A shareable skill portfolio built from completed projects",
-    ],
-}
+# My Learning Paths, Explore Subjects (Phase 6), Assessments (Phase 9),
+# and Projects (Phase 13) all moved out of this file once they became
+# real pages. Progress (Phase 15) is still ahead, so it stays here as a
+# stub.
 _PROGRESS = {
     "title": "Progress",
     "blurb": (
@@ -44,11 +30,6 @@ _PROGRESS = {
         "“Why this was recommended” explanations, not just a suggestion",
     ],
 }
-
-
-@router.get("/projects", response_class=HTMLResponse)
-async def projects(request: Request, user_id: int = Depends(require_user_id)):
-    return templates.TemplateResponse(request, "roadmap/coming_soon.html", _PROJECTS)
 
 
 @router.get("/progress", response_class=HTMLResponse)

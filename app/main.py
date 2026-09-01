@@ -31,6 +31,7 @@ from app.learning_paths.router import router as learning_paths_router
 from app.mentor.router import router as mentor_router
 from app.practice.router import router as practice_router
 from app.profile.router import router as profile_router
+from app.projects.router import router as projects_router
 from app.roadmap.router import router as roadmap_router
 
 logger = get_logger(__name__)
@@ -88,6 +89,7 @@ app.include_router(learning_paths_router)
 app.include_router(assessments_router)
 app.include_router(mentor_router)
 app.include_router(labs_router)
+app.include_router(projects_router)
 app.include_router(roadmap_router)
 
 

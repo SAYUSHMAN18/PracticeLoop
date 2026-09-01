@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Projects - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Projects</h1>
+<p class="muted">Real output beyond a mastery score -- a project idea, a milestone checklist, and feedback when you submit.</p>
+<div class="hub-links"><a href="/portfolio">View your portfolio &rarr;</a></div>
+
+<div class="card">
+  <h2>Start a new project</h2>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <form method="post" action="/projects">
+    <label for="f-topic">What skill or topic should the project cover?</label>
+    <input id="f-topic" type="text" name="topic" required maxlength="200" placeholder="e.g. REST APIs in Python">
+    <button type="submit">Suggest a project</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Your projects ({{ projects|length }})</h2>
+  {% for project in projects %}
+    <div class="question-item">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:1rem;flex-wrap:wrap;">
+        <div style="flex:1;min-width:220px;">
+          <a href="/projects/{{ project.project_id }}" style="font-weight:700;font-size:1.02rem;text-decoration:none;color:var(--text);">{{ project.title }}</a>
+          <span class="tag {{ 'tag-proven' if project.status == 'submitted' else '' }}" style="margin-left:0.4rem;">
+            {{ 'Submitted' if project.status == 'submitted' else 'In progress' }}
+          </span>
+          <div style="margin-top:0.6rem;max-width:320px;">
+            <div class="progress-bar"><div class="progress-bar-fill" style="width:{{ project.progress_percent }}%;"></div></div>
+            <div class="muted" style="font-size:0.76rem;margin-top:0.25rem;">{{ project.completed_milestones }}/{{ project.total_milestones }} milestones</div>
+          </div>
+        </div>
+        <a class="btn secondary" href="/projects/{{ project.project_id }}">Open</a>
+      </div>
+    </div>
+  {% else %}
+    <p class="muted">No projects yet -- start one above.</p>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,32 +1,22 @@
-import pytest
-
 from tests.conftest import signup
 
-# One (path, sidebar label, phase heading) tuple per Phase 5 placeholder --
-# the sections the new sidebar links to that Phase 13/15 haven't built
-# out yet. See app/roadmap/router.py for why these are literal routes
-# instead of a single "/{section}" catch-all. My Learning Paths, Explore
-# Subjects (Phase 6), and Assessments (Phase 9) moved out of this list
-# once they became real pages -- covered by test_learning_paths.py and
-# test_diagnostics.py instead.
-SECTIONS = [
-    ("/projects", "Projects", "Phase 13"),
-    ("/progress", "Progress", "Phase 15"),
-]
+# Progress (Phase 15) is the only Phase 5 stub left -- My Learning Paths,
+# Explore Subjects (Phase 6), Assessments (Phase 9), and Projects
+# (Phase 13) all moved out of this file once they became real pages,
+# covered by their own test files instead.
 
 
-@pytest.mark.parametrize("path,title,phase", SECTIONS)
-async def test_placeholder_renders_its_own_title_and_phase(client, path, title, phase):
-    await signup(client, f"roadmap-{path.strip('/')}@example.com")
-    response = await client.get(path)
+async def test_progress_placeholder_renders_its_title_and_phase(client):
+    await signup(client, "roadmap-progress@example.com")
+    response = await client.get("/progress")
     assert response.status_code == 200
-    assert f'<h1 style="margin-top:0.75rem;">{title}</h1>' in response.text
-    assert phase in response.text
+    assert '<h1 style="margin-top:0.75rem;">Progress</h1>' in response.text
+    assert "Phase 15" in response.text
     assert "What's coming" in response.text
 
 
-async def test_placeholders_stay_in_the_app_shell_not_a_dead_end(client):
-    """Each stub should still be a real page in the app -- sidebar, topbar,
+async def test_placeholder_stays_in_the_app_shell_not_a_dead_end(client):
+    """The stub should still be a real page in the app -- sidebar, topbar,
     mentor panel and all -- not a bare fragment that drops the student out
     of the shell just because the feature behind it isn't built yet."""
     await signup(client, "roadmap-shell@example.com")

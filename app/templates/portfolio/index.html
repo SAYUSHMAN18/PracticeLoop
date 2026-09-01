@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Portfolio - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Portfolio</h1>
+<p class="muted">
+  A private snapshot of what you've actually done -- built from your real activity, not a
+  self-reported summary. Only visible to you for now.
+</p>
+
+<div class="card">
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="value">Lv {{ xp.level }}</div>
+      <div class="label">{{ xp.total_xp }} XP</div>
+    </div>
+    <div class="stat">
+      <div class="value">{{ completed_paths|length }}</div>
+      <div class="label">Paths completed</div>
+    </div>
+    <div class="stat">
+      <div class="value">{{ submitted_projects|length }}</div>
+      <div class="label">Projects submitted</div>
+    </div>
+    <div class="stat">
+      <div class="value">{{ earned_badges|length }}</div>
+      <div class="label">Badges earned</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Projects</h2>
+  {% for project in submitted_projects %}
+    <div class="question-item">
+      <a href="/projects/{{ project.project_id }}" style="color:var(--text);text-decoration:none;font-weight:700;">{{ project.title }}</a>
+      <div class="muted" style="font-size:0.82rem;margin-top:0.2rem;">Submitted {{ project.submitted_at.strftime('%b %d, %Y') }}</div>
+    </div>
+  {% else %}
+    <p class="muted">No submitted projects yet.</p>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>Completed learning paths</h2>
+  {% for path in completed_paths %}
+    <div class="question-item">
+      <a href="/learning-paths/{{ path.path_id }}" style="color:var(--text);text-decoration:none;font-weight:700;">{{ path.title }}</a>
+      <div class="muted" style="font-size:0.82rem;margin-top:0.2rem;">{{ path.lesson_count }} lessons</div>
+    </div>
+  {% else %}
+    <p class="muted">No fully completed paths yet.</p>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>Diagnostics taken</h2>
+  {% for attempt in diagnostics %}
+    <div class="question-item">
+      <a href="/assessments/result/{{ attempt.attempt_id }}" style="color:var(--text);text-decoration:none;font-weight:700;">{{ attempt.topic }}</a>
+      <span class="tag" style="margin-left:0.4rem;">{{ proficiency_labels.get(attempt.proficiency_result, attempt.proficiency_result) }}</span>
+      <div class="muted" style="font-size:0.82rem;margin-top:0.2rem;">{{ attempt.correct_count }}/{{ attempt.total_count }} correct</div>
+    </div>
+  {% else %}
+    <p class="muted">No diagnostics taken yet.</p>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>Strongest topics</h2>
+  {% for m in top_mastery %}
+    <div class="question-item">
+      <strong>{{ m.topic }}</strong>
+      <span class="tag {{ 'tag-proven' if m.mastery_score >= 70 else '' }}" style="margin-left:0.4rem;">{{ m.mastery_score }}/100</span>
+    </div>
+  {% else %}
+    <p class="muted">No practice activity yet.</p>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>Badges</h2>
+  {% if earned_badges %}
+    <div style="display:flex;flex-wrap:wrap;gap:0.6rem;">
+      {% for badge in earned_badges %}
+        <span class="tag tag-proven">🏆 {{ badge.label }}</span>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted">No badges earned yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
