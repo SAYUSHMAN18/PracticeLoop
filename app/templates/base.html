@@ -102,7 +102,7 @@
         <a href="/subjects" class="{{ 'active' if request.url.path == '/subjects' }}">Explore Subjects</a>
         <a href="/practice" class="{{ 'active' if request.url.path == '/practice' }}">Practice</a>
         <a href="/practice/review" class="{{ 'active' if request.url.path.startswith('/practice/review') }}">Review</a>
-        <a href="/assessments" class="{{ 'active' if request.url.path == '/assessments' }}">Assessments</a>
+        <a href="/assessments" class="{{ 'active' if request.url.path.startswith('/assessments') }}">Assessments</a>
         <a href="/documents" class="{{ 'active' if request.url.path == '/documents' }}">Knowledge Vault</a>
         <a href="/projects" class="{{ 'active' if request.url.path == '/projects' }}">Projects</a>
         <a href="/jobs" class="{{ 'active' if request.url.path.startswith('/jobs') }}">Career Lab</a>

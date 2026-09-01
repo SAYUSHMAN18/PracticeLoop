@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.assessments.router import router as assessments_router
 from app.auth.router import router as auth_router
 from app.core.config import settings, verify_production_config
 from app.core.db import close_pool, get_pool
@@ -82,6 +83,7 @@ app.include_router(dashboard_router)
 app.include_router(jobs_router)
 app.include_router(documents_router)
 app.include_router(learning_paths_router)
+app.include_router(assessments_router)
 app.include_router(roadmap_router)
 
 

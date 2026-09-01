@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Assessments - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Assessments</h1>
+<p class="muted">
+  A short multiple-choice diagnostic on any topic -- scored instantly, mapped to a
+  proficiency level, and (unlike the profile page's dropdown) actually measured.
+</p>
+
+{% if profile.proficiency_level %}
+<div class="card">
+  <h2>Current proficiency</h2>
+  <span class="tag {{ 'tag-proven' if profile.proficiency_source == 'diagnostic' }}">
+    {{ proficiency_labels.get(profile.proficiency_level, profile.proficiency_level) }}
+  </span>
+  <span class="muted" style="font-size:0.82rem;">
+    {{ 'Measured by a diagnostic' if profile.proficiency_source == 'diagnostic' else 'Self-reported on your profile' }}
+  </span>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Start a diagnostic</h2>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  {% if not ai_available %}
+    <p class="muted">Diagnostics need an AI provider configured on this deployment.</p>
+  {% endif %}
+  <form method="post" action="/assessments/start">
+    <label for="f-topic">What should we test you on?</label>
+    <input id="f-topic" type="text" name="topic" required maxlength="200"
+           value="{{ profile.target_role }}" placeholder="e.g. Python fundamentals">
+    <button type="submit">Start diagnostic (8 questions)</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Past diagnostics ({{ attempts|length }})</h2>
+  {% for attempt in attempts %}
+    <div class="question-item">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div>
+          <a href="/assessments/result/{{ attempt.attempt_id }}" style="color:var(--text);text-decoration:none;font-weight:700;">{{ attempt.topic }}</a>
+          <div class="muted" style="font-size:0.82rem;margin-top:0.2rem;">
+            {{ attempt.correct_count }}/{{ attempt.total_count }} correct &middot; {{ attempt.created_at.strftime('%b %d, %Y') }}
+          </div>
+        </div>
+        <span class="tag">{{ proficiency_labels.get(attempt.proficiency_result, attempt.proficiency_result) }}</span>
+      </div>
+    </div>
+  {% else %}
+    <p class="muted">No diagnostics taken yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

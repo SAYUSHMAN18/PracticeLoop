@@ -3,13 +3,13 @@ import pytest
 from tests.conftest import signup
 
 # One (path, sidebar label, phase heading) tuple per Phase 5 placeholder --
-# the sections the new sidebar links to that Phase 9/13/15 haven't built
+# the sections the new sidebar links to that Phase 13/15 haven't built
 # out yet. See app/roadmap/router.py for why these are literal routes
-# instead of a single "/{section}" catch-all. My Learning Paths and
-# Explore Subjects moved out of this list in Phase 6 -- they're real
-# pages now, covered by test_learning_paths.py instead.
+# instead of a single "/{section}" catch-all. My Learning Paths, Explore
+# Subjects (Phase 6), and Assessments (Phase 9) moved out of this list
+# once they became real pages -- covered by test_learning_paths.py and
+# test_diagnostics.py instead.
 SECTIONS = [
-    ("/assessments", "Assessments", "Phase 9"),
     ("/projects", "Projects", "Phase 13"),
     ("/progress", "Progress", "Phase 15"),
 ]

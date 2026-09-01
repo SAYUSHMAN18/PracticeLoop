@@ -36,7 +36,7 @@ async def get_profile(pool: asyncpg.Pool, user_id: int) -> asyncpg.Record:
     return await pool.fetchrow(
         """SELECT user_id, target_role, target_companies, resume_text,
                   goal_type, target_date, daily_time_budget_minutes, timezone,
-                  onboarding_completed, proficiency_level
+                  onboarding_completed, proficiency_level, proficiency_source
            FROM profiles WHERE user_id = $1""",
         user_id,
     )
@@ -71,12 +71,18 @@ async def update_profile(
     # text" semantics (the file upload is optional on every save) -- every
     # other field is a simple always-submitted form value instead, so it
     # doesn't need that same two-branch treatment.
+    #
+    # proficiency_source is always reset to 'self_reported' here -- this
+    # function is only ever called from the profile form's own dropdown,
+    # never from the Phase 9 diagnostic (which sets it to 'diagnostic'
+    # directly). Without this, saving the profile after taking a
+    # diagnostic would leave a self-reported value mislabeled as measured.
     if resume_text is None:
         await pool.execute(
             """UPDATE profiles SET
                    target_role = $2, target_companies = $3,
                    goal_type = $4, target_date = $5, daily_time_budget_minutes = $6, timezone = $7,
-                   proficiency_level = $8,
+                   proficiency_level = $8, proficiency_source = 'self_reported',
                    updated_at = now()
                WHERE user_id = $1""",
             user_id,
@@ -93,7 +99,7 @@ async def update_profile(
             """UPDATE profiles SET
                    target_role = $2, target_companies = $3, resume_text = $4,
                    goal_type = $5, target_date = $6, daily_time_budget_minutes = $7, timezone = $8,
-                   proficiency_level = $9,
+                   proficiency_level = $9, proficiency_source = 'self_reported',
                    updated_at = now()
                WHERE user_id = $1""",
             user_id,

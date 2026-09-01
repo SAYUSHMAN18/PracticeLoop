@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Diagnostic: {{ topic }} - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Diagnostic: {{ topic }}</h1>
+<p class="muted">Answer all {{ questions|length }} questions, then submit. There's no time limit.</p>
+
+<form method="post" action="/assessments/submit">
+  {% for q in questions %}
+    {% set q_index = loop.index0 %}
+    <div class="card">
+      <h2 style="font-size:1rem;">{{ loop.index }}. {{ q.question }}</h2>
+      <div class="rating-row" style="flex-direction:column;align-items:stretch;">
+        {% for choice in q.choices %}
+          <label style="display:flex;align-items:center;gap:0.6rem;font-weight:500;color:var(--text);margin:0.3rem 0;cursor:pointer;">
+            <input type="radio" name="answer_{{ q_index }}" value="{{ loop.index0 }}" required style="width:auto;">
+            {{ choice }}
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+  <button type="submit">Submit diagnostic</button>
+</form>
+{% endblock %}

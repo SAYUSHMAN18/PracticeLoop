@@ -41,6 +41,7 @@ async def test_anonymous_access_redirects_to_login():
             "/learning-paths",
             "/subjects",
             "/assessments",
+            "/assessments/take",
             "/projects",
             "/progress",
         ):

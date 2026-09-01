@@ -13,24 +13,11 @@ router = APIRouter(dependencies=[Depends(inject_current_user)])
 # out. A real destination that says what's coming beats either a dead
 # link or hiding the nav item until the feature exists.
 #
-# My Learning Paths and Explore Subjects moved out of this file in
-# Phase 6 -- they're real pages now (app/learning_paths/router.py).
-# Assessments (Phase 9), Projects (Phase 13), and Progress (Phase 15)
-# are still ahead, so they stay here as stubs.
-_ASSESSMENTS = {
-    "title": "Assessments",
-    "blurb": (
-        "A short adaptive diagnostic before you start a path, plus quizzes and mastery "
-        "checkpoints along the way -- so your starting level and progress are measured, "
-        "not just assumed."
-    ),
-    "phase": "Phase 9 — Diagnostic and Adaptive Learning",
-    "coming": [
-        "Quick (5-10q), standard (15-25q), or deep (30-50q) diagnostics",
-        "Difficulty adapts to your answers as you go",
-        "A weakness map and a recommended starting unit at the end",
-    ],
-}
+# My Learning Paths, Explore Subjects (Phase 6), and Assessments
+# (Phase 9) moved out of this file once they became real pages --
+# app/learning_paths/router.py and app/assessments/router.py. Projects
+# (Phase 13) and Progress (Phase 15) are still ahead, so they stay here
+# as stubs.
 _PROJECTS = {
     "title": "Projects",
     "blurb": (
@@ -57,11 +44,6 @@ _PROGRESS = {
         "“Why this was recommended” explanations, not just a suggestion",
     ],
 }
-
-
-@router.get("/assessments", response_class=HTMLResponse)
-async def assessments(request: Request, user_id: int = Depends(require_user_id)):
-    return templates.TemplateResponse(request, "roadmap/coming_soon.html", _ASSESSMENTS)
 
 
 @router.get("/projects", response_class=HTMLResponse)

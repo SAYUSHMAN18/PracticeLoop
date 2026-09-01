@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Diagnostic result: {{ attempt.topic }} - PracticeLoop{% endblock %}
+{% block content %}
+<p class="muted" style="margin-bottom:0.3rem;"><a href="/assessments">&larr; Assessments</a></p>
+<h1>{{ attempt.topic }}</h1>
+
+<div class="card">
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="value">{{ attempt.correct_count }}/{{ attempt.total_count }}</div>
+      <div class="label">Correct</div>
+    </div>
+    <div class="stat">
+      <div class="value">{{ proficiency_labels.get(attempt.proficiency_result, attempt.proficiency_result) }}</div>
+      <div class="label">Estimated level</div>
+    </div>
+  </div>
+</div>
+
+{% if attempt.weak_subtopics %}
+<div class="card">
+  <h2>Areas to focus on</h2>
+  <p class="muted">Questions you missed were about:</p>
+  {% for subtopic in attempt.weak_subtopics %}
+    <span class="tag tag-missing">{{ subtopic }}</span>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>What's next</h2>
+  <div class="hub-links">
+    <a href="/learning-paths">Start a learning path on {{ attempt.topic }}</a>
+    <a href="/subjects">Browse subject templates</a>
+    <a href="/assessments">Take another diagnostic</a>
+  </div>
+</div>
+{% endblock %}
