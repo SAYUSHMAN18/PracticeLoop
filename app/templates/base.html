@@ -30,6 +30,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css?v={{ asset_version }}">
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#211c16">
   <script src="https://unpkg.com/htmx.org@2.0.3" defer></script>
 </head>
 <body>
@@ -186,6 +189,7 @@
         { label: "Portfolio", href: "/portfolio", keywords: "projects proof badges skills" },
         { label: "Classrooms", href: "/classrooms", keywords: "teacher student roster assignments join" },
         { label: "Guardian access", href: "/guardian", keywords: "parent guardian invite" },
+        { label: "Account", href: "/account", keywords: "export data delete account privacy" },
         { label: "Career Lab", href: "/jobs", keywords: "jobs discovery career" },
         { label: "Math Lab", href: "/labs/math", keywords: "labs equation solve algebra" },
         { label: "Writing Lab", href: "/labs/writing", keywords: "labs essay feedback grammar" },
@@ -498,6 +502,16 @@
       });
       render();
     })();
+
+    // PWA shell caching + offline fallback (see /static/service-worker.js
+    // for exactly what it does and doesn't do -- static-asset caching and
+    // an offline page, not a claim of full offline functionality this
+    // server-rendered app doesn't architecturally have).
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("/service-worker.js").catch(function () {});
+      });
+    }
   </script>
 </body>
 </html>

@@ -675,6 +675,22 @@ html[data-mentor="collapsed"] .mentor-panel { overflow: hidden; border-left: non
   box-shadow: 0 2px 4px hsl(var(--shadow-color) / 0.08), 0 18px 32px -18px hsl(var(--shadow-color) / 0.4);
 }
 
+/* A lesson's code example is real multi-line, indented source (see
+   app/learning_paths/lesson_content.py) -- rendering it in a plain <p>
+   collapses every newline and indent into one run-on line. <pre> preserves
+   it verbatim; overflow-x handles a line too long for the card instead of
+   forcing the whole page to scroll sideways. */
+.code-block {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.9rem 1.1rem;
+  overflow-x: auto;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.87rem;
+  line-height: 1.5;
+}
+
 h1 {
   font-family: var(--font-display);
   font-size: 2rem;

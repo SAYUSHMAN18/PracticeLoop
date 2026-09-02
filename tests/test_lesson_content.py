@@ -74,6 +74,29 @@ async def test_ai_generated_content_is_used_when_available(client, monkeypatch):
     assert "O(1) on average." in response.text
 
 
+async def test_a_multiline_code_example_keeps_its_newlines_and_indentation(client, monkeypatch):
+    # Regression test: the example used to render inside a plain <p>, which
+    # collapses every newline and indent the moment the browser lays it
+    # out -- a multi-line code sample came out as one run-on line. It now
+    # renders inside <pre class="code-block">, which preserves whitespace.
+    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+        return """{
+          "concept": "Python uses indentation to define blocks.",
+          "example": "def greet(name):\\n    if name:\\n        print(name)",
+          "checkpoint_question": "What starts a new block?",
+          "checkpoint_answer": "A colon, followed by an indented line.",
+          "summary": "Indentation is structural in Python."
+        }"""
+
+    monkeypatch.setattr(service, "generate", fake_generate)
+    monkeypatch.setattr("app.learning_paths.router.llm_is_configured", lambda: True)
+
+    path_id, lesson_ids = await _create_path(client, "lesson-codeblock@example.com", "Learn Python")
+    response = await client.get(f"/learning-paths/{path_id}/lessons/{lesson_ids[0]}")
+    expected = '<pre class="code-block">def greet(name):\n    if name:\n        print(name)</pre>'
+    assert expected in response.text
+
+
 async def test_prev_next_navigation_across_lesson_boundaries(client):
     path_id, lesson_ids = await _create_path(client, "lesson-nav@example.com", "Learn origami")
     assert len(lesson_ids) == 4  # the fallback skeleton's one unit has exactly 4 lessons

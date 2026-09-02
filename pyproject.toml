@@ -1,7 +1,7 @@
 [project]
 name = "practiceloop"
 version = "0.1.0"
-description = "A lean, all-Python spaced-practice platform for interview/skill prep."
+description = "An adaptive learning platform: goal-to-path learning, spaced-repetition practice, an AI mentor, and interview/job-search prep, all on one account."
 requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.115",

@@ -57,6 +57,20 @@ async def _use_test_database():
     # every test the same client IP, so it must be off here or the Nth
     # signup across the whole test session starts 429ing.
     settings.disable_rate_limits = True
+    # The whole suite's "no AI configured" tests (fallback skeletons, honest
+    # "AI unavailable" notices, canned mentor replies) assert on is_configured()
+    # being False by default, and the "AI is configured" tests each opt back in
+    # with their own monkeypatch of *_is_configured plus a mocked LLM call --
+    # never a real network request. That contract breaks silently the moment a
+    # developer's own .env has a real key in it (is_configured() reads live
+    # settings, not a test-only stub), which both makes the suite's outcome
+    # depend on whoever's machine it runs on and risks real, uncontrolled LLM
+    # calls during a test run. Blanking every provider credential here makes
+    # is_configured() reliably False for the whole session no matter what's in
+    # .env, matching what the tests actually assume.
+    settings.groq_api_key = ""
+    settings.gemini_api_key = ""
+    settings.bedrock_model_id = ""
 
     yield
 
