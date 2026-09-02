@@ -11,6 +11,7 @@ from app.core.deps import inject_current_user, require_user_id
 from app.core.llm import is_configured as llm_is_configured
 from app.core.llm_budget import require_llm_budget
 from app.core.logging import get_logger
+from app.core.markdown import render_markdown
 from app.core.templates import templates
 from app.practice import extraction, grading, service
 
@@ -479,7 +480,7 @@ async def grade_review_answer(
         "practice/_review_graded_result.html",
         {
             "rating": result["rating"],
-            "feedback": result["feedback"],
+            "feedback": render_markdown(result["feedback"]),
             "correct_answer": question["answer"],
             "review_date": review_date,
             "days_until": days_until,

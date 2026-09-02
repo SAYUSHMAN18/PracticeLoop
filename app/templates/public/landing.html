@@ -1,0 +1,132 @@
+{% extends "base_public.html" %}
+{% block title %}PracticeLoop — turn a goal into a study plan that actually sticks{% endblock %}
+{% block meta_description %}{{ meta_description }}{% endblock %}
+{% block og_title %}PracticeLoop — adaptive learning built on spaced repetition{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-inner">
+    <p class="hero-eyebrow">Free &amp; open source · No credit card</p>
+    <h1 class="hero-title">Turn a goal into a study plan that actually sticks.</h1>
+    <p class="hero-sub">
+      Most study apps are a flashcard box with a timer bolted on. PracticeLoop generates the
+      curriculum, measures what you really know with a scored diagnostic, and schedules review
+      with <strong>FSRS</strong> — so you revisit each idea on the day you'd otherwise forget it.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-lg" href="/signup">Start learning free</a>
+      <a class="btn btn-lg secondary" href="#how-it-works">See how it works</a>
+    </div>
+    <ul class="hero-proof">
+      <li><strong>80+</strong> starter questions on day one</li>
+      <li><strong>6</strong> ready-made subject templates</li>
+      <li><strong>1</strong> review queue for every format</li>
+    </ul>
+  </div>
+</section>
+
+<section id="how-it-works" class="section" aria-labelledby="how-heading">
+  <div class="section-inner">
+    <h2 id="how-heading" class="section-title">How it works</h2>
+    <p class="section-lede">Four steps, and the loop closes on itself.</p>
+    <ol class="steps">
+      {% for step in how_it_works %}
+        <li class="step">
+          <span class="step-num" aria-hidden="true">{{ loop.index }}</span>
+          <div>
+            <h3>{{ step.title }}</h3>
+            <p>{{ step.body }}</p>
+          </div>
+        </li>
+      {% endfor %}
+    </ol>
+  </div>
+</section>
+
+<section id="features" class="section section-alt" aria-labelledby="features-heading">
+  <div class="section-inner">
+    <h2 id="features-heading" class="section-title">Everything on one account</h2>
+    <p class="section-lede">
+      One practice history and one scheduler underneath all of it — nothing here is a separate app
+      bolted on.
+    </p>
+    <ul class="feature-grid">
+      {% for feature in features %}
+        <li class="feature-card">
+          <span class="feature-icon" aria-hidden="true">{{ feature.icon }}</span>
+          <h3>{{ feature.title }}</h3>
+          <p>{{ feature.body }}</p>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="who-heading">
+  <div class="section-inner">
+    <h2 id="who-heading" class="section-title">Who it's for</h2>
+    <ul class="audience-grid">
+      {% for audience in audiences %}
+        <li class="audience-card">
+          <h3>{{ audience.title }}</h3>
+          <p>{{ audience.body }}</p>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+
+<section class="section section-alt" aria-labelledby="honest-heading">
+  <div class="section-inner narrow">
+    <h2 id="honest-heading" class="section-title">What it won't do</h2>
+    <p class="section-lede">
+      The things a product page usually leaves out, said plainly.
+    </p>
+    <ul class="honest-list">
+      <li>
+        <strong>It won't fake an AI answer.</strong> With no AI provider configured, every feature
+        either falls back to something deterministic and useful or tells you it's unavailable.
+        Diagnostics and the Writing Lab have no non-AI equivalent, so they say so rather than
+        guessing.
+      </li>
+      <li>
+        <strong>It won't let a role snoop.</strong> Being a teacher or a guardian grants nothing by
+        itself. Every cross-user view needs an explicit action from the learner — a join code they
+        enter, an invite they accept — and guardians only ever see a summary.
+      </li>
+      <li>
+        <strong>It won't apply to jobs for you.</strong> No automating LinkedIn or Naukri from the
+        server. Both platforms' terms bar it, and it would mean risking your account to save a click.
+      </li>
+      <li>
+        <strong>The free demo sleeps.</strong> It's hosted on a free tier, so the first request
+        after ~15 minutes idle takes about 50 seconds to wake the instance.
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section id="faq" class="section" aria-labelledby="faq-heading">
+  <div class="section-inner narrow">
+    <h2 id="faq-heading" class="section-title">Frequently asked questions</h2>
+    <div class="faq-list">
+      {% for item in faq %}
+        <details class="faq-item"{% if loop.first %} open{% endif %}>
+          <summary><h3>{{ item.q }}</h3></summary>
+          <p>{{ item.a }}</p>
+        </details>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section cta-section" aria-labelledby="cta-heading">
+  <div class="section-inner narrow center">
+    <h2 id="cta-heading" class="section-title">Start with a plan, not a blank deck.</h2>
+    <p class="section-lede">
+      Sign up in under a minute and begin with 80+ ready-to-review questions.
+    </p>
+    <a class="btn btn-lg" href="/signup">Create your free account</a>
+  </div>
+</section>
+{% endblock %}

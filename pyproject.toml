@@ -20,6 +20,9 @@ dependencies = [
     "httpx>=0.27",
     "fsrs>=6.0",
     "sympy>=1.13",  # Math Lab (Phase 12): symbolic equation solving/verification
+    # Loop Mentor and every other LLM-authored panel answers in markdown;
+    # html=False makes rendering it safe without a separate sanitizer.
+    "markdown-it-py>=3.0",
 ]
 
 [tool.setuptools.packages.find]

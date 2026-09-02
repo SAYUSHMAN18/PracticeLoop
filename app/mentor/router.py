@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse
 from app.core.db import get_pool
 from app.core.deps import inject_current_user, require_user_id
 from app.core.llm import is_configured as llm_is_configured
+from app.core.markdown import render_markdown
 from app.core.templates import templates
 from app.mentor import service
 
@@ -32,6 +33,12 @@ async def _render_conversation(
     for message in messages:
         message["is_ai_generated"] = (
             message["role"] == "assistant" and message["content"] not in service.CANNED_REPLIES
+        )
+        # Only the assistant writes markdown. A student's own message is
+        # rendered as the literal text they typed -- running it through a
+        # markdown renderer would silently reformat their question.
+        message["content_html"] = (
+            render_markdown(message["content"]) if message["role"] == "assistant" else None
         )
     return templates.TemplateResponse(
         request,

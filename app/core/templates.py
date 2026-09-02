@@ -6,6 +6,8 @@ from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
 
+from app.core.config import settings
+
 _APP_DIR = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = _APP_DIR / "templates"
 STATIC_DIR = _APP_DIR / "static"
@@ -44,3 +46,6 @@ def _static_asset_version(filename: str) -> str:
 
 
 templates.env.globals["asset_version"] = _static_asset_version
+# The absolute origin this site is served from. Templates build canonical
+# and Open Graph URLs off it, so no route has to pass one down by hand.
+templates.env.globals["public_base_url"] = settings.public_base_url.rstrip("/")

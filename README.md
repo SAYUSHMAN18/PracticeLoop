@@ -62,8 +62,9 @@ passing a diagnostic, closing a review — not for clicking around.
   lessons**, as a focus module inserted at the *top* of a learning path (existing or new),
   so the next thing you study is the thing just measured as weakest.
 - **Quiz Arena** — a timed round mixing free-text and MCQ questions from your whole bank.
-- **Loop Mentor** — a context-aware AI tutor. No provider configured, or the daily budget
-  spent? It says so honestly instead of faking a reply or crashing.
+- **Loop Mentor** — a context-aware AI tutor whose answers render as real formatted
+  content: headings, bullet lists, tables and code, not raw `**markdown**`. No provider
+  configured, or the daily budget spent? It says so honestly instead of faking a reply.
 - **Two subject labs.** *Math Lab* solves and verifies single-variable equations with
   sandboxed symbolic evaluation (`sympy`, not a bare `eval`) plus optional AI step-by-step
   explanations. *Writing Lab* scores pasted essay / cover-letter / short-answer text on
@@ -103,6 +104,11 @@ passing a diagnostic, closing a review — not for clicking around.
 - **Installable as a PWA** — manifest, icon, and a service worker that caches the static
   shell and serves an honest offline page (no pretending a server-rendered app works fully
   offline).
+- **A real public landing page** at `/` — with a full meta set, `SoftwareApplication` +
+  `FAQPage` JSON-LD generated from the same FAQ the page renders (so the two can't drift),
+  plus `robots.txt`, `sitemap.xml`, and an [`llms.txt`](https://llmstxt.org/) brief for AI
+  assistants. App pages are `noindex`; only the landing page and the auth pages are
+  crawlable.
 - Uploads are checked against their real file signature before being stored or parsed;
   responses carry a nonce-based CSP with no third-party origins in it at all (htmx and the
   webfonts are self-hosted, so there's no CDN to trust or to go down); per-IP rate limiting,
@@ -164,7 +170,7 @@ python scripts/seed.py you@example.com
 
 ### Tests
 
-348 tests across 50 files — spaced repetition and semantic search, every AI-backed feature's
+369 tests across 52 files — spaced repetition and semantic search, every AI-backed feature's
 fallback *and* configured path, ownership/IDOR checks on every cross-user-reachable route,
 migration idempotency, upload validation, and more.
 

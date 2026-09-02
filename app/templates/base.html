@@ -4,6 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}PracticeLoop{% endblock %}</title>
+  {# Every page using this shell is behind a login and 303s to /login for a
+     crawler, so there is nothing here worth indexing -- saying so explicitly
+     keeps crawl budget on the public landing page. #}
+  <meta name="robots" content="noindex, nofollow">
   <script nonce="{{ request.state.csp_nonce }}">
     // Applied before first paint (this is a synchronous, render-blocking
     // script in <head>) so a saved manual theme/mentor/accessibility

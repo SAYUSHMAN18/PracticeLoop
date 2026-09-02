@@ -24,7 +24,6 @@ from app.core.middleware import (
     SecurityHeadersMiddleware,
     StaticCacheHeadersMiddleware,
 )
-from app.core.security import current_user_id
 from app.core.templates import STATIC_DIR, templates
 from app.dashboard.router import router as dashboard_router
 from app.documents.router import router as documents_router
@@ -37,6 +36,7 @@ from app.notifications.router import router as notifications_router
 from app.practice.router import router as practice_router
 from app.profile.router import router as profile_router
 from app.projects.router import router as projects_router
+from app.public.router import router as public_router
 
 logger = get_logger(__name__)
 
@@ -100,6 +100,8 @@ app.include_router(guardian_router)
 app.include_router(notifications_router)
 app.include_router(analytics_router)
 app.include_router(account_router)
+# Last: its "/" must not shadow anything, and it is the only public surface.
+app.include_router(public_router)
 
 
 @app.exception_handler(LoginRequired)
@@ -124,12 +126,6 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 async def unhandled_exception_handler(request: Request, exc: Exception):
     logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
     return templates.TemplateResponse(request, "error.html", {}, status_code=500)
-
-
-@app.get("/")
-async def root(request: Request):
-    destination = "/dashboard" if current_user_id(request) is not None else "/login"
-    return RedirectResponse(destination)
 
 
 @app.get("/service-worker.js")

@@ -92,6 +92,32 @@ the student's practice, not the lesson's checkbox. `ON DELETE CASCADE` on `sourc
 means deleting the path takes its auto-generated cards with it and leaves every hand-captured
 question untouched.
 
+## The public surface, and rendering model output
+
+`/` used to redirect straight to `/login`, which meant a crawler -- or an AI assistant asked
+about this app -- found a login form and nothing else. `app/public/` is the one part of the
+app meant to be read by someone who hasn't signed up: a landing page plus `robots.txt`,
+`sitemap.xml` and `llms.txt`. Everything behind the login sends `noindex` and is disallowed
+in robots.txt, so crawl budget goes to the one page with content rather than to a few dozen
+redirects.
+
+The landing page's copy and FAQ live in `app/public/content.py`, not in the template,
+because the FAQ has to appear twice: as the `<section id="faq">` a person reads and as the
+`FAQPage` JSON-LD an engine parses. Building both from one list is what keeps them from
+contradicting each other. The JSON-LD is emitted as `Markup` with every `<` rewritten to its
+JSON unicode escape -- still valid JSON, and it makes a literal closing script tag
+impossible to express, which is the one way a JSON-LD block can break out of its own tag.
+
+`app/core/markdown.py` renders LLM-authored prose. Models format their answers whether or
+not you ask, so showing that raw is how a study plan ends up as literal `**Week 1**` and
+`| Week |` pipes. Safety here is `html=False` rather than a sanitizer: markdown-it escapes
+any raw HTML in the source, so the only tags that can reach the page are ones it generated
+itself -- a prompt injection that talks a model into emitting `<script>` produces visible
+text. Its link validation drops `javascript:` URLs on top of that, and the nonce CSP is the
+second layer. `emphasis=False` exists for Math Lab, where `*` is multiplication: with
+emphasis on, a worked solution reading "2*x + 3 = 9 ... 2*x = 6" pairs the asterisks into an
+`<em>` and silently loses both multiplication signs.
+
 ## Scheduled job discovery
 
 Render's free tier has no cron and no background workers, and free web services sleep

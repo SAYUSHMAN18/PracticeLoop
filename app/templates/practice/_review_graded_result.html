@@ -2,7 +2,7 @@
   <p class="{{ 'success' if rating >= 4 else 'error' if rating <= 2 else 'muted' }}" style="margin:0;">
     Graded {{ rating }}/5
   </p>
-  {% if feedback %}<p style="margin-top:0.5rem;">{{ feedback }}</p>{% endif %}
+  {% if feedback %}<div class="markdown-body" style="margin-top:0.5rem;">{{ feedback }}</div>{% endif %}
   <p class="muted" style="margin-top:0.5rem;">Correct answer: {{ correct_answer }}</p>
   <p class="success" style="margin-top:0.5rem;">
     Next review in {{ days_until }} day{{ "s" if days_until != 1 }} ({{ review_date.strftime("%b %d, %Y") }})

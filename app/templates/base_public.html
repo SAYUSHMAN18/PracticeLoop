@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}PracticeLoop{% endblock %}</title>
+
+  {# The whole SEO/GEO surface lives here, because until this page existed
+     "/" redirected straight to /login -- a crawler saw a login form and
+     nothing else, so there was literally no content to index or cite. #}
+  <meta name="description" content="{% block meta_description %}{% endblock %}">
+  <link rel="canonical" href="{{ canonical_url }}">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PracticeLoop">
+  <meta property="og:title" content="{% block og_title %}{{ self.title() }}{% endblock %}">
+  <meta property="og:description" content="{{ self.meta_description() }}">
+  <meta property="og:url" content="{{ canonical_url }}">
+  <meta property="og:image" content="{{ base_url }}/static/icon.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ self.og_title() }}">
+  <meta name="twitter:description" content="{{ self.meta_description() }}">
+
+  <script nonce="{{ request.state.csp_nonce }}">
+    (function () {
+      try {
+        var saved = localStorage.getItem("pl-theme");
+        if (saved === "light" || saved === "dark" || saved === "contrast") {
+          document.documentElement.setAttribute("data-theme", saved);
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="/static/fonts.css?v={{ asset_version('fonts.css') }}">
+  <link rel="stylesheet" href="/static/style.css?v={{ asset_version('style.css') }}">
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#211c16">
+
+  {# Structured data. SoftwareApplication tells search engines what this is;
+     FAQPage is the part generative engines actually quote back, which is
+     why the questions below are phrased the way a person would ask them
+     rather than as marketing headings. #}
+  <script type="application/ld+json" nonce="{{ request.state.csp_nonce }}">{{ structured_data }}</script>
+</head>
+<body class="public-body">
+  <a href="#main-content" class="skip-link">Skip to content</a>
+
+  <header class="public-nav">
+    <a class="brand" href="/"><span>PracticeLoop</span></a>
+    <nav aria-label="Main">
+      <a href="#how-it-works">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="public-nav-actions">
+      <button type="button" class="icon-button" id="theme-toggle" aria-label="Change color theme">
+        <span id="theme-toggle-label">Sys</span>
+      </button>
+      <a class="btn secondary" href="/login">Log in</a>
+      <a class="btn" href="/signup">Start free</a>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="public-footer">
+    <div class="public-footer-inner">
+      <div>
+        <span class="brand"><span>PracticeLoop</span></span>
+        <p class="muted">An adaptive learning platform built around spaced repetition — free and open source (MIT).</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="/signup">Create an account</a>
+        <a href="/login">Log in</a>
+        <a href="https://github.com/SAYUSHMAN18/PracticeLoop" rel="noopener">Source on GitHub</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script nonce="{{ request.state.csp_nonce }}">
+    // Same four-way theme cycle as the app shell, minus the parts that need
+    // a logged-in session. Kept here rather than shared so the public page
+    // stays a single standalone document with no app-shell dependencies.
+    (function () {
+      var btn = document.getElementById("theme-toggle");
+      var label = document.getElementById("theme-toggle-label");
+      if (!btn || !label) return;
+      var order = ["system", "light", "dark", "contrast"];
+      var shortLabels = { system: "Sys", light: "Light", dark: "Dark", contrast: "HC" };
+
+      function current() {
+        try {
+          var saved = localStorage.getItem("pl-theme");
+          return order.indexOf(saved) > 0 ? saved : "system";
+        } catch (e) { return "system"; }
+      }
+      function apply(mode) {
+        if (mode === "system") {
+          document.documentElement.removeAttribute("data-theme");
+          try { localStorage.removeItem("pl-theme"); } catch (e) {}
+        } else {
+          document.documentElement.setAttribute("data-theme", mode);
+          try { localStorage.setItem("pl-theme", mode); } catch (e) {}
+        }
+        label.textContent = shortLabels[mode];
+      }
+      apply(current());
+      btn.addEventListener("click", function () {
+        apply(order[(order.indexOf(current()) + 1) % order.length]);
+      });
+    })();
+  </script>
+</body>
+</html>

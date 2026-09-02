@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     session_secret: str = DEFAULT_SESSION_SECRET
     disable_rate_limits: bool = False  # tests flip this on -- the limiter is per-IP
 
+    # Public identity -- used for canonical URLs, Open Graph tags, the
+    # sitemap, and llms.txt. Must be the absolute origin the site is
+    # actually served from: a canonical pointing somewhere else is worse
+    # for search than having none at all.
+    public_base_url: str = "https://practiceloop.onrender.com"
+
     # Observability
     sentry_dsn: str = ""  # unset disables error reporting entirely, no-op at import
     sentry_traces_sample_rate: float = 0.0

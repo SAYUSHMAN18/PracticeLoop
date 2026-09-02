@@ -6,12 +6,18 @@
     </p>
   {% endif %}
   {% for m in messages %}
-    <div style="align-self:{{ 'flex-end' if m.role == 'user' else 'flex-start' }};max-width:92%;">
-      <div style="padding:0.55rem 0.75rem;border-radius:10px;font-size:0.87rem;line-height:1.45;
-                  background:{{ 'var(--accent-soft)' if m.role == 'user' else 'var(--mentor-soft)' }};
-                  color:{{ 'var(--accent-2)' if m.role == 'user' else 'var(--text)' }};white-space:pre-wrap;">{{ m.content }}</div>
+    <div class="mentor-msg {{ 'mentor-msg-user' if m.role == 'user' else 'mentor-msg-bot' }}">
+      {% if m.content_html %}
+        {# Assistant replies arrive as markdown -- headings, bold labels,
+           bullet lists, and tables for anything plan-shaped. Rendered to
+           HTML in core/markdown.py, which escapes any raw HTML in the
+           model's output rather than trusting it. #}
+        <div class="mentor-bubble markdown-body">{{ m.content_html }}</div>
+      {% else %}
+        <div class="mentor-bubble mentor-bubble-plain">{{ m.content }}</div>
+      {% endif %}
       {% if m.is_ai_generated %}
-        <div class="muted" style="font-size:0.68rem;margin-top:0.15rem;">AI-generated &mdash; verify anything important.</div>
+        <div class="muted mentor-disclaimer">AI-generated &mdash; verify anything important.</div>
       {% endif %}
     </div>
   {% endfor %}

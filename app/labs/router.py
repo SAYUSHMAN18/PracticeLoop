@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse
 from app.core.db import get_pool
 from app.core.deps import inject_current_user, require_user_id
 from app.core.llm import is_configured as llm_is_configured
+from app.core.markdown import render_markdown
 from app.core.templates import templates
 from app.labs import math_service, writing_service
 
@@ -51,7 +52,14 @@ async def math_lab_solve(
     return templates.TemplateResponse(
         request,
         "labs/math.html",
-        {"equation": equation, "result": result, "steps": steps, "error": error},
+        {
+            "equation": equation,
+            "result": result,
+            # emphasis off: `*` is multiplication in a worked solution, not
+            # formatting -- see core/markdown.py.
+            "steps": render_markdown(steps, emphasis=False),
+            "error": error,
+        },
     )
 
 
