@@ -285,7 +285,7 @@ async def get_path_detail(pool: asyncpg.Pool, user_id: int, path_id: int) -> dic
         raise PathNotFound(path_id)
 
     module_rows = await pool.fetch(
-        "SELECT module_id, title, description, position FROM learning_modules "
+        "SELECT module_id, title, description, position, source_attempt_id FROM learning_modules "
         "WHERE path_id = $1 ORDER BY position",
         path_id,
     )
@@ -342,6 +342,189 @@ async def get_path_detail(pool: asyncpg.Pool, user_id: int, path_id: int) -> dic
         "progress_percent": round(100 * completed_lessons / total_lessons) if total_lessons else 0,
         "resume_lesson_id": resume_lesson_id,
     }
+
+
+# Phase 17: turning a diagnostic result into lessons. Bounded the same way
+# the path skeleton is -- a diagnostic is 8 questions, so it can surface at
+# most 8 weak subtopics, but the LLM is free to merge related ones and
+# shouldn't be able to turn that into an unbounded lesson list either.
+_MAX_REMEDIATION_SUBTOPICS = 8
+_MAX_REMEDIATION_LESSONS = 12
+
+_REMEDIATION_PROMPT = """A student just took a diagnostic quiz on "{topic}" and got these
+subtopics wrong:
+
+{subtopic_list}
+
+Design a short focus unit that fixes exactly those gaps -- nothing else. Write 3-6 lesson
+titles, ordered so earlier ones are prerequisites for later ones. Cover every subtopic
+above; merge two into one lesson only when they're genuinely the same idea.
+
+Output strict JSON only, no markdown fences, no commentary, in exactly this shape:
+{{
+  "unit_title": "a short title for this focus unit",
+  "unit_description": "one sentence on what it fixes",
+  "lessons": ["lesson title", "lesson title", "..."]
+}}
+"""
+
+
+def _fallback_remediation(topic: str, weak_subtopics: list[str]) -> dict:
+    """No LLM: one lesson per measured gap, named after the gap itself.
+    That's a real, honest plan -- the subtopics came from the student's own
+    wrong answers, not from a guess -- and each lesson's *content* still
+    gets written on first open by get_lesson's own AI-or-fallback path, so
+    nothing here pretends to be tailored material it isn't."""
+    return {
+        "unit_title": f"Weak spots in {topic}",
+        "unit_description": "Built from the subtopics you missed on the diagnostic.",
+        "lessons": [f"Review: {subtopic}" for subtopic in weak_subtopics],
+    }
+
+
+def _validate_remediation(data: dict, topic: str, weak_subtopics: list[str]) -> dict:
+    if not isinstance(data, dict):
+        raise ValueError("not an object")
+    lessons_raw = data.get("lessons")
+    lessons = [
+        str(lesson).strip()
+        for lesson in (lessons_raw if isinstance(lessons_raw, list) else [])
+        if str(lesson).strip()
+    ][:_MAX_REMEDIATION_LESSONS]
+    if not lessons:
+        raise ValueError("no usable lessons after validation")
+
+    fallback = _fallback_remediation(topic, weak_subtopics)
+    return {
+        "unit_title": str(data.get("unit_title") or "").strip() or fallback["unit_title"],
+        "unit_description": str(data.get("unit_description") or "").strip() or fallback["unit_description"],
+        "lessons": lessons,
+    }
+
+
+async def _build_remediation(topic: str, weak_subtopics: list[str], *, ai_available: bool) -> dict:
+    if not ai_available:
+        return _fallback_remediation(topic, weak_subtopics)
+
+    try:
+        prompt = _REMEDIATION_PROMPT.format(
+            topic=topic.strip(),
+            subtopic_list="\n".join(f"- {s}" for s in weak_subtopics),
+        )
+        response = await generate(prompt, temperature=0.4)
+        data = json.loads(extract_first_json_value(response))
+        return _validate_remediation(data, topic, weak_subtopics)
+    except Exception:
+        logger.warning("Remediation unit generation failed, using the fallback unit", exc_info=True)
+        return _fallback_remediation(topic, weak_subtopics)
+
+
+async def add_remediation_module(
+    pool: asyncpg.Pool,
+    user_id: int,
+    path_id: int,
+    *,
+    topic: str,
+    weak_subtopics: list[str],
+    attempt_id: int,
+    ai_available: bool,
+) -> int:
+    """Inserts a focus module built from a diagnostic's weak subtopics at
+    the *top* of an owned path, shifting everything already there down one
+    position. Top, not bottom: the whole point of re-planning around a
+    measurement is that the next thing studied is the thing just measured
+    as weakest -- appending it after every existing module would bury it.
+
+    Returns the module id. Idempotent per (path, diagnostic) via the
+    partial unique index from migration 0021: submitting the same result
+    into the same path twice returns the existing module instead of
+    stacking a duplicate.
+    """
+    owned = await pool.fetchval(
+        "SELECT path_id FROM learning_paths WHERE path_id = $1 AND user_id = $2", path_id, user_id
+    )
+    if owned is None:
+        raise PathNotFound(path_id)
+
+    existing = await pool.fetchval(
+        "SELECT module_id FROM learning_modules WHERE path_id = $1 AND source_attempt_id = $2",
+        path_id,
+        attempt_id,
+    )
+    if existing is not None:
+        return existing
+
+    subtopics = [s for s in weak_subtopics if s][:_MAX_REMEDIATION_SUBTOPICS]
+    unit = await _build_remediation(topic, subtopics, ai_available=ai_available)
+
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            # Shift first so position 0 is free. Descending order isn't
+            # needed -- there's no unique constraint on (path_id, position)
+            # to transiently violate -- but the whole shift and the insert
+            # share one transaction so a reader never sees two modules
+            # claiming the same position.
+            await conn.execute(
+                "UPDATE learning_modules SET position = position + 1 WHERE path_id = $1", path_id
+            )
+            module_id = await conn.fetchval(
+                """INSERT INTO learning_modules (path_id, title, description, position, source_attempt_id)
+                   VALUES ($1, $2, $3, 0, $4) RETURNING module_id""",
+                path_id,
+                f"Focus: {topic}",
+                "Added from your diagnostic result -- these are the subtopics you missed.",
+                attempt_id,
+            )
+            unit_id = await conn.fetchval(
+                """INSERT INTO learning_units (module_id, title, description, position)
+                   VALUES ($1, $2, $3, 0) RETURNING unit_id""",
+                module_id,
+                unit["unit_title"],
+                unit["unit_description"],
+            )
+            for position, lesson_title in enumerate(unit["lessons"]):
+                await conn.execute(
+                    "INSERT INTO learning_lessons (unit_id, title, position) VALUES ($1, $2, $3)",
+                    unit_id,
+                    lesson_title,
+                    position,
+                )
+
+    return module_id
+
+
+async def create_path_from_diagnostic(
+    pool: asyncpg.Pool,
+    user_id: int,
+    *,
+    topic: str,
+    weak_subtopics: list[str],
+    attempt_id: int,
+    ai_available: bool,
+) -> int:
+    """A student with no path yet still needs somewhere for the focus
+    module to land. Creates an empty path titled after the diagnostic's
+    topic and puts the module in it -- deliberately *not* a full generated
+    curriculum on top, which would bury the measured gaps under a module
+    the student didn't ask for and hasn't been assessed on."""
+    path_id = await pool.fetchval(
+        """INSERT INTO learning_paths (user_id, title, source_type, source_detail, ai_generated)
+           VALUES ($1, $2, 'diagnostic', $3, $4) RETURNING path_id""",
+        user_id,
+        topic,
+        str(attempt_id),
+        ai_available,
+    )
+    await add_remediation_module(
+        pool,
+        user_id,
+        path_id,
+        topic=topic,
+        weak_subtopics=weak_subtopics,
+        attempt_id=attempt_id,
+        ai_available=ai_available,
+    )
+    return path_id
 
 
 async def delete_path(pool: asyncpg.Pool, user_id: int, path_id: int) -> None:

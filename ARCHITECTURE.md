@@ -107,6 +107,43 @@ keyword-only for now (`app/jobs/scoring.py`, scored against the *listing's* voca
 long resume can't inflate its own score) — no LLM key required, matching the rest of the
 app's "degrade to something deterministic" pattern rather than a hard dependency.
 
+## Diagnostic to learning path
+
+A diagnostic used to dead-end: it named the subtopics you missed and then linked you to
+"start a learning path", leaving you to retype the gaps by hand. `POST
+/assessments/result/{attempt_id}/reinforce` closes that loop —
+`learning_paths/service.py::add_remediation_module` turns the stored `weak_subtopics` into a
+focus module and inserts it at **position 0**, shifting every existing module down one.
+
+Top, not bottom, is the whole point: re-planning around a measurement means the measured gap
+is what you study next, and appending it last would bury it under modules the diagnostic just
+showed you don't need yet.
+
+```mermaid
+flowchart LR
+    A[Diagnostic submitted] --> B[(diagnostic_attempts<br/>weak_subtopics jsonb)]
+    B --> C{Build my focus module}
+    C -->|existing path| D[add_remediation_module]
+    C -->|no path yet| E[create_path_from_diagnostic<br/>source_type='diagnostic'] --> D
+    D --> F{LLM available<br/>AND budget left?}
+    F -->|yes| G[3-6 ordered lesson titles<br/>covering every gap]
+    F -->|no / call fails| H["one lesson per gap:<br/>'Review: {subtopic}'"]
+    G --> I[shift modules +1,<br/>insert at position 0]
+    H --> I
+    I --> J[(learning_modules<br/>source_attempt_id)]
+```
+
+Three details worth naming. The budget is consumed with `consume_llm_budget` in a `try`,
+falling back rather than 429ing (the pattern `get_lesson` already uses) — a student out of
+budget still gets their measured gaps turned into a real, checkable plan, just without
+AI-written titles; a 429 would strand the one page whose entire purpose is "here's what to do
+next". Lesson *content* is not generated here at all: each new lesson gets its content on
+first open through `get_lesson`'s existing cache-and-generate path, so this route makes at
+most one LLM call regardless of how many lessons it creates. And `learning_modules
+.source_attempt_id` carries a partial unique index on `(path_id, source_attempt_id)`
+(migration 0021), which makes a double-click or a back-and-resubmit return the existing
+module instead of stacking duplicates.
+
 ## Skill gap analysis
 
 `app/jobs/gap_analysis.py` is the feature the rest of the app's data exists to feed: paste a

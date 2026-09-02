@@ -10,6 +10,7 @@ from app.core.llm import is_configured as llm_is_configured
 from app.core.llm_budget import LLMBudgetExceeded, consume_llm_budget
 from app.core.logging import get_logger
 from app.core.templates import templates
+from app.learning_paths import service as learning_paths_service
 from app.profile import service as profile_service
 
 router = APIRouter(dependencies=[Depends(inject_current_user)])
@@ -149,8 +150,84 @@ async def diagnostic_result(
     attempt = await service.get_attempt(pool, user_id, attempt_id)
     if attempt is None:
         raise HTTPException(status_code=404)
+    paths = await learning_paths_service.list_paths(pool, user_id)
     return templates.TemplateResponse(
         request,
         "assessments/result.html",
-        {"attempt": attempt, "proficiency_labels": profile_service.PROFICIENCY_LABELS},
+        {
+            "attempt": attempt,
+            "proficiency_labels": profile_service.PROFICIENCY_LABELS,
+            "paths": paths,
+        },
     )
+
+
+@router.post("/assessments/result/{attempt_id}/reinforce")
+async def reinforce_from_result(
+    attempt_id: int,
+    request: Request,
+    path_id: str = Form(""),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    """Turns this diagnostic's weak subtopics into a focus module at the top
+    of a learning path -- an existing one, or a new one named after the
+    topic when `path_id` is blank.
+
+    Budget is consumed the same way lesson content does it (try, and fall
+    back to the deterministic unit if there's none left) rather than via
+    require_llm_budget: a student out of budget should still get their
+    measured gaps turned into a real, checkable plan, just without the
+    AI-written lesson titles. A 429 here would strand the one page whose
+    entire purpose is telling them what to do next.
+    """
+    attempt = await service.get_attempt(pool, user_id, attempt_id)
+    if attempt is None:
+        raise HTTPException(status_code=404)
+
+    weak_subtopics = [s for s in (attempt["weak_subtopics"] or []) if s]
+    if not weak_subtopics:
+        return await _render_index(
+            request,
+            pool,
+            user_id,
+            error="That diagnostic didn't flag any weak subtopics -- nothing to build a focus unit from.",
+            status_code=400,
+        )
+
+    ai_available = llm_is_configured()
+    if ai_available:
+        try:
+            await consume_llm_budget(pool, user_id)
+        except LLMBudgetExceeded:
+            logger.info("LLM budget exhausted for remediation, using the fallback unit")
+            ai_available = False
+
+    if path_id.strip():
+        try:
+            target_path_id = int(path_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="Invalid path.") from exc
+        try:
+            await learning_paths_service.add_remediation_module(
+                pool,
+                user_id,
+                target_path_id,
+                topic=attempt["topic"],
+                weak_subtopics=weak_subtopics,
+                attempt_id=attempt_id,
+                ai_available=ai_available,
+            )
+        except learning_paths_service.PathNotFound as exc:
+            raise HTTPException(status_code=404) from exc
+    else:
+        target_path_id = await learning_paths_service.create_path_from_diagnostic(
+            pool,
+            user_id,
+            topic=attempt["topic"],
+            weak_subtopics=weak_subtopics,
+            attempt_id=attempt_id,
+            ai_available=ai_available,
+        )
+
+    return RedirectResponse(f"/learning-paths/{target_path_id}", status_code=303)

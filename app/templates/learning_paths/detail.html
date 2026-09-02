@@ -29,7 +29,10 @@
 
 {% for module in path.modules %}
   <div class="card">
-    <h2>{{ loop.index }}. {{ module.title }}</h2>
+    <h2>
+      {{ loop.index }}. {{ module.title }}
+      {% if module.source_attempt_id %}<span class="tag tag-missing">From a diagnostic</span>{% endif %}
+    </h2>
     {% if module.description %}<p class="muted">{{ module.description }}</p>{% endif %}
 
     {% for unit in module.units %}

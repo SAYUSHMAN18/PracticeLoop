@@ -29,6 +29,8 @@ top of the same engine.
    checkpoint question, and a summary.
 4. **Take a diagnostic** on any topic — a scored multiple-choice quiz that tells you which
    subtopics are weak, instead of asking you to guess "beginner / intermediate / advanced".
+   Then hit **"Build my focus module"** and those exact gaps become lessons at the top of
+   your path.
 5. **Do today's plan** — everything due for review, plus a pick from your weakest topic and
    a harder question, each labelled with why it's there.
 6. **Ask Loop Mentor** (the panel on the right) to explain something more simply, give a
@@ -52,7 +54,9 @@ passing a diagnostic, closing a review — not for clicking around.
   recall are scheduled by the same FSRS engine and compete for review time on their real due
   dates — not two separate systems.
 - **A real diagnostic** on any topic: an AI-generated MCQ quiz, scored instantly, mapped to
-  a proficiency level, with the weak subtopics named.
+  a proficiency level, with the weak subtopics named — and **one click turns those gaps into
+  lessons**, as a focus module inserted at the *top* of a learning path (existing or new),
+  so the next thing you study is the thing just measured as weakest.
 - **Quiz Arena** — a timed round mixing free-text and MCQ questions from your whole bank.
 - **Loop Mentor** — a context-aware AI tutor. No provider configured, or the daily budget
   spent? It says so honestly instead of faking a reply or crashing.
@@ -154,7 +158,7 @@ python scripts/seed.py you@example.com
 
 ### Tests
 
-301 tests across 45 files — spaced repetition and semantic search, every AI-backed feature's
+311 tests across 46 files — spaced repetition and semantic search, every AI-backed feature's
 fallback *and* configured path, ownership/IDOR checks on every cross-user-reachable route,
 migration idempotency, upload validation, and more.
 
