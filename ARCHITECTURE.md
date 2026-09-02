@@ -27,7 +27,7 @@ flowchart LR
         R -->|grading fails| K
         K --> L[record_attempt]
         R --> L
-        L --> M[spaced_repetition.next_review_date]
+        L --> M[fsrs_scheduler.schedule_review<br/>updates card_states]
         M --> N[(attempts table)]
         L --> O[HTMX swaps in<br/>next card]
     end
@@ -35,18 +35,22 @@ flowchart LR
 
 ## Module layout
 
-Each feature is a self-contained package under `app/`: `auth`, `profile`, `practice`,
-`dashboard`, `jobs`. Every one follows the same shape:
+Each feature is a self-contained package under `app/`: `account`, `analytics`,
+`assessments`, `auth`, `classrooms`, `dashboard`, `documents`, `gamification`, `guardian`,
+`jobs`, `labs`, `learning_paths`, `mentor`, `notifications`, `practice`, `profile`,
+`projects`. Every one follows the same shape:
 
 - `router.py` — FastAPI routes. Thin: parses the request, calls `service.py`, picks a
   template. No SQL, no business logic here.
 - `service.py` — the actual logic and SQL. Framework-agnostic; could be called from a CLI
   script (see `scripts/seed.py`) without touching FastAPI at all.
-- `extraction.py`, `spaced_repetition.py` (in `practice/`) — pure functions with no I/O,
-  which is exactly why they're the only things with unit tests today (see
-  [`tests/`](tests/)). `spaced_repetition.next_interval_days` in particular takes a rating
-  and a previous interval and returns a new interval — no database, no clock dependency
-  beyond an injectable `today` parameter.
+- Supporting modules alongside them hold the logic that isn't request- or SQL-shaped:
+  `practice/extraction.py` (marker parsing) and `practice/grading.py`,
+  `practice/fsrs_scheduler.py` (the FSRS wrapper — see
+  [`docs/spaced-repetition.md`](docs/spaced-repetition.md)), `jobs/scoring.py`,
+  `jobs/gap_analysis.py`, `labs/math_service.py`. The pure ones take an injectable `today`/
+  `now` rather than reading the clock, which is what makes them directly unit-testable (see
+  [`tests/`](tests/)).
 
 `app/core/` holds cross-cutting concerns every feature package depends on but none of them
 own: `config.py` (settings), `db.py` (the asyncpg pool), `security.py` (password hashing,
@@ -119,12 +123,20 @@ the way marker-parsing a structured Q:/A: paste is.
 
 ## Data model
 
+The core loop's tables, below. The later phases add their own — `learning_paths` →
+`learning_modules` → `learning_units` → `learning_lessons`, `diagnostic_attempts`,
+`xp_events`, `mentor_conversations`/`mentor_messages`, `projects`/`project_milestones`/
+`project_submissions`, `classrooms`/`classroom_members`/`assignments`, `guardian_links`,
+`notifications`, `documents`, `llm_usage` — each introduced by its own numbered file in
+[`migrations/`](migrations/), which is the authoritative schema.
+
 ```mermaid
 erDiagram
     users ||--|| profiles : has
     users ||--o{ questions : owns
     users ||--o{ attempts : owns
     questions ||--o{ attempts : "practiced via"
+    questions ||--|| card_states : "scheduled by"
 
     users {
         int user_id PK
@@ -153,8 +165,17 @@ erDiagram
         int question_id FK
         int user_id FK
         smallint confidence_rating "1-5"
-        date next_review_at
+        date next_review_at "denormalized copy of the due date at attempt time"
         timestamptz practiced_at
+    }
+    card_states {
+        int question_id PK "FK to questions, 1:1 -- FSRS memory state"
+        int user_id FK
+        smallint state "FSRS State enum"
+        double stability
+        double difficulty
+        timestamptz due "what due_for_review actually reads"
+        timestamptz last_review
     }
 
     users ||--o{ job_listings : discovers

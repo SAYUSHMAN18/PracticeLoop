@@ -1,70 +1,84 @@
 # How PracticeLoop schedules reviews
 
-## The idea (SM-2, briefly)
+## The idea
 
-Spaced repetition schedules a review further in the future every time you demonstrate you
-know something, and resets to "soon" the moment you don't. The classic algorithm, SM-2
-(used by Anki and SuperMemo), tracks a per-card "ease factor" that adjusts based on every
-rating you've ever given that card, so two cards with the same rating history can still end
-up on different schedules if one consistently felt harder to recall.
+Spaced repetition pushes a review further into the future every time you show you know
+something, and pulls it back to "soon" the moment you don't. The goal is to review each
+item just as your memory of it is about to fade — not sooner (wasted effort) and not later
+(you've already forgotten).
 
-## What this app actually does (`app/practice/spaced_repetition.py`)
+## What this app uses: FSRS
 
-A simplified version: no per-card ease factor, just a fixed multiplier keyed by the rating
-(1-5) you give after seeing the answer.
+PracticeLoop schedules reviews with [FSRS](https://github.com/open-spaced-repetition) (Free
+Spaced Repetition Scheduler) via the `fsrs` package, wired up in
+[`app/practice/fsrs_scheduler.py`](../app/practice/fsrs_scheduler.py).
+
+FSRS models each card with three numbers it updates on every review:
+
+- **stability** — how many days until recall probability drops to 90%. Grows each time you
+  successfully recall; the interval to the next review is derived from it.
+- **difficulty** — how hard *this specific card* is for you (0–10). Nudged up on a lapse,
+  down on an easy recall. This is what an ease-factor-based scheduler like SM-2 approximates
+  with a single per-card multiplier; FSRS separates it from stability.
+- **retrievability** — the current estimated probability you'd recall the card right now
+  (0–1), computed from stability and time since last review.
+
+A card's memory state lives in the `card_states` table, one row per question, upserted on
+every attempt. A question with no `card_states` row (or a null `stability`) is treated as a
+brand-new card — no guessing at a memory state that doesn't exist.
+
+## Rating scale mapping
+
+The app's self-rating and AI-grading scales are both 1–5 ("1 — blackout" through "5 —
+easy"). FSRS's `Rating` has four values, so `_RATING_MAP` collapses them:
+
+| App rating | FSRS rating | Meaning |
+|---|---|---|
+| 1 | `Again` | total blank / lapse |
+| 2 | `Hard` | recalled, but a struggle |
+| 3 | `Good` | passing recall |
+| 4 | `Good` | solid recall |
+| 5 | `Easy` | instant, effortless |
+
+3 and 4 both map to `Good` — both are a passing recall — rather than inventing a fifth FSRS
+bucket the algorithm doesn't have. Auto-graded multiple-choice answers land one notch inside
+the extremes: **4 (`Good`)** for correct, **2 (`Hard`)** for incorrect, since a right or
+wrong click doesn't carry the certainty of a self-assessed "I knew this cold" or "I drew a
+total blank" (see `record_mcq_attempt` in `app/practice/service.py`).
+
+## No same-session relearning steps
 
 ```python
-_FIRST_INTERVAL_DAYS = {3: 3, 4: 7, 5: 14}
-_GROWTH_MULTIPLIER = {3: 1.3, 4: 1.8, 5: 2.5}
+_SCHEDULER = fsrs.Scheduler(learning_steps=(), relearning_steps=())
 ```
 
-- **Rating 1 or 2 ("blackout" or "hard, got it wrong"):** the interval resets to **1 day**,
-  regardless of history. A lapse means the card needs to come back soon.
-- **Rating 3, 4, or 5, first time you've ever rated this card:** interval is 3, 7, or 14
-  days respectively — a reasonable first guess before there's any history to lean on.
-- **Rating 3, 4, or 5, and you've rated it before:** the *previous* interval is multiplied
-  by 1.3, 1.8, or 2.5. Easier ratings grow the interval faster.
+FSRS's built-in (re)learning steps exist for Anki-style intra-session drilling — a brand-new
+or just-lapsed card comes back a few minutes later, same sitting. This app reviews on a
+day-by-day cadence only ("come back tomorrow", "in a week"), so those steps are disabled:
+every card is scheduled to a real future review day, and a lapsed card is due again the next
+day rather than 10 minutes later.
 
-The previous interval is recovered from the last `attempts` row for that question
-(`next_review_at - practiced_at`) rather than stored as its own column — one fewer thing to
-keep in sync, at the cost of one extra query per rating.
+## What "due" means
 
-## Why 3 / 7 / 14 and 1.3 / 1.8 / 2.5
+`due_for_review` (in `app/practice/service.py`) selects every question where
+`card_states.due` is null (never reviewed — due immediately) or `due::date <= today`,
+ordered by due date with never-reviewed cards first. That one query is the review queue, the
+"just review" count on the dashboard, and the base of the adaptive daily plan.
 
-These aren't derived from a formula — they're a reasonable starting point copied from how
-SM-2 tends to behave in practice for the first few repetitions, chosen for something that
-feels right (a "medium" rating roughly doubles the gap, an "easy" rating stretches it much
-further) without the bookkeeping of a true per-card ease factor. They're constants in one
-file specifically so they're easy to tune later against real usage data.
+## Retrievability drives more than the queue
 
-## A worked example
+`retrievability_bulk` computes FSRS's current recall estimate for every one of a user's
+reviewed cards in a single query. Phase 5.4's per-topic **mastery score** blends that
+estimate (weighted 40%) with recency-weighted, difficulty-adjusted self-rated confidence —
+so "which topics are weak" reuses the same scheduler that decides what's due, instead of
+being a second disconnected opinion (see `topic_mastery` in `app/dashboard/service.py`).
 
-Starting from a fresh card, rated 4 ("good") every single time:
+## Why FSRS instead of a hand-rolled SM-2
 
-| Review # | Rating | Previous interval | New interval | Next review |
-|---|---|---|---|---|
-| 1 | 4 | none | 7 days | day 7 |
-| 2 | 4 | 7 | round(7 × 1.8) = 13 | day 20 |
-| 3 | 4 | 13 | round(13 × 1.8) = 23 | day 43 |
-| 4 | 4 | 23 | round(23 × 1.8) = 41 | day 84 |
-
-Now suppose review #3 had been a lapse (rating 2) instead:
-
-| Review # | Rating | Previous interval | New interval | Next review |
-|---|---|---|---|---|
-| 1 | 4 | none | 7 | day 7 |
-| 2 | 4 | 7 | 13 | day 20 |
-| 3 | **2** | 13 | **1** (lapse, ignores history) | day 21 |
-| 4 | 4 | 1 | round(1 × 1.8) = 2 | day 23 |
-
-The lapse doesn't just fail to grow the interval — it throws away the accumulated interval
-entirely and starts the climb over from 1 day, same as SM-2's own lapse behavior.
-
-## Known limitation
-
-There's currently no maximum interval and no ease factor, so a long streak of "easy" ratings
-on one card can push its interval arbitrarily far out (14 → 35 → 88 → 219 → 548 days) with
-no ceiling. A real SM-2/FSRS implementation caps this (365 days is a common ceiling) and
-adds per-card jitter so cards captured in the same batch don't all come due on the same day
-forever. That's a documented gap, not an oversight — see the code review this app was built
-against for the full list of what's next.
+An earlier version of this app used a simplified SM-2 variant: fixed interval multipliers
+keyed by rating, no per-card ease factor, no interval ceiling. That had a known failure mode
+— a long streak of "easy" ratings pushed a card's interval out with no cap (14 → 35 → 88 →
+219 → 548 days). FSRS is a well-studied model fit against millions of real reviews, handles
+the ease/stability split properly, and manages interval growth without an ad-hoc ceiling.
+Adopting the maintained `fsrs` package also means the scheduling logic isn't ours to keep
+tuning by hand.
