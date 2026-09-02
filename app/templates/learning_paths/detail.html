@@ -12,6 +12,9 @@
       <div class="progress-bar"><div class="progress-bar-fill" style="width:{{ path.progress_percent }}%;"></div></div>
       <div class="muted" style="font-size:0.82rem;margin-top:0.35rem;">
         {{ path.completed_lessons }} of {{ path.total_lessons }} lessons complete ({{ path.progress_percent }}%)
+        {% if path.review_card_count %}
+          &middot; <a href="/practice/review">{{ path.review_card_count }} checkpoint{{ 's' if path.review_card_count != 1 }} in review</a>
+        {% endif %}
       </div>
     </div>
     <div class="inline-form" style="margin-top:0;">

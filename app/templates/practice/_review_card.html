@@ -21,6 +21,7 @@
     <div style="margin-bottom:0.5rem;">
       {% if card.topic %}<span class="tag">{{ card.topic }}</span>{% endif %}
       <span class="tag">{{ card.difficulty|capitalize }}</span>
+      {% if card.source == "lesson" %}<span class="tag">From a lesson</span>{% endif %}
     </div>
     <strong>{{ card.question }}</strong>
 

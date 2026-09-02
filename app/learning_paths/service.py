@@ -4,6 +4,7 @@ import json
 
 import asyncpg
 
+from app.core.embedder import embed_text_async
 from app.core.json_extraction import extract_first_json_value
 from app.core.llm import generate
 from app.core.llm_budget import consume_llm_budget
@@ -13,6 +14,11 @@ from app.gamification.service import award_xp
 logger = get_logger(__name__)
 
 _XP_LESSON_COMPLETE = 15
+
+# The checkpoint_answer that _fallback_lesson_content writes when there is no
+# LLM to draft a real one. Recognised in two places -- here it means "make
+# this a self-rated review card, there is nothing real to grade against".
+_LESSON_FALLBACK_ANSWER = "There's no AI-suggested answer yet -- write your own."
 
 # Curated starting points for the Explore Subjects page -- Phase 6's
 # "existing PracticeLoop template" source type. Straight from the plan's
@@ -326,6 +332,15 @@ async def get_path_detail(pool: asyncpg.Pool, user_id: int, path_id: int) -> dic
     total_lessons = len(lesson_rows)
     completed_lessons = sum(1 for row in lesson_rows if row["completed_at"] is not None)
 
+    lesson_ids = [row["lesson_id"] for row in lesson_rows]
+    review_card_count = (
+        await pool.fetchval(
+            "SELECT count(*) FROM questions WHERE source_lesson_id = ANY($1::int[])", lesson_ids
+        )
+        if lesson_ids
+        else 0
+    )
+
     # "Resume" -- the first not-yet-complete lesson in true module/unit/
     # lesson reading order, or the last lesson if everything's done (so
     # the button still goes somewhere useful instead of disappearing).
@@ -341,6 +356,7 @@ async def get_path_detail(pool: asyncpg.Pool, user_id: int, path_id: int) -> dic
         "completed_lessons": completed_lessons,
         "progress_percent": round(100 * completed_lessons / total_lessons) if total_lessons else 0,
         "resume_lesson_id": resume_lesson_id,
+        "review_card_count": review_card_count,
     }
 
 
@@ -581,7 +597,7 @@ def _fallback_lesson_content(lesson_title: str) -> dict:
         "or add an LLM provider key so PracticeLoop can draft this for you.",
         "example": "",
         "checkpoint_question": f'In your own words, what is the main idea of "{lesson_title}"?',
-        "checkpoint_answer": "There's no AI-suggested answer yet -- write your own.",
+        "checkpoint_answer": _LESSON_FALLBACK_ANSWER,
         "summary": "",
     }
 
@@ -664,6 +680,16 @@ async def get_lesson(
         await pool.execute(
             "UPDATE learning_lessons SET content = $2 WHERE lesson_id = $1", lesson_id, content
         )
+        # A lesson marked done straight from the path tree had no checkpoint
+        # to turn into a review card yet -- now it does. sync is a no-op if
+        # the lesson isn't complete or the card already exists.
+        if row["completed_at"] is not None:
+            try:
+                await sync_lesson_review_card(pool, user_id, lesson_id, completed=True)
+            except Exception:
+                logger.warning(
+                    "Lesson review-card backfill failed for lesson_id=%s", lesson_id, exc_info=True
+                )
     elif isinstance(content, str):
         # Defensive only: the jsonb type codec (app/core/db.py) round-trips
         # this as a dict already. Kept in case a connection ever slips
@@ -695,7 +721,99 @@ async def get_lesson(
         "content": content,
         "prev_lesson_id": prev_id,
         "next_lesson_id": next_id,
+        "review_card": await lesson_review_card(pool, lesson_id),
     }
+
+
+def _lesson_card_topic(unit_title: str | None, module_title: str | None) -> str:
+    """A lesson-derived card is tagged with its unit (falling back to its
+    module) so it clusters with its siblings in the weak-topics analysis
+    rather than showing up as one more 'untagged' entry."""
+    return (unit_title or module_title or "").strip()
+
+
+async def sync_lesson_review_card(
+    pool: asyncpg.Pool, user_id: int, lesson_id: int, *, completed: bool
+) -> None:
+    """Keep a lesson's checkpoint in the spaced-repetition queue in step
+    with whether the lesson is done.
+
+    Completing: the checkpoint question becomes a free-text review card,
+    scheduled by the same FSRS engine as every other practice format, so a
+    finished path actually builds retention instead of just filling a
+    progress bar. A fallback-content lesson (no LLM drafted its answer)
+    still gets a card -- just an answerless, self-rated one, exactly like a
+    hand-captured question with no answer.
+
+    Uncompleting: the card is removed -- but only if it has never been
+    reviewed. Once there's real attempt history the card is the student's,
+    not the lesson's, and un-ticking a checkbox shouldn't delete practice
+    they actually did.
+
+    Best-effort by design: the caller runs this after the completion flip
+    has already committed, so a failure here (a transient embed error, say)
+    logs and leaves the lesson correctly marked done rather than 500ing the
+    whole request. The next toggle re-syncs.
+    """
+    if not completed:
+        await pool.execute(
+            """DELETE FROM questions q
+               WHERE q.source_lesson_id = $1
+                 AND NOT EXISTS (SELECT 1 FROM attempts a WHERE a.question_id = q.question_id)""",
+            lesson_id,
+        )
+        return
+
+    row = await pool.fetchrow(
+        """SELECT l.content, u.title AS unit_title, m.title AS module_title
+           FROM learning_lessons l
+           JOIN learning_units u ON u.unit_id = l.unit_id
+           JOIN learning_modules m ON m.module_id = u.module_id
+           WHERE l.lesson_id = $1""",
+        lesson_id,
+    )
+    content = row["content"] if row else None
+    if not content:
+        # Lesson completed straight from the path tree without ever being
+        # opened, so there's no generated checkpoint yet. get_lesson calls
+        # this again once it generates content for an already-complete lesson.
+        return
+
+    question = (content.get("checkpoint_question") or "").strip()
+    if not question:
+        return
+    answer = (content.get("checkpoint_answer") or "").strip()
+    if answer == _LESSON_FALLBACK_ANSWER:
+        answer = ""  # nothing real to grade against -> self-rate, same as any answerless card
+    topic = _lesson_card_topic(row["unit_title"], row["module_title"])
+
+    embedding = await embed_text_async(f"{question}\n{topic}".strip())
+    await pool.execute(
+        """INSERT INTO questions (user_id, question, answer, topic, source, embedding, source_lesson_id)
+           VALUES ($1, $2, $3, $4, 'lesson', $5, $6)
+           ON CONFLICT (source_lesson_id) WHERE source_lesson_id IS NOT NULL DO NOTHING""",
+        user_id,
+        question,
+        answer,
+        topic,
+        embedding,
+        lesson_id,
+    )
+
+
+async def lesson_review_card(pool: asyncpg.Pool, lesson_id: int) -> dict | None:
+    """The review card a completed lesson produced, if any -- for the lesson
+    page to show "in your review queue, due <date>" instead of leaving the
+    connection between the two features invisible."""
+    row = await pool.fetchrow(
+        """SELECT q.question_id, cs.due::date AS due,
+                  EXISTS (SELECT 1 FROM attempts a WHERE a.question_id = q.question_id) AS reviewed
+           FROM questions q
+           LEFT JOIN card_states cs ON cs.question_id = q.question_id
+           WHERE q.source_lesson_id = $1""",
+        lesson_id,
+    )
+    return dict(row) if row else None
 
 
 async def toggle_lesson(pool: asyncpg.Pool, user_id: int, path_id: int, lesson_id: int) -> bool:
@@ -725,4 +843,10 @@ async def toggle_lesson(pool: asyncpg.Pool, user_id: int, path_id: int, lesson_i
         # again re-completes it (real, useful behavior) without granting
         # XP a second time for the same lesson.
         await award_xp(pool, user_id, "lesson_complete", lesson_id, _XP_LESSON_COMPLETE)
+
+    try:
+        await sync_lesson_review_card(pool, user_id, lesson_id, completed=completed)
+    except Exception:
+        logger.warning("Lesson review-card sync failed for lesson_id=%s", lesson_id, exc_info=True)
+
     return completed

@@ -29,6 +29,13 @@
     <summary class="btn secondary" style="display:inline-flex;">Reveal answer</summary>
     <p class="muted" style="margin-top:0.75rem;">{{ lesson.content.checkpoint_answer }}</p>
   </details>
+  <p class="muted" style="margin-top:0.9rem;font-size:0.85rem;">
+    {% if lesson.review_card %}
+      &#128260; In your <a href="/practice/review">review queue</a>{% if lesson.review_card.reviewed and lesson.review_card.due %} &mdash; next due {{ lesson.review_card.due }}{% else %} &mdash; due now{% endif %}.
+    {% else %}
+      &#128260; Mark this lesson complete to add this checkpoint to your spaced-repetition review queue.
+    {% endif %}
+  </p>
 </div>
 {% endif %}
 

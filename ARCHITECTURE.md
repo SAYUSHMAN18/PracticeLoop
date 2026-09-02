@@ -76,6 +76,22 @@ that one card rather than losing the typed answer to a 500. Either path ends at 
 `record_attempt` and the same scheduler; grading only changes what produces the 1-5 rating,
 never how that rating is used afterward.
 
+## Lessons feed the review queue
+
+Marking a lesson complete (`learning_paths/service.py::toggle_lesson`) turns its checkpoint
+into a `questions` row -- `source = 'lesson'`, `source_lesson_id` pointing back at the
+lesson, a partial unique index on that column so re-completing is a no-op rather than a
+duplicate card. From there it's an ordinary free-text question: embedded for search,
+scheduled by the same FSRS path as everything else, gradeable against the checkpoint answer
+when there is one (a fallback lesson's sentinel answer is stored as `''`, which routes it to
+self-rating like any answerless card). The sync is best-effort -- it runs after the
+completion flip has committed, so an embed hiccup logs and leaves the lesson correctly
+marked done rather than 500ing the toggle; the next toggle re-syncs. Uncompleting removes
+the card, but only when it has no `attempts` -- once there's real review history the card is
+the student's practice, not the lesson's checkbox. `ON DELETE CASCADE` on `source_lesson_id`
+means deleting the path takes its auto-generated cards with it and leaves every hand-captured
+question untouched.
+
 ## Scheduled job discovery
 
 Render's free tier has no cron and no background workers, and free web services sleep

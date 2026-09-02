@@ -13,7 +13,7 @@ from app.practice.fsrs_scheduler import schedule_review
 _QUESTION_COLUMNS = (
     "question_id, user_id, question, answer, example, topic, difficulty, "
     "company, code_snippet, language, source, created_at, "
-    "question_type, choices, correct_choice_index"
+    "question_type, choices, correct_choice_index, source_lesson_id"
 )
 
 # Cosine distance cutoff for "this counts as a match" -- pgvector's <=> ranges

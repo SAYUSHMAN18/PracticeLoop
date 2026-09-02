@@ -50,9 +50,13 @@ passing a diagnostic, closing a review — not for clicking around.
   generator produces a usable structure either way — never an empty state.
 - **Real lesson content**, generated once and cached: concept, worked example, checkpoint
   question with reveal-to-check answer, summary.
-- **One review queue for every format.** Multiple-choice concept checks and typed free-text
-  recall are scheduled by the same FSRS engine and compete for review time on their real due
-  dates — not two separate systems.
+- **Finishing a lesson builds retention, not just a progress bar.** Marking a lesson
+  complete drops its checkpoint into your review queue as a spaced-repetition card — so a
+  40-lesson path actively reinforces itself instead of being a checklist you tick once and
+  forget.
+- **One review queue for every format.** Lesson checkpoints, multiple-choice concept checks,
+  typed free-text recall, and captured questions are all scheduled by the same FSRS engine
+  and compete for review time on their real due dates — not separate systems.
 - **A real diagnostic** on any topic: an AI-generated MCQ quiz, scored instantly, mapped to
   a proficiency level, with the weak subtopics named — and **one click turns those gaps into
   lessons**, as a focus module inserted at the *top* of a learning path (existing or new),
@@ -160,7 +164,7 @@ python scripts/seed.py you@example.com
 
 ### Tests
 
-335 tests across 49 files — spaced repetition and semantic search, every AI-backed feature's
+348 tests across 50 files — spaced repetition and semantic search, every AI-backed feature's
 fallback *and* configured path, ownership/IDOR checks on every cross-user-reachable route,
 migration idempotency, upload validation, and more.
 
@@ -224,9 +228,10 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md#production-hardening) for what else is c
 - **Multi-tenancy without implicit trust.** A teacher or guardian role never grants access
   to another person's data by itself. Every cross-user view needs an explicit action from
   the data's owner, and even then a guardian sees only a summary.
-- **Spaced repetition is the spine.** MCQs, free-text recall, and diagnostics all schedule
-  through the same FSRS engine, so "what's due today" is one honest answer across every
-  format.
+- **Spaced repetition is the spine.** Lesson checkpoints, MCQs, free-text recall, and
+  diagnostics all schedule through the same FSRS engine, so "what's due today" is one honest
+  answer across every format — and every part of the app that produces something to learn
+  feeds the one queue that makes you remember it.
 - **Deletion means deletion.** Every user-referencing table uses `ON DELETE CASCADE`,
   verified across the whole schema — account deletion is one query and it's complete.
 
