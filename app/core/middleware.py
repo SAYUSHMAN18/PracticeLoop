@@ -20,7 +20,7 @@ _CSP = "; ".join(
         # addition -- everything else here still meaningfully restricts
         # what a successful injection could load or exfiltrate to
         # (no arbitrary third-party script/image/font/fetch targets).
-        "script-src 'self' 'unsafe-inline' https://unpkg.com",
+        "script-src 'self' 'unsafe-inline'",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data:",

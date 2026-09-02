@@ -125,6 +125,7 @@ async def test_taking_a_diagnostic_awards_xp(client, monkeypatch):
 
     monkeypatch.setattr(assessments_service, "generate", fake_generate)
     monkeypatch.setattr("app.assessments.router.llm_is_configured", lambda: True)
+    monkeypatch.setattr(assessments_service, "_shuffle_choices", lambda choices, index, rng: (choices, index))
 
     await signup(client, "xp-diagnostic@example.com")
     await client.post("/assessments/start", data={"topic": "Math"})

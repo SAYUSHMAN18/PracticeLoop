@@ -13,8 +13,14 @@
 //      call) passes straight through to the network, unmodified -- no
 //      attempt to fake functionality that genuinely needs the server.
 
-const CACHE_NAME = "practiceloop-shell-v1";
-const SHELL_ASSETS = ["/static/style.css", "/static/manifest.json", "/static/icon.svg", "/static/offline.html"];
+const CACHE_NAME = "practiceloop-shell-v2";
+const SHELL_ASSETS = [
+  "/static/style.css",
+  "/static/htmx.min.js",
+  "/static/manifest.json",
+  "/static/icon.svg",
+  "/static/offline.html",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

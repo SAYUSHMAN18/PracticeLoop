@@ -1,3 +1,4 @@
+import random
 import re
 
 from app.assessments import service
@@ -18,6 +19,14 @@ def _attempt_id_from_redirect(response) -> str:
     match = re.search(r"/assessments/result/(\d+)", str(response.headers["location"]))
     assert match, response.headers["location"]
     return match.group(1)
+
+
+def _no_shuffle(monkeypatch) -> None:
+    """Pin the generated answer order for tests that assert fixed choice
+    indices. Those tests are about scoring and weak-subtopic reporting, not
+    about where the correct answer sits -- _shuffle_choices has its own
+    tests below."""
+    monkeypatch.setattr(service, "_shuffle_choices", lambda choices, index, rng: (choices, index))
 
 
 def test_score_to_level_boundaries():
@@ -60,6 +69,7 @@ async def test_taking_a_diagnostic_end_to_end_with_a_perfect_score(client, monke
 
     monkeypatch.setattr(service, "generate", fake_generate)
     monkeypatch.setattr("app.assessments.router.llm_is_configured", lambda: True)
+    _no_shuffle(monkeypatch)
 
     await signup(client, "diag-perfect@example.com")
     start = await client.post("/assessments/start", data={"topic": "Arithmetic"}, follow_redirects=False)
@@ -97,6 +107,7 @@ async def test_taking_a_diagnostic_with_a_wrong_answer_reports_the_weak_subtopic
 
     monkeypatch.setattr(service, "generate", fake_generate)
     monkeypatch.setattr("app.assessments.router.llm_is_configured", lambda: True)
+    _no_shuffle(monkeypatch)
 
     await signup(client, "diag-partial@example.com")
     await client.post("/assessments/start", data={"topic": "Arithmetic"})
@@ -119,6 +130,7 @@ async def test_diagnostic_result_updates_profile_proficiency_as_measured(client,
 
     monkeypatch.setattr(service, "generate", fake_generate)
     monkeypatch.setattr("app.assessments.router.llm_is_configured", lambda: True)
+    _no_shuffle(monkeypatch)
 
     await signup(client, "diag-profile@example.com")
     await client.post("/assessments/start", data={"topic": "Arithmetic"})
@@ -171,3 +183,51 @@ async def test_another_users_diagnostic_result_404s():
 
     await owner.aclose()
     await attacker.aclose()
+
+
+def test_shuffle_choices_keeps_the_correct_answer_correct():
+    """Whatever order comes out, correct_choice_index must still point at
+    the same text it pointed at going in -- a remap bug here would silently
+    mark right answers wrong for every diagnostic."""
+    choices = ["alpha", "beta", "gamma", "delta"]
+    for seed in range(200):
+        shuffled, index = service._shuffle_choices(choices, 2, random.Random(seed))
+        assert sorted(shuffled) == sorted(choices)
+        assert shuffled[index] == "gamma"
+
+
+def test_shuffle_choices_spreads_the_correct_answer_across_every_position():
+    """The whole point: a model that always emits index 0 must not produce
+    a quiz whose answer is always first. Every position should be reachable
+    and roughly equally likely."""
+    counts = [0, 0, 0, 0]
+    for seed in range(400):
+        _, index = service._shuffle_choices(["a", "b", "c", "d"], 0, random.Random(seed))
+        counts[index] += 1
+
+    assert all(c > 0 for c in counts), counts
+    # 400 draws over 4 slots: 100 expected each. A generous band still
+    # fails loudly if the remap collapses onto one position.
+    assert all(50 < c < 150 for c in counts), counts
+
+
+def test_validated_questions_do_not_inherit_the_models_index_0_bias():
+    """End to end through the real validator: every question generated with
+    the correct answer at index 0 must not still be at index 0 afterward."""
+    data = {
+        "questions": [
+            {
+                "question": f"q{i}?",
+                "subtopic": "s",
+                "choices": ["right", "wrong1", "wrong2", "wrong3"],
+                "correct_choice_index": 0,
+            }
+            for i in range(8)
+        ]
+    }
+    cleaned = service._validate_questions(data, rng=random.Random(7))
+
+    assert len(cleaned) == 8
+    for q in cleaned:
+        assert q["choices"][q["correct_choice_index"]] == "right"
+    assert len({q["correct_choice_index"] for q in cleaned}) > 1

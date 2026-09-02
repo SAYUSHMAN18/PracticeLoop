@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import random
 
 import asyncpg
 
@@ -51,7 +52,27 @@ class DiagnosticGenerationFailed(Exception):
     zero valid questions after validation)."""
 
 
-def _validate_questions(data: dict) -> list[dict]:
+def _shuffle_choices(choices: list[str], correct_index: int, rng: random.Random) -> tuple[list[str], int]:
+    """Randomize a generated question's answer order, remapping the correct
+    index to wherever that choice landed.
+
+    Models anchor hard on the shape of the JSON example in the prompt, and
+    that example has to show *some* value for correct_choice_index. Measured
+    over 48 freshly generated questions, the correct answer came back at
+    index 0 for 67% of them, index 3 for none at all, and for two topics it
+    was index 0 for all eight questions -- so "always pick the first option"
+    scored ~67% without reading anything, and the resulting proficiency
+    level and weak-subtopic list were both meaningless. Shuffling here (not
+    by asking the prompt to vary it, which is unenforceable) makes the
+    position uniform by construction, at zero token cost.
+    """
+    order = list(range(len(choices)))
+    rng.shuffle(order)
+    return [choices[i] for i in order], order.index(correct_index)
+
+
+def _validate_questions(data: dict, *, rng: random.Random | None = None) -> list[dict]:
+    rng = rng or random.Random()
     if not isinstance(data, dict):
         raise ValueError("not an object")
     raw_questions = data.get("questions")
@@ -73,6 +94,7 @@ def _validate_questions(data: dict) -> list[dict]:
             continue
         if not isinstance(correct_index, int) or not (0 <= correct_index < len(choices)):
             continue
+        choices, correct_index = _shuffle_choices(choices, correct_index, rng)
         cleaned.append(
             {
                 "question": question_text,

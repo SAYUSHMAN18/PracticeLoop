@@ -29,11 +29,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v={{ asset_version }}">
+  <link rel="stylesheet" href="/static/style.css?v={{ asset_version("style.css") }}">
   <link rel="manifest" href="/static/manifest.json">
   <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#211c16">
-  <script src="https://unpkg.com/htmx.org@2.0.3" defer></script>
+  {# htmx is vendored (app/static/htmx.min.js), not pulled from unpkg: it drives every
+     interactive surface in the app -- the review queue's card swaps, the mentor panel,
+     notifications, search -- so a CDN outage took all of that down, and a CDN we allow
+     in script-src is a script we can't verify. Self-hosting also drops a third-party
+     round trip from every page load, which matters most on the free-tier cold start. #}
+  <script src="/static/htmx.min.js?v={{ asset_version("htmx.min.js") }}" defer></script>
 </head>
 <body>
   <a href="#main-content" class="skip-link">Skip to content</a>
