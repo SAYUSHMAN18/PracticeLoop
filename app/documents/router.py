@@ -104,11 +104,18 @@ async def upload_document(
     if not content:
         return await _render_index(request, pool, user_id, error="That file looks empty.", status_code=400)
 
+    try:
+        profile_service.validate_upload_content(file.filename or "upload", content)
+    except profile_service.InvalidUpload as exc:
+        return await _render_index(request, pool, user_id, error=str(exc), status_code=400)
+
     extracted_text = ""
     try:
         extracted_text = profile_service.extract_text_from_file(file.filename or "upload", content)
     except Exception:
-        extracted_text = ""  # non-text formats (images, scans) just skip extraction; storage still works
+        # A real file of a supported type that just isn't extractable
+        # (e.g. a scanned PDF with no text layer) -- storage still works.
+        extracted_text = ""
 
     display_title = title.strip() or file.filename or DOC_TYPE_LABELS.get(doc_type, "Document")
 

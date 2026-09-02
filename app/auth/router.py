@@ -62,8 +62,10 @@ async def signup(
 
 
 @router.get("/login", response_class=HTMLResponse)
-async def login_form(request: Request):
-    return templates.TemplateResponse(request, "auth/login.html", {"error": None})
+async def login_form(request: Request, deleted: str = ""):
+    return templates.TemplateResponse(
+        request, "auth/login.html", {"error": None, "account_deleted": deleted == "1"}
+    )
 
 
 @router.post("/login")

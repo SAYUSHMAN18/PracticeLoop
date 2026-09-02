@@ -1,0 +1,12 @@
+{
+  "name": "PracticeLoop",
+  "short_name": "PracticeLoop",
+  "description": "An adaptive learning workspace -- practice, learning paths, diagnostics, and a portfolio in one place.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#211c16",
+  "theme_color": "#211c16",
+  "icons": [
+    { "src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

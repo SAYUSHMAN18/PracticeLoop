@@ -114,6 +114,39 @@ async def update_profile(
         )
 
 
+class InvalidUpload(Exception):
+    pass
+
+
+# Magic-byte signatures, not the filename's own extension -- the
+# extension is whatever the uploader claims it is, unverified. PDF and
+# DOCX both have a real, checkable file signature; DOCX (and every other
+# Office Open XML format) is a zip archive under the hood, so its
+# signature is the same as any zip's. Plain text formats (.txt/.md/.csv)
+# have no reliable magic bytes -- the best available check there is
+# "does this look like text at all," not "is this specifically a CSV."
+_MAGIC_BYTES = {".pdf": b"%PDF-", ".docx": b"PK\x03\x04"}
+_TEXT_EXTENSIONS = {".txt", ".md", ".csv"}
+_SNIFF_LENGTH = 8192  # only the first few KB need checking for a NUL byte
+
+
+def validate_upload_content(filename: str, content: bytes) -> None:
+    """Rejects a file whose actual bytes don't match what its extension
+    claims -- someone renaming an arbitrary binary to resume.pdf (or
+    resume.txt) shouldn't have it silently accepted and stored just
+    because the filename looked right. Not malware scanning (that needs
+    a real AV engine/API this deploy doesn't have) -- this only catches
+    "the content isn't even the claimed file type," which needs no
+    external service at all."""
+    lower_name = filename.lower()
+    for ext, signature in _MAGIC_BYTES.items():
+        if lower_name.endswith(ext) and not content.startswith(signature):
+            raise InvalidUpload(f"That file doesn't look like a real {ext.lstrip('.').upper()} file.")
+
+    if any(lower_name.endswith(ext) for ext in _TEXT_EXTENSIONS) and b"\x00" in content[:_SNIFF_LENGTH]:
+        raise InvalidUpload("That file doesn't look like plain text.")
+
+
 def extract_text_from_file(filename: str, content: bytes) -> str:
     """Deterministic text extraction -- no LLM call needed for this step.
     Phase 4.1's supported-sources list also asks for images/OCR and audio/

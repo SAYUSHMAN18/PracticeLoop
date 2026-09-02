@@ -9,16 +9,42 @@ from starlette.responses import Response
 
 from app.core.config import settings
 
+_CSP = "; ".join(
+    [
+        "default-src 'self'",
+        # 'unsafe-inline' on script-src is a real, deliberate gap, not an
+        # oversight: base.html has a dozen-plus inline <script> blocks
+        # (theme toggle, command palette, topbar dropdowns, ...) with no
+        # nonce/hash infrastructure behind them. Retrofitting nonces
+        # across all of them is real follow-up work, not a same-pass
+        # addition -- everything else here still meaningfully restricts
+        # what a successful injection could load or exfiltrate to
+        # (no arbitrary third-party script/image/font/fetch targets).
+        "script-src 'self' 'unsafe-inline' https://unpkg.com",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data:",
+        "connect-src 'self'",
+        "frame-ancestors 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "object-src 'none'",
+    ]
+)
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Baseline response headers that cost nothing and close off a few
-    classes of attack (clickjacking, MIME sniffing, referrer leakage)."""
+    classes of attack (clickjacking, MIME sniffing, referrer leakage,
+    and -- via CSP -- loading a script/style/font/image from anywhere
+    this app doesn't itself serve or explicitly trust)."""
 
     async def dispatch(self, request: Request, call_next) -> Response:
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = _CSP
         if settings.app_env == "production":
             response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
         return response

@@ -4,10 +4,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import HTTPException
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.account.router import router as account_router
 from app.analytics.router import router as analytics_router
 from app.assessments.router import router as assessments_router
 from app.auth.router import router as auth_router
@@ -97,6 +98,7 @@ app.include_router(classrooms_router)
 app.include_router(guardian_router)
 app.include_router(notifications_router)
 app.include_router(analytics_router)
+app.include_router(account_router)
 
 
 @app.exception_handler(LoginRequired)
@@ -127,6 +129,15 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 async def root(request: Request):
     destination = "/dashboard" if current_user_id(request) is not None else "/login"
     return RedirectResponse(destination)
+
+
+@app.get("/service-worker.js")
+async def service_worker():
+    # Served from the root, not /static/service-worker.js, deliberately:
+    # a service worker's default scope is its own directory and below,
+    # so serving it from /static/ would only ever let it control pages
+    # under /static/ -- root-level pages are the entire point.
+    return FileResponse(STATIC_DIR / "service-worker.js", media_type="text/javascript")
 
 
 @app.get("/healthz")

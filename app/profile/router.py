@@ -103,6 +103,7 @@ async def save_profile(
         if len(content) > MAX_RESUME_BYTES:
             raise HTTPException(status_code=413, detail="Resume file is too large (max 10MB).")
         try:
+            service.validate_upload_content(resume.filename, content)
             resume_text = service.extract_text_from_file(resume.filename, content)
         except Exception:
             profile = await service.get_profile(pool, user_id)

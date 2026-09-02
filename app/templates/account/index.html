@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Account - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Account</h1>
+
+<div class="card">
+  <h2>Export your data</h2>
+  <p class="muted">Download everything you've created and everything measured about you -- questions, learning paths, diagnostics, projects, XP -- as one JSON file.</p>
+  <a class="btn secondary" href="/account/export">Download my data</a>
+</div>
+
+<div class="card">
+  <h2 style="color:var(--danger);">Delete account</h2>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <p class="muted">Permanently deletes your account and everything in it -- questions, learning paths, projects, documents, everything. This can't be undone.</p>
+  <form method="post" action="/account/delete" id="delete-account-form">
+    <label for="f-password">Confirm your password</label>
+    <input id="f-password" type="password" name="password" required autocomplete="current-password">
+    <button type="submit" style="background:var(--danger);border-color:var(--danger);">Delete my account</button>
+  </form>
+</div>
+
+<script>
+document.getElementById("delete-account-form").addEventListener("submit", function (e) {
+  if (!confirm("This permanently deletes your account and everything in it. This can't be undone. Continue?")) {
+    e.preventDefault();
+  }
+});
+</script>
+{% endblock %}
