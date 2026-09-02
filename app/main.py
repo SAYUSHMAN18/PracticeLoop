@@ -13,7 +13,7 @@ from app.analytics.router import router as analytics_router
 from app.assessments.router import router as assessments_router
 from app.auth.router import router as auth_router
 from app.classrooms.router import router as classrooms_router
-from app.core.config import settings, verify_production_config
+from app.core.config import configure_error_reporting, settings, verify_production_config
 from app.core.db import close_pool, get_pool
 from app.core.deps import LoginRequired
 from app.core.embedder import get_embedding_model, verify_embedding_dimension
@@ -44,6 +44,7 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging()
+    configure_error_reporting()
     verify_production_config()
 
     await get_pool()

@@ -47,7 +47,7 @@
   {% endfor %}
 </div>
 
-<script>
+<script nonce="{{ request.state.csp_nonce }}">
 document.querySelectorAll(".path-delete-form").forEach(function (form) {
   form.addEventListener("submit", function (e) {
     if (!confirm("Delete \"" + form.dataset.title + "\"? This can't be undone.")) {

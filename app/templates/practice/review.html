@@ -11,7 +11,7 @@
   {% include "practice/_review_card.html" %}
 </div>
 
-<script>
+<script nonce="{{ request.state.csp_nonce }}">
 document.body.addEventListener('keydown', function (e) {
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
   if (e.code === 'Space') {

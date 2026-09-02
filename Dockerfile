@@ -18,7 +18,7 @@ COPY data ./data
 # wheel first satisfies sentence-transformers' torch requirement without pip ever
 # reaching for the CUDA build.
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
-    && pip install --no-cache-dir -e ".[groq]" \
+    && pip install --no-cache-dir -e ".[groq,sentry]" \
     && useradd --create-home --uid 1000 appuser \
     && chown -R appuser:appuser /app
 USER appuser

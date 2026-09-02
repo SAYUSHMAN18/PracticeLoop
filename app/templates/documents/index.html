@@ -85,7 +85,7 @@
   {% endfor %}
 </div>
 
-<script>
+<script nonce="{{ request.state.csp_nonce }}">
 // Confirms via data-title so nothing user-supplied is ever interpolated
 // into inline JS -- the title goes through normal HTML-attribute
 // autoescaping and is read back with .dataset at click time.

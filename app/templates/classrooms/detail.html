@@ -62,7 +62,7 @@
   {% endfor %}
 </div>
 
-<script>
+<script nonce="{{ request.state.csp_nonce }}">
 document.getElementById("classroom-delete-form").addEventListener("submit", function (e) {
   if (!confirm("Delete \"" + this.dataset.title + "\"? This can't be undone.")) {
     e.preventDefault();

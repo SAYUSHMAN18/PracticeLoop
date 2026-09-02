@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 import time
 from collections import defaultdict, deque
 
@@ -9,20 +10,18 @@ from starlette.responses import Response
 
 from app.core.config import settings
 
-_CSP = "; ".join(
+# Everything except script-src, which is built per request so it can carry
+# that request's nonce (see SecurityHeadersMiddleware.dispatch).
+#
+# style-src keeps 'unsafe-inline' and is not going to stop: there are ~260
+# inline style="..." attributes across these templates, and a nonce cannot
+# cover a style attribute -- only a <style> element. Removing it means
+# moving every one of those into a class, which is a real refactor with no
+# security payoff worth the churn while script-src is the actual XSS vector.
+_CSP_TAIL = "; ".join(
     [
-        "default-src 'self'",
-        # 'unsafe-inline' on script-src is a real, deliberate gap, not an
-        # oversight: base.html has a dozen-plus inline <script> blocks
-        # (theme toggle, command palette, topbar dropdowns, ...) with no
-        # nonce/hash infrastructure behind them. Retrofitting nonces
-        # across all of them is real follow-up work, not a same-pass
-        # addition -- everything else here still meaningfully restricts
-        # what a successful injection could load or exfiltrate to
-        # (no arbitrary third-party script/image/font/fetch targets).
-        "script-src 'self' 'unsafe-inline'",
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "font-src 'self' https://fonts.gstatic.com",
+        "style-src 'self' 'unsafe-inline'",
+        "font-src 'self'",
         "img-src 'self' data:",
         "connect-src 'self'",
         "frame-ancestors 'none'",
@@ -36,15 +35,32 @@ _CSP = "; ".join(
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Baseline response headers that cost nothing and close off a few
     classes of attack (clickjacking, MIME sniffing, referrer leakage,
-    and -- via CSP -- loading a script/style/font/image from anywhere
-    this app doesn't itself serve or explicitly trust)."""
+    and -- via CSP -- loading a script/style/font/image from anywhere this
+    app doesn't itself serve).
+
+    script-src is nonce-based rather than 'unsafe-inline': every inline
+    <script> in these templates carries the per-request nonce, so injected
+    markup that doesn't know it simply never executes. That's the whole
+    point of a CSP for an app that renders user-supplied text (mentor
+    conversations, question banks, pasted job descriptions) back into HTML."""
 
     async def dispatch(self, request: Request, call_next) -> Response:
+        # Generated before the route runs, so templates can read it off
+        # request.state and stamp it on their inline <script> blocks -- the
+        # same value then goes into this response's own header below. A
+        # fresh 128 bits per request: a nonce an attacker can predict (or
+        # one reused across responses) is worth exactly as much to them as
+        # 'unsafe-inline' was.
+        nonce = secrets.token_urlsafe(16)
+        request.state.csp_nonce = nonce
+
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Content-Security-Policy"] = _CSP
+        response.headers["Content-Security-Policy"] = (
+            f"default-src 'self'; script-src 'self' 'nonce-{nonce}'; {_CSP_TAIL}"
+        )
         if settings.app_env == "production":
             response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
         return response

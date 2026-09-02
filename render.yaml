@@ -28,6 +28,13 @@ services:
         sync: false # set this in the Render dashboard after the blueprint deploys -- never commit a real key
       - key: GROQ_MODEL
         value: openai/gpt-oss-120b
+      # Signup is open, so the per-user LLM_DAILY_BUDGET alone leaves total spend
+      # against the shared GROQ_API_KEY unbounded. This is the ceiling for the
+      # whole deployment per day; raise it if real usage justifies the cost.
+      - key: LLM_GLOBAL_DAILY_BUDGET
+        value: "500"
+      - key: SENTRY_DSN
+        sync: false # optional -- unset disables error reporting; needs the `sentry` extra
       - key: JOBS_CRON_TOKEN
         sync: false # must match the JOBS_CRON_TOKEN secret in this repo's GitHub Actions settings
       - key: ADZUNA_APP_ID

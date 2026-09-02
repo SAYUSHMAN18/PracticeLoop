@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}PracticeLoop{% endblock %}</title>
-  <script>
+  <script nonce="{{ request.state.csp_nonce }}">
     // Applied before first paint (this is a synchronous, render-blocking
     // script in <head>) so a saved manual theme/mentor/accessibility
     // choice never flashes the wrong state on load. Absence of a saved
@@ -26,9 +26,14 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+  {# Fonts are self-hosted (app/static/fonts/) rather than pulled from Google.
+     Same reasoning as htmx: it drops two third-party origins (fonts.googleapis.com
+     for the CSS, fonts.gstatic.com for the files) off the critical path of every
+     page load and out of the CSP, and the render-blocking stylesheet request to
+     Google was pure added latency on a free-tier cold start. Only the latin and
+     latin-ext subsets are shipped; unicode-range means a browser downloads just
+     the faces it actually needs. #}
+  <link rel="stylesheet" href="/static/fonts.css?v={{ asset_version("fonts.css") }}">
   <link rel="stylesheet" href="/static/style.css?v={{ asset_version("style.css") }}">
   <link rel="manifest" href="/static/manifest.json">
   <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
@@ -173,7 +178,7 @@
     </div>
   </div>
 
-  <script>
+  <script nonce="{{ request.state.csp_nonce }}">
     // Command palette (Phase 1.4): a static, client-side list of every
     // page and quick action this app has -- no full-text search backend
     // needed since the whole point is fast keyboard navigation between a
@@ -303,7 +308,7 @@
     })();
   </script>
 
-  <script>
+  <script nonce="{{ request.state.csp_nonce }}">
     // Mobile sidebar drawer: hidden off-canvas by default (see the
     // max-width: 860px rules in style.css), toggled by the hamburger
     // button, dismissed by the backdrop or by following a nav link.
@@ -374,7 +379,7 @@
     })();
   </script>
 
-  <script>
+  <script nonce="{{ request.state.csp_nonce }}">
     // Topbar dropdowns (notifications, accessibility menu, profile menu):
     // each trigger toggles its own panel; opening one closes any other
     // that's open; outside clicks and Escape close whichever is open.

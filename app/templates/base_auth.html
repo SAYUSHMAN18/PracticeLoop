@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}PracticeLoop{% endblock %}</title>
-  <script>
+  <script nonce="{{ request.state.csp_nonce }}">
     // Same pre-paint theme restore as base.html -- a manual choice made
     // while logged in should still hold on the login/signup screens.
     (function () {
@@ -16,9 +16,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/fonts.css?v={{ asset_version("fonts.css") }}">
   <link rel="stylesheet" href="/static/style.css?v={{ asset_version("style.css") }}">
 </head>
 <body>
@@ -47,7 +45,7 @@
       </div>
     </main>
   </div>
-  <script>
+  <script nonce="{{ request.state.csp_nonce }}">
     // Subtle parallax on the background glow, following the pointer -- pure
     // visual flourish, so it's skipped entirely for reduced-motion and for
     // touch-only devices (no meaningful pointer to follow).

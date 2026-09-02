@@ -253,7 +253,17 @@ deliberate choice rather than an oversight.
 `app/core/middleware.py` adds three cross-cutting layers, wired up in `app/main.py`:
 
 - **`SecurityHeadersMiddleware`** -- `X-Content-Type-Options`, `X-Frame-Options`,
-  `Referrer-Policy` on every response, plus HSTS when `APP_ENV=production`.
+  `Referrer-Policy` on every response, plus HSTS when `APP_ENV=production`, plus the CSP.
+  `script-src` is **nonce-based**, not `'unsafe-inline'`: the middleware mints a fresh
+  `secrets.token_urlsafe(16)` per request, hands it to templates via `request.state.csp_nonce`
+  (every inline `<script>` stamps it), and puts the same value in the header. That matters
+  for an app that renders user-supplied text -- mentor conversations, question banks, pasted
+  job descriptions -- back into HTML: injected markup can't guess the nonce, so it never
+  runs. `style-src` still allows `'unsafe-inline'` and will keep doing so: a nonce covers a
+  `<style>` element, not the ~260 inline `style="..."` attributes across these templates,
+  and moving all of those to classes is churn with no payoff while `script-src` is the real
+  vector. Nothing third-party is allowed anywhere in the policy -- htmx and the webfonts are
+  served from `/static/`, so there's no CDN to trust or to go down.
 - **`RateLimitMiddleware`** -- per-IP fixed window on `/login` (10/min) and `/signup`
   (5/min) to blunt credential stuffing and signup spam. It's in-memory and per-process: a
   multi-worker or multi-replica deployment enforces the limit separately in each process,
@@ -274,6 +284,16 @@ resetting with an in-memory counter. `LLM_DAILY_BUDGET` (default 20) controls it
 the call before checking the limit, so the request that would push the total over budget is
 itself the one rejected with a 429 -- not a bonus call let through first.
 
+That bounds one account. `LLM_GLOBAL_DAILY_BUDGET` (default 0, meaning off) bounds the
+*deployment*, counted in `llm_usage_global`: signup is open, so N users x the per-user
+budget is otherwise unbounded spend against one shared provider key, and a drained key
+degrades every user at once rather than just the account draining it. Off is right for a
+single-user install; any public deploy wants a real number. The global counter is
+incremented only *after* the per-user check passes, so a user already over their own budget
+can't drain the shared pool by hammering a route they're locked out of. The two limits raise
+different exceptions on purpose -- "you're out until midnight" and "this deployment is out
+for everyone" send a student to do different things.
+
 Two auth-adjacent details worth knowing: `auth/service.py::authenticate` always runs a
 bcrypt comparison, even against a dummy hash for a nonexistent email, so a timing
 difference can't be used to enumerate registered addresses; and `difficulty` is normalized
@@ -281,11 +301,37 @@ to `easy|medium|hard` in `practice/service.py` before every insert/update, becau
 value can arrive from an LLM or a user's free-text paste (not just the capture form's
 `<select>`) and the column has a `CHECK` constraint.
 
+`config.py::verify_production_config` runs at startup and turns two kinds of
+"deployed wrong" into "refused to start", because running anyway is worse than not running:
+a default `SESSION_SECRET` means every session cookie is forgeable by anyone who has read
+this repo, and a default `DATABASE_URL` in production points at a localhost database that
+isn't there. Both problems are reported together, so fixing a bad deploy doesn't cost one
+restart each. A *missing LLM provider* only warns -- an AI-free deploy is supported and most
+of the app degrades to a real deterministic path -- but it silently turns diagnostics and
+Writing Lab off entirely, which have no non-LLM equivalent, so it belongs in the logs rather
+than in a confused user's bug report.
+
+`config.py::configure_error_reporting` initializes Sentry when `SENTRY_DSN` is set and does
+nothing at all when it isn't. `send_default_pii=False` is deliberate: session cookies,
+resume text, mentor conversations and typed answers all pass through this app and none of it
+belongs in an error report. A missing `sentry-sdk` warns rather than crashing, since the
+dependency is an optional extra.
+
 Deployment notes: the Docker image runs as a non-root user and exposes `WEB_CONCURRENCY`
 (default 1) to control `uvicorn --workers`; each worker loads its own copy of the
 sentence-transformers model, so raising it trades memory for throughput. `/healthz` backs
 both the container `HEALTHCHECK` and `docker-compose`'s `depends_on: condition:
 service_healthy`.
+
+`scripts/backup.py` is the recovery story for a free-tier deploy, which has no automated
+database backups and no `pg_dump` on the web service's container. It's a logical JSON dump
+over asyncpg (already a dependency), so it runs from anywhere that can reach `DATABASE_URL`.
+Restore rebuilds the schema with `migrate.py` first, then loads the dump in one transaction,
+inserting tables parent-first from a foreign-key graph recorded at dump time -- Postgres FKs
+are `NOT DEFERRABLE` by default, so `SET CONSTRAINTS ALL DEFERRED` does nothing for them and
+alphabetical order fails as soon as `applications` lands before `users`. Column types are
+recorded alongside the rows because JSON has no datetime, and every sequence is reset at the
+end, or the first insert after a restore collides with restored ids.
 
 ## Further reading
 

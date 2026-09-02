@@ -34,6 +34,7 @@ include = ["app*"]
 groq = ["groq>=0.13"]
 gemini = ["google-generativeai>=0.8"]
 bedrock = ["boto3>=1.35"]
+sentry = ["sentry-sdk>=2.19"]
 dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "ruff>=0.8"]
 
 [tool.ruff]

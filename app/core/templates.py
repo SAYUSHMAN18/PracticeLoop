@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import hashlib
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
@@ -13,7 +13,7 @@ STATIC_DIR = _APP_DIR / "static"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
-@lru_cache(maxsize=None)
+@cache
 def _static_asset_version(filename: str) -> str:
     """A short hash of one static file's own content, appended by templates
     as a query string (?v=...). Cached, so each file is hashed once per

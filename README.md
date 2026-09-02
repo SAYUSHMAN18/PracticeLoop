@@ -100,8 +100,10 @@ passing a diagnostic, closing a review — not for clicking around.
   shell and serves an honest offline page (no pretending a server-rendered app works fully
   offline).
 - Uploads are checked against their real file signature before being stored or parsed;
-  responses carry a real CSP; per-IP rate limiting, a per-user daily LLM budget, security
-  headers, and request-size caps apply platform-wide.
+  responses carry a nonce-based CSP with no third-party origins in it at all (htmx and the
+  webfonts are self-hosted, so there's no CDN to trust or to go down); per-IP rate limiting,
+  per-user *and* deployment-wide daily LLM budgets, security headers, and request-size caps
+  apply platform-wide.
 
 ---
 
@@ -158,7 +160,7 @@ python scripts/seed.py you@example.com
 
 ### Tests
 
-316 tests across 46 files — spaced repetition and semantic search, every AI-backed feature's
+335 tests across 49 files — spaced repetition and semantic search, every AI-backed feature's
 fallback *and* configured path, ownership/IDOR checks on every cross-user-reachable route,
 migration idempotency, upload validation, and more.
 
@@ -182,6 +184,25 @@ typed by hand.
    generated.
 4. First deploy runs migrations automatically via the container's start command.
 
+### Before you make it public
+
+- **Set `LLM_GLOBAL_DAILY_BUDGET`.** `LLM_DAILY_BUDGET` (default 20) caps one *account*.
+  Signup is open, so without a global ceiling N accounts × 20 is unbounded spend against
+  your provider key — and a drained key degrades every user at once. `render.yaml` ships
+  with 500/day; tune it to what you're willing to pay for.
+- **Set `SENTRY_DSN`** if you want to hear about crashes from Sentry rather than from a
+  user. Unset disables error reporting entirely. `send_default_pii` is off — resume text,
+  mentor conversations and typed answers never leave the app.
+- **Take backups.** Render's free Postgres has no automated ones, and no `pg_dump` on the
+  web service container. `scripts/backup.py` needs nothing but `DATABASE_URL`, so it runs
+  from your laptop or a scheduled Action:
+
+  ```bash
+  python scripts/backup.py                            # backups/practiceloop-<timestamp>.json
+  python scripts/migrate.py                           # rebuild schema on a fresh database
+  python scripts/backup.py --restore backups/<file>   # then load the dump into it
+  ```
+
 **Scheduled job discovery** (optional): set `JOBS_CRON_TOKEN` on the Render service (any
 random string) and add the same value as a repo secret under **Settings → Secrets and
 variables → Actions** — that's what `.github/workflows/jobs-discover.yml` authenticates
@@ -189,7 +210,7 @@ with. Add `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` (free at
 [developer.adzuna.com](https://developer.adzuna.com)) to actually find listings.
 
 See [`ARCHITECTURE.md`](ARCHITECTURE.md#production-hardening) for what else is configurable
-(worker count, rate limits, security headers).
+(worker count, rate limits, the nonce-based CSP).
 
 ---
 

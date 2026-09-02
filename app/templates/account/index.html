@@ -20,7 +20,7 @@
   </form>
 </div>
 
-<script>
+<script nonce="{{ request.state.csp_nonce }}">
 document.getElementById("delete-account-form").addEventListener("submit", function (e) {
   if (!confirm("This permanently deletes your account and everything in it. This can't be undone. Continue?")) {
     e.preventDefault();
