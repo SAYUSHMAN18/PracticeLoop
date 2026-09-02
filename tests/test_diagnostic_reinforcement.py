@@ -169,6 +169,84 @@ async def test_submitting_the_same_result_twice_does_not_stack_duplicate_modules
     assert await _lesson_titles(path_id) == ["Review: long division", "Review: remainders"]
 
 
+async def test_two_concurrent_requests_settle_on_one_module(client):
+    """A double-click issues both requests before either has inserted, so
+    the "already exists?" check passes twice and the partial unique index
+    is what actually enforces idempotency. Losing that race must return
+    the winner's module, not a 500."""
+    import asyncio
+
+    await signup(client, "reinforce-race@example.com")
+    attempt_id = await _make_attempt("reinforce-race@example.com")
+    create = await client.post("/learning-paths", data={"goal": "Learn maths"}, follow_redirects=False)
+    path_id = _path_id_from_redirect(create)
+
+    first, second = await asyncio.gather(
+        client.post(
+            f"/assessments/result/{attempt_id}/reinforce",
+            data={"path_id": str(path_id)},
+            follow_redirects=False,
+        ),
+        client.post(
+            f"/assessments/result/{attempt_id}/reinforce",
+            data={"path_id": str(path_id)},
+            follow_redirects=False,
+        ),
+    )
+    assert first.status_code == 303
+    assert second.status_code == 303
+
+    modules = await _modules(path_id)
+    focus = [m for m in modules if m["source_attempt_id"] == attempt_id]
+    assert len(focus) == 1
+    # the rollback must not leave the shift applied twice either
+    assert [m["position"] for m in modules] == [0, 1]
+
+
+async def test_losing_the_insert_race_returns_the_winners_module(client, monkeypatch):
+    """The concurrent test above asserts the invariant but can't guarantee
+    the two requests actually interleave at the unsafe point. This forces
+    it: blind the "already exists?" pre-check so the second call goes
+    straight to an INSERT the unique index must reject, and assert that
+    rejection is recovered from rather than surfacing as a 500."""
+    await signup(client, "reinforce-race-forced@example.com")
+    attempt_id = await _make_attempt("reinforce-race-forced@example.com")
+    create = await client.post("/learning-paths", data={"goal": "Learn maths"}, follow_redirects=False)
+    path_id = _path_id_from_redirect(create)
+    pool = await get_pool()
+    user_id = await pool.fetchval(
+        "SELECT user_id FROM users WHERE email = $1", "reinforce-race-forced@example.com"
+    )
+
+    kwargs = dict(
+        topic="Arithmetic",
+        weak_subtopics=["long division"],
+        attempt_id=attempt_id,
+        ai_available=False,
+    )
+    winner = await paths_service.add_remediation_module(pool, user_id, path_id, **kwargs)
+
+    real_find = paths_service._find_remediation_module
+    calls = {"n": 0}
+
+    async def blind_first_lookup(pool_, path_id_, attempt_id_):
+        # None on the pre-check (as if the winner hadn't committed yet),
+        # real answer on the post-violation recovery lookup.
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return None
+        return await real_find(pool_, path_id_, attempt_id_)
+
+    monkeypatch.setattr(paths_service, "_find_remediation_module", blind_first_lookup)
+    loser = await paths_service.add_remediation_module(pool, user_id, path_id, **kwargs)
+
+    assert loser == winner
+    modules = await _modules(path_id)
+    assert len([m for m in modules if m["source_attempt_id"] == attempt_id]) == 1
+    # the losing transaction's position shift must have rolled back with it
+    assert [m["position"] for m in modules] == [0, 1]
+
+
 async def test_a_clean_diagnostic_has_nothing_to_reinforce(client):
     await signup(client, "reinforce-clean@example.com")
     attempt_id = await _make_attempt("reinforce-clean@example.com", weak=[])

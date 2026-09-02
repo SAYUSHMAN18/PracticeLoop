@@ -127,7 +127,7 @@ flowchart LR
     C -->|no path yet| E[create_path_from_diagnostic<br/>source_type='diagnostic'] --> D
     D --> F{LLM available<br/>AND budget left?}
     F -->|yes| G[3-6 ordered lesson titles<br/>covering every gap]
-    F -->|no / call fails| H["one lesson per gap:<br/>'Review: {subtopic}'"]
+    F -->|no / call fails| H["one lesson per gap,<br/>named after the gap"]
     G --> I[shift modules +1,<br/>insert at position 0]
     H --> I
     I --> J[(learning_modules<br/>source_attempt_id)]

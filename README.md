@@ -158,7 +158,7 @@ python scripts/seed.py you@example.com
 
 ### Tests
 
-311 tests across 46 files — spaced repetition and semantic search, every AI-backed feature's
+313 tests across 46 files — spaced repetition and semantic search, every AI-backed feature's
 fallback *and* configured path, ownership/IDOR checks on every cross-user-reachable route,
 migration idempotency, upload validation, and more.
 

@@ -419,6 +419,14 @@ async def _build_remediation(topic: str, weak_subtopics: list[str], *, ai_availa
         return _fallback_remediation(topic, weak_subtopics)
 
 
+async def _find_remediation_module(pool: asyncpg.Pool, path_id: int, attempt_id: int) -> int | None:
+    return await pool.fetchval(
+        "SELECT module_id FROM learning_modules WHERE path_id = $1 AND source_attempt_id = $2",
+        path_id,
+        attempt_id,
+    )
+
+
 async def add_remediation_module(
     pool: asyncpg.Pool,
     user_id: int,
@@ -435,10 +443,10 @@ async def add_remediation_module(
     measurement is that the next thing studied is the thing just measured
     as weakest -- appending it after every existing module would bury it.
 
-    Returns the module id. Idempotent per (path, diagnostic) via the
-    partial unique index from migration 0021: submitting the same result
-    into the same path twice returns the existing module instead of
-    stacking a duplicate.
+    Returns the module id. Idempotent per (path, diagnostic): the check
+    below handles the ordinary repeat, and the partial unique index from
+    migration 0021 is what makes that true even for two requests racing
+    (a double-click issues both before either has inserted).
     """
     owned = await pool.fetchval(
         "SELECT path_id FROM learning_paths WHERE path_id = $1 AND user_id = $2", path_id, user_id
@@ -446,49 +454,57 @@ async def add_remediation_module(
     if owned is None:
         raise PathNotFound(path_id)
 
-    existing = await pool.fetchval(
-        "SELECT module_id FROM learning_modules WHERE path_id = $1 AND source_attempt_id = $2",
-        path_id,
-        attempt_id,
-    )
+    existing = await _find_remediation_module(pool, path_id, attempt_id)
     if existing is not None:
         return existing
 
     subtopics = [s for s in weak_subtopics if s][:_MAX_REMEDIATION_SUBTOPICS]
     unit = await _build_remediation(topic, subtopics, ai_available=ai_available)
 
-    async with pool.acquire() as conn:
-        async with conn.transaction():
-            # Shift first so position 0 is free. Descending order isn't
-            # needed -- there's no unique constraint on (path_id, position)
-            # to transiently violate -- but the whole shift and the insert
-            # share one transaction so a reader never sees two modules
-            # claiming the same position.
-            await conn.execute(
-                "UPDATE learning_modules SET position = position + 1 WHERE path_id = $1", path_id
-            )
-            module_id = await conn.fetchval(
-                """INSERT INTO learning_modules (path_id, title, description, position, source_attempt_id)
-                   VALUES ($1, $2, $3, 0, $4) RETURNING module_id""",
-                path_id,
-                f"Focus: {topic}",
-                "Added from your diagnostic result -- these are the subtopics you missed.",
-                attempt_id,
-            )
-            unit_id = await conn.fetchval(
-                """INSERT INTO learning_units (module_id, title, description, position)
-                   VALUES ($1, $2, $3, 0) RETURNING unit_id""",
-                module_id,
-                unit["unit_title"],
-                unit["unit_description"],
-            )
-            for position, lesson_title in enumerate(unit["lessons"]):
+    try:
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                # Shift first so position 0 is free. Descending order isn't
+                # needed -- there's no unique constraint on (path_id, position)
+                # to transiently violate -- but the whole shift and the insert
+                # share one transaction so a reader never sees two modules
+                # claiming the same position.
                 await conn.execute(
-                    "INSERT INTO learning_lessons (unit_id, title, position) VALUES ($1, $2, $3)",
-                    unit_id,
-                    lesson_title,
-                    position,
+                    "UPDATE learning_modules SET position = position + 1 WHERE path_id = $1", path_id
                 )
+                module_id = await conn.fetchval(
+                    """INSERT INTO learning_modules
+                           (path_id, title, description, position, source_attempt_id)
+                       VALUES ($1, $2, $3, 0, $4) RETURNING module_id""",
+                    path_id,
+                    f"Focus: {topic}",
+                    "Added from your diagnostic result -- these are the subtopics you missed.",
+                    attempt_id,
+                )
+                unit_id = await conn.fetchval(
+                    """INSERT INTO learning_units (module_id, title, description, position)
+                       VALUES ($1, $2, $3, 0) RETURNING unit_id""",
+                    module_id,
+                    unit["unit_title"],
+                    unit["unit_description"],
+                )
+                for position, lesson_title in enumerate(unit["lessons"]):
+                    await conn.execute(
+                        "INSERT INTO learning_lessons (unit_id, title, position) VALUES ($1, $2, $3)",
+                        unit_id,
+                        lesson_title,
+                        position,
+                    )
+    except asyncpg.UniqueViolationError:
+        # Lost a race with a concurrent request for the same (path,
+        # diagnostic) -- the index did its job, the whole transaction
+        # (including the position shift) rolled back, and the winner's
+        # module is the right answer to return. A double-click should
+        # land the student on their focus module, not a 500.
+        existing = await _find_remediation_module(pool, path_id, attempt_id)
+        if existing is None:
+            raise
+        return existing
 
     return module_id
 
