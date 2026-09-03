@@ -172,6 +172,27 @@ async def test_failover_tries_the_fallback_provider_once(monkeypatch, fast_pacin
     assert (rows[-1]["provider"], rows[-1]["failed"]) == ("gemini", False)
 
 
+async def test_a_permanent_error_is_not_retried(monkeypatch, fast_pacing):
+    monkeypatch.setattr(settings, "llm_fallback_provider", "")
+    llm._bootstrap()
+    attempts = 0
+
+    async def not_configured(prompt, temperature):
+        nonlocal attempts
+        attempts += 1
+        raise RuntimeError("GROQ_API_KEY is not configured.")
+
+    _stub_provider(monkeypatch, not_configured)
+    slept: list[float] = []
+    real_sleep = asyncio.sleep
+    monkeypatch.setattr(llm.asyncio, "sleep", lambda d=0: (slept.append(d), real_sleep(0))[1])
+
+    with pytest.raises(RuntimeError, match="not configured"):
+        await llm.generate("q")
+    assert attempts == 1  # tried once, gave up -- no backoff
+    assert slept == []
+
+
 async def test_a_transient_error_is_retried_then_succeeds(monkeypatch, fast_pacing):
     monkeypatch.setattr(settings, "llm_fallback_provider", "")
     llm._bootstrap()

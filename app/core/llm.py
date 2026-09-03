@@ -287,10 +287,29 @@ async def _dispatch(prompt: str, temperature: float, primary: LLMProvider, user_
     raise last_exc
 
 
+# Substrings that mark a permanent failure -- retrying it just adds
+# 1s + 2s of backoff before the same error, and delays the deterministic
+# fallback the caller has waiting. A missing key or an uninstalled SDK
+# won't fix itself between attempts.
+_PERMANENT_ERROR_MARKERS = (
+    "not configured",
+    "requires the",
+    "pip install",
+    "unsupported llm provider",
+    "api key is not",
+)
+
+
+def _is_permanent(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return any(marker in msg for marker in _PERMANENT_ERROR_MARKERS)
+
+
 async def _with_retry(provider: LLMProvider, prompt: str, temperature: float) -> LLMResult:
-    """Three attempts, exponential backoff, for every provider -- not just
-    Groq's own RateLimitError. A transient 5xx or a dropped connection is
-    just as worth retrying."""
+    """Three attempts with exponential backoff, for every provider -- a
+    transient 5xx, a rate-limit, or a dropped connection from any of them
+    is worth retrying. A *permanent* error (no key, no SDK) is raised
+    immediately: retrying it only delays the caller's fallback."""
     attempts = 3
     for attempt in range(attempts):
         try:
@@ -301,8 +320,8 @@ async def _with_retry(provider: LLMProvider, prompt: str, temperature: float) ->
             if provider is LLMProvider.BEDROCK:
                 return await _call_bedrock(prompt, temperature)
             raise RuntimeError(f"Unsupported LLM provider: {provider}")
-        except Exception:
-            if attempt == attempts - 1:
+        except Exception as exc:
+            if attempt == attempts - 1 or _is_permanent(exc):
                 raise
             await asyncio.sleep(2**attempt)
     raise RuntimeError("unreachable")
