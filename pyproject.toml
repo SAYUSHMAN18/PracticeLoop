@@ -28,6 +28,11 @@ dependencies = [
     # Loop Mentor and every other LLM-authored panel answers in markdown;
     # html=False makes rendering it safe without a separate sanitizer.
     "markdown-it-py>=3.0",
+    # Server-side syntax highlighting for code -- fenced blocks in the
+    # mentor's replies and the code_snippet on a practice question. No
+    # client JS, and the colour stylesheet is generated and vendored
+    # (scripts/gen_pygments_css.py) to satisfy style-src 'self'.
+    "pygments>=2.18",
 ]
 
 [tool.setuptools.packages.find]

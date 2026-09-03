@@ -49,3 +49,14 @@ templates.env.globals["asset_version"] = _static_asset_version
 # The absolute origin this site is served from. Templates build canonical
 # and Open Graph URLs off it, so no route has to pass one down by hand.
 templates.env.globals["public_base_url"] = settings.public_base_url.rstrip("/")
+
+
+def _highlight_filter(code: str | None, language: str = "") -> str:
+    """`{{ snippet | highlight(lang) }}` -> Pygments HTML. Returns Markup
+    (via highlight_code) so Jinja doesn't re-escape the spans."""
+    from app.core.highlighting import highlight_code
+
+    return highlight_code(code or "", language or "")
+
+
+templates.env.filters["highlight"] = _highlight_filter

@@ -36,7 +36,24 @@ def test_tables_become_real_tables():
 def test_code_spans_and_fences_render():
     html = render_markdown("Run `pip install x`:\n\n```python\nprint('hi')\n```")
     assert "<code>pip install x</code>" in html
-    assert "<pre>" in html
+    # Fenced blocks go through Pygments: a <pre class="highlight"> with
+    # token spans, not markdown-it's bare <pre><code>.
+    assert '<pre class="highlight">' in html
+    assert 'class="nb">print' in html  # 'print' highlighted as a builtin
+
+
+def test_a_fence_with_no_language_still_renders_as_a_block():
+    html = render_markdown("```\njust text\n```")
+    assert '<pre class="highlight">just text' in html
+
+
+def test_a_fence_in_an_unknown_language_falls_back_cleanly():
+    # An unrecognized language name must never raise -- worst case Pygments
+    # guesses a lexer, best case a plain block. Either way it's a <pre> and
+    # the source text survives.
+    html = render_markdown("```wubbalubba\nxyzzy_var = 1\n```")
+    assert "<pre" in html
+    assert "xyzzy_var" in html
 
 
 def test_raw_html_in_model_output_is_escaped_not_executed():

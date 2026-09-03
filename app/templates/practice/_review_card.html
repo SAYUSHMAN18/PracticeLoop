@@ -38,7 +38,7 @@
         <label for="f-answer">Your answer</label>
         <textarea id="f-answer" name="answer" rows="4" autofocus></textarea>
         {% if card.example %}<p class="muted">Example context: {{ card.example }}</p>{% endif %}
-        {% if card.code_snippet %}<pre style="background:#10131a;padding:0.75rem;border-radius:6px;overflow-x:auto;">{{ card.code_snippet }}</pre>{% endif %}
+        {% if card.code_snippet %}{{ card.code_snippet | highlight(card.language) }}{% endif %}
         <button type="submit">Grade my answer</button>
       </form>
     {% else %}
@@ -46,7 +46,7 @@
         <summary style="cursor:pointer;color:var(--accent);">Show answer (space)</summary>
         <p style="margin-top:0.5rem;">{{ card.answer }}</p>
         {% if card.example %}<p class="muted">Example: {{ card.example }}</p>{% endif %}
-        {% if card.code_snippet %}<pre style="background:#10131a;padding:0.75rem;border-radius:6px;overflow-x:auto;">{{ card.code_snippet }}</pre>{% endif %}
+        {% if card.code_snippet %}{{ card.code_snippet | highlight(card.language) }}{% endif %}
       </details>
       <form hx-post="/practice/review/{{ card.question_id }}" hx-target="#review-card" hx-swap="innerHTML">
         <label style="margin-top:0.75rem;">How well did you know it? <span class="muted">(keys 1-5)</span></label>

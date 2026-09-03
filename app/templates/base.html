@@ -39,6 +39,10 @@
      the faces it actually needs. #}
   <link rel="stylesheet" href="/static/fonts.css?v={{ asset_version("fonts.css") }}">
   <link rel="stylesheet" href="/static/style.css?v={{ asset_version("style.css") }}">
+  {# Syntax-highlight colours for Pygments output (lesson examples, code
+     flashcards, fenced blocks in mentor replies). Generated, self-hosted --
+     the strict style-src 'self' CSP rules out a CDN. #}
+  <link rel="stylesheet" href="/static/vendor/pygments.css?v={{ asset_version('vendor/pygments.css') }}">
   <link rel="manifest" href="/static/manifest.json">
   <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#211c16">

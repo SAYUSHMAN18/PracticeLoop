@@ -27,6 +27,8 @@ from functools import lru_cache
 from markdown_it import MarkdownIt
 from markupsafe import Markup
 
+from app.core.highlighting import _markdown_highlight
+
 
 @lru_cache(maxsize=2)
 def _renderer(emphasis: bool) -> MarkdownIt:
@@ -34,8 +36,16 @@ def _renderer(emphasis: bool) -> MarkdownIt:
     # stays off: it rewrites anything that merely looks like a URL, which
     # turns a mention of "app.py" or a bare domain in a code discussion into
     # a link nobody asked for.
+    #
+    # `highlight` runs fenced code blocks through Pygments. markdown-it drops
+    # the hook's return value in verbatim, which is safe here because
+    # _markdown_highlight only ever returns Pygments spans or an escaped
+    # block -- never the raw source.
     md = (
-        MarkdownIt("commonmark", {"html": False, "linkify": False, "breaks": True})
+        MarkdownIt(
+            "commonmark",
+            {"html": False, "linkify": False, "breaks": True, "highlight": _markdown_highlight},
+        )
         .enable("table")
         .enable("strikethrough")
     )
