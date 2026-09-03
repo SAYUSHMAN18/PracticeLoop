@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app.auth.service import set_role
 from app.core.db import get_pool
 from app.core.deps import inject_current_user, require_user_id
+from app.core.links import clean_url
 from app.core.templates import templates
 from app.core.usertime import clamp_rollover_hour
 from app.profile import service
@@ -94,6 +95,9 @@ async def save_profile(
     day_rollover_hour: str = Form("0"),
     proficiency_level: str = Form(""),
     review_reminders: bool = Form(False),
+    github_url: str = Form(""),
+    linkedin_url: str = Form(""),
+    website_url: str = Form(""),
     resume: UploadFile | None = File(None),
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
@@ -139,6 +143,13 @@ async def save_profile(
     # Checkbox is "send me reminders" (checked = on); the column stores the
     # opposite, so an absent checkbox means opted out.
     await service.set_digest_opt_out(pool, user_id, not review_reminders)
+    await service.set_profile_links(
+        pool,
+        user_id,
+        github=clean_url(github_url, host_contains="github.com"),
+        linkedin=clean_url(linkedin_url, host_contains="linkedin.com"),
+        website=clean_url(website_url),
+    )
 
     profile = await service.get_profile(pool, user_id)
     return templates.TemplateResponse(

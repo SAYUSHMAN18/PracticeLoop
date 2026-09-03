@@ -137,6 +137,7 @@ async def create_project(
 async def list_projects(pool: asyncpg.Pool, user_id: int) -> list[dict]:
     rows = await pool.fetch(
         """SELECT p.project_id, p.title, p.status, p.created_at, p.submitted_at,
+                  p.repo_url, p.submission_link,
                   count(m.milestone_id) AS total_milestones, count(m.completed_at) AS completed_milestones
            FROM projects p
            LEFT JOIN project_milestones m ON m.project_id = p.project_id
@@ -159,7 +160,7 @@ async def list_projects(pool: asyncpg.Pool, user_id: int) -> list[dict]:
 async def get_project(pool: asyncpg.Pool, user_id: int, project_id: int) -> dict:
     project = await pool.fetchrow(
         """SELECT project_id, path_id, title, brief, status, submission_text, submission_link,
-                  feedback, created_at, submitted_at
+                  repo_url, feedback, created_at, submitted_at
            FROM projects WHERE project_id = $1 AND user_id = $2""",
         project_id,
         user_id,
@@ -273,13 +274,16 @@ async def get_portfolio(pool: asyncpg.Pool, user_id: int, *, streak_days: int) -
     from app.gamification.service import get_badges, get_xp_summary
     from app.learning_paths.service import list_paths
 
-    projects, paths, diagnostics, mastery, badges, xp = await asyncio.gather(
+    projects, paths, diagnostics, mastery, badges, xp, links_row = await asyncio.gather(
         list_projects(pool, user_id),
         list_paths(pool, user_id),
         list_diagnostic_attempts(pool, user_id),
         topic_mastery(pool, user_id),
         get_badges(pool, user_id, streak_days=streak_days),
         get_xp_summary(pool, user_id),
+        pool.fetchrow(
+            "SELECT github_url, linkedin_url, website_url FROM profiles WHERE user_id = $1", user_id
+        ),
     )
 
     return {
@@ -289,7 +293,21 @@ async def get_portfolio(pool: asyncpg.Pool, user_id: int, *, streak_days: int) -
         "top_mastery": sorted(mastery, key=lambda m: -m["mastery_score"])[:5],
         "earned_badges": [b for b in badges if b["earned"]],
         "xp": xp,
+        "links": dict(links_row) if links_row else {},
     }
+
+
+async def set_project_repo(pool: asyncpg.Pool, user_id: int, project_id: int, repo_url: str) -> None:
+    """Attach (or clear, with "") the code link for a project. repo_url is
+    expected already cleaned by app.core.links.clean_url."""
+    result = await pool.execute(
+        "UPDATE projects SET repo_url = $3 WHERE project_id = $1 AND user_id = $2",
+        project_id,
+        user_id,
+        repo_url,
+    )
+    if result == "UPDATE 0":
+        raise ProjectNotFound(project_id)
 
 
 async def delete_project(pool: asyncpg.Pool, user_id: int, project_id: int) -> None:

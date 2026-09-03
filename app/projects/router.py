@@ -61,6 +61,22 @@ async def project_detail(
     return templates.TemplateResponse(request, "projects/detail.html", {"project": project})
 
 
+@router.post("/projects/{project_id}/repo")
+async def set_project_repo(
+    project_id: int,
+    repo_url: str = Form(""),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    from app.core.links import clean_url
+
+    try:
+        await service.set_project_repo(pool, user_id, project_id, clean_url(repo_url))
+    except service.ProjectNotFound as exc:
+        raise HTTPException(status_code=404) from exc
+    return RedirectResponse(f"/projects/{project_id}", status_code=303)
+
+
 @router.post("/projects/{project_id}/milestones/{milestone_id}/toggle")
 async def toggle_milestone(
     project_id: int,

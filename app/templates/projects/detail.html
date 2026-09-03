@@ -20,6 +20,20 @@
     </form>
   </div>
 
+  <form method="post" action="/projects/{{ project.project_id }}/repo" class="project-repo-form">
+    <label for="f-repo">Code repository</label>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      <input id="f-repo" type="url" name="repo_url" value="{{ project.repo_url }}"
+             placeholder="https://github.com/you/project" style="flex:1;min-width:200px;">
+      <button type="submit" class="secondary" style="margin:0;">Save link</button>
+    </div>
+    {% if project.repo_url %}
+      <p class="muted" style="font-size:0.82rem;margin-top:0.35rem;">
+        <a href="{{ project.repo_url }}" target="_blank" rel="noopener">{{ project.repo_url }}</a> &mdash; shows on your portfolio.
+      </p>
+    {% endif %}
+  </form>
+
   <h2 style="margin-top:1.25rem;">Milestones</h2>
   {% for milestone in project.milestones %}
     <div style="display:flex;align-items:center;gap:0.55rem;padding:0.35rem 0;">

@@ -1814,3 +1814,26 @@ h1, h2, h3, h4, p, li, td, th, summary, label, .tag { overflow-wrap: break-word;
 .subject-item:first-of-type { border-top: none; }
 .subject-blurb { font-size: 0.85rem; margin-top: 0.2rem; }
 .subject-no-match { padding: 0.85rem 0 0.2rem; font-size: 0.88rem; }
+
+/* --- Portfolio contact links (portfolio/index.html) --- */
+.portfolio-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0 1.25rem;
+}
+.portfolio-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.86rem;
+  font-weight: 600;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.portfolio-links a:hover { border-color: var(--accent); background: var(--accent-soft); }
+.portfolio-links a .ico { width: 16px; height: 16px; }

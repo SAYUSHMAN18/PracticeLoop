@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Portfolio - PracticeLoop{% endblock %}
 {% block content %}
 <h1>Portfolio</h1>
@@ -6,6 +7,18 @@
   A private snapshot of what you've actually done -- built from your real activity, not a
   self-reported summary. Only visible to you for now.
 </p>
+
+{% if links.github_url or links.linkedin_url or links.website_url %}
+  <p class="portfolio-links">
+    {% if links.github_url %}<a href="{{ links.github_url }}" target="_blank" rel="noopener">{{ icon("github") }}<span>GitHub</span></a>{% endif %}
+    {% if links.linkedin_url %}<a href="{{ links.linkedin_url }}" target="_blank" rel="noopener">{{ icon("link") }}<span>LinkedIn</span></a>{% endif %}
+    {% if links.website_url %}<a href="{{ links.website_url }}" target="_blank" rel="noopener">{{ icon("explore") }}<span>Website</span></a>{% endif %}
+  </p>
+{% else %}
+  <p class="muted" style="font-size:0.85rem;">
+    <a href="/profile">Add your GitHub, LinkedIn, or website</a> so a shared portfolio points back to you.
+  </p>
+{% endif %}
 
 <div class="card">
   <div class="stat-grid">
@@ -33,7 +46,11 @@
   {% for project in submitted_projects %}
     <div class="question-item">
       <a href="/projects/{{ project.project_id }}" style="color:var(--text);text-decoration:none;font-weight:700;">{{ project.title }}</a>
-      <div class="muted" style="font-size:0.82rem;margin-top:0.2rem;">Submitted {{ project.submitted_at.strftime('%b %d, %Y') }}</div>
+      <div class="muted" style="font-size:0.82rem;margin-top:0.2rem;">
+        Submitted {{ project.submitted_at.strftime('%b %d, %Y') }}
+        {% set code = project.repo_url or project.submission_link %}
+        {% if code %} &middot; <a href="{{ code }}" target="_blank" rel="noopener">code &rarr;</a>{% endif %}
+      </div>
     </div>
   {% else %}
     <p class="muted">No submitted projects yet.</p>

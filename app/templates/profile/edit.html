@@ -84,6 +84,21 @@
       <span>Email me when I have review cards due and haven't practiced yet. Needs a confirmed email address.</span>
     </label>
 
+    <h2 style="margin-top:1.5rem;border-top:1px solid var(--border);padding-top:1rem;">Links</h2>
+    <p class="muted" style="margin-top:-0.3rem;font-size:0.85rem;">Shown on your portfolio. Leave blank to hide.</p>
+    <div class="form-row">
+      <div>
+        <label for="f-github">GitHub</label>
+        <input id="f-github" type="url" name="github_url" value="{{ profile.github_url }}" placeholder="https://github.com/you">
+      </div>
+      <div>
+        <label for="f-linkedin">LinkedIn</label>
+        <input id="f-linkedin" type="url" name="linkedin_url" value="{{ profile.linkedin_url }}" placeholder="https://linkedin.com/in/you">
+      </div>
+    </div>
+    <label for="f-website">Website or portfolio</label>
+    <input id="f-website" type="url" name="website_url" value="{{ profile.website_url }}" placeholder="https://your-site.com">
+
     <h2 style="margin-top:1.5rem;border-top:1px solid var(--border);padding-top:1rem;">Resume</h2>
     <label for="f-resume">Resume (.pdf, .docx, .txt, .md, or .csv) &mdash; optional, replaces the stored text</label>
     <input id="f-resume" type="file" name="resume" accept=".pdf,.docx,.txt,.md,.csv">

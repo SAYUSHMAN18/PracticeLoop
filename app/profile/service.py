@@ -36,8 +36,9 @@ async def get_profile(pool: asyncpg.Pool, user_id: int) -> asyncpg.Record:
     return await pool.fetchrow(
         """SELECT user_id, target_role, target_companies, resume_text,
                   goal_type, target_date, daily_time_budget_minutes, timezone,
-                  day_rollover_hour, digest_opt_out, onboarding_completed,
-                  proficiency_level, proficiency_source
+                  day_rollover_hour, digest_opt_out, github_url, linkedin_url,
+                  website_url, onboarding_completed, proficiency_level,
+                  proficiency_source
            FROM profiles WHERE user_id = $1""",
         user_id,
     )
@@ -61,6 +62,20 @@ async def set_digest_opt_out(pool: asyncpg.Pool, user_id: int, opted_out: bool) 
     (not another update_profile param) because the one-click unsubscribe
     link sets it too, from outside the profile form."""
     await pool.execute("UPDATE profiles SET digest_opt_out = $2 WHERE user_id = $1", user_id, opted_out)
+
+
+async def set_profile_links(
+    pool: asyncpg.Pool, user_id: int, *, github: str, linkedin: str, website: str
+) -> None:
+    """The portfolio's contact links. Values are expected to be already
+    cleaned (app.core.links.clean_url) -- empty string means "no link"."""
+    await pool.execute(
+        "UPDATE profiles SET github_url = $2, linkedin_url = $3, website_url = $4 WHERE user_id = $1",
+        user_id,
+        github,
+        linkedin,
+        website,
+    )
 
 
 async def update_profile(
