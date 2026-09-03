@@ -1,0 +1,28 @@
+name: Review-reminder digest
+
+on:
+  schedule:
+    # Twice a day so it lands in a reasonable local morning/evening for
+    # most timezones. The endpoint dedups on last_digest_at (18h), so the
+    # second run only reaches people the first one skipped.
+    - cron: "0 8 * * *"
+    - cron: "0 18 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Warm the instance
+        run: |
+          curl -sf --retry 6 --retry-delay 10 --max-time 30 \
+            https://practiceloop.onrender.com/healthz
+
+      - name: Send digest
+        # -f turns a bad run into a failed workflow, which GitHub emails
+        # the repo owner about -- that's the alerting.
+        run: |
+          curl -sf --max-time 120 \
+            -X POST \
+            -H "Authorization: Bearer ${{ secrets.DIGEST_CRON_TOKEN }}" \
+            https://practiceloop.onrender.com/cron/digest

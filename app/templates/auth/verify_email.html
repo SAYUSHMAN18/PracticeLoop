@@ -1,0 +1,18 @@
+{% extends "base_auth.html" %}
+{% block title %}{{ "Email confirmed" if ok else "Link not valid" }} - PracticeLoop{% endblock %}
+{% block content %}
+<div class="card">
+  {% if ok %}
+    <h1>Email confirmed</h1>
+    <p class="muted" style="margin-top:-0.3rem;">Thanks &mdash; review reminders are on. You're signed in.</p>
+    <a class="btn" href="/dashboard" style="width:100%;justify-content:center;margin-top:1rem;">Go to your dashboard</a>
+  {% else %}
+    <h1>That link isn't valid</h1>
+    <p class="muted" style="margin-top:-0.3rem;">
+      It may have already been used, or a newer one was sent. Sign in and use
+      the "Resend" button on your dashboard to get a fresh link.
+    </p>
+    <a class="btn secondary" href="/login" style="width:100%;justify-content:center;margin-top:1rem;">Log in</a>
+  {% endif %}
+</div>
+{% endblock %}

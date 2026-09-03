@@ -27,6 +27,7 @@ from app.core.middleware import (
 )
 from app.core.templates import STATIC_DIR, templates
 from app.dashboard.router import router as dashboard_router
+from app.digest.router import router as digest_router
 from app.documents.router import router as documents_router
 from app.guardian.router import router as guardian_router
 from app.jobs.router import router as jobs_router
@@ -104,6 +105,7 @@ app.include_router(notifications_router)
 app.include_router(analytics_router)
 app.include_router(account_router)
 app.include_router(admin_router)
+app.include_router(digest_router)
 # Last: its "/" must not shadow anything, and it is the only public surface.
 app.include_router(public_router)
 

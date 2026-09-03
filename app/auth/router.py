@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app.auth import service
 from app.core.config import settings
 from app.core.db import get_pool
+from app.core.deps import require_user_id
 from app.core.email import send_email
 from app.core.logging import get_logger
 from app.core.security import InvalidEmail, InvalidPassword, log_in, log_out, validate_email
@@ -56,6 +57,11 @@ async def signup(
             await seed_starter_deck(pool, user_id)
         except Exception:
             logger.exception("Starter deck seeding failed for new user_id=%s", user_id)
+
+    try:
+        await service.send_verification_email(pool, user_id, email)
+    except Exception:
+        logger.exception("Verification email failed for new user_id=%s", user_id)
 
     log_in(request, user_id)
     # A brand-new profile row is always onboarding_completed = false, but
@@ -112,6 +118,40 @@ async def login(
 async def logout(request: Request):
     log_out(request)
     return RedirectResponse("/login", status_code=303)
+
+
+# --- email verification -------------------------------------------------
+
+
+@router.get("/verify-email")
+async def verify_email(request: Request, token: str = "", pool=Depends(get_pool)):
+    user_id = await service.consume_email_verification_token(pool, token) if token else None
+    if user_id is None:
+        return templates.TemplateResponse(
+            request,
+            "auth/verify_email.html",
+            {"ok": False},
+            status_code=400,
+        )
+    # If they clicked the link in a different browser, sign them in too --
+    # a verified email and a live session is the least surprising outcome.
+    log_in(request, user_id)
+    return templates.TemplateResponse(request, "auth/verify_email.html", {"ok": True})
+
+
+@router.post("/verify-email/resend")
+async def resend_verification(
+    request: Request,
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    row = await pool.fetchrow("SELECT email, email_verified_at FROM users WHERE user_id = $1", user_id)
+    if row is not None and row["email_verified_at"] is None:
+        try:
+            await service.send_verification_email(pool, user_id, row["email"])
+        except Exception:
+            logger.exception("Resend verification failed for user_id=%s", user_id)
+    return RedirectResponse("/dashboard?verify_sent=1", status_code=303)
 
 
 # --- password reset ------------------------------------------------------

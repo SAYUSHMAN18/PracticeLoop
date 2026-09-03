@@ -1711,3 +1711,20 @@ h1, h2, h3, h4, p, li, td, th, summary, label, .tag { overflow-wrap: break-word;
   font-size: 0.9rem;
   border-radius: 4px;
 }
+
+/* --- Email verification banner (base.html) --- */
+.verify-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-2);
+  border-radius: 6px;
+  padding: 0.6rem 0.9rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.88rem;
+}
+.verify-banner .link-button { font-size: 0.85rem; white-space: nowrap; }

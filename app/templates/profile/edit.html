@@ -79,6 +79,11 @@
       {% endfor %}
     </select>
 
+    <label style="display:flex;align-items:flex-start;gap:0.6rem;margin-top:1rem;font-size:0.9rem;">
+      <input type="checkbox" name="review_reminders" value="1" {{ "checked" if not profile.digest_opt_out }}>
+      <span>Email me when I have review cards due and haven't practiced yet. Needs a confirmed email address.</span>
+    </label>
+
     <h2 style="margin-top:1.5rem;border-top:1px solid var(--border);padding-top:1rem;">Resume</h2>
     <label for="f-resume">Resume (.pdf, .docx, .txt, .md, or .csv) &mdash; optional, replaces the stored text</label>
     <input id="f-resume" type="file" name="resume" accept=".pdf,.docx,.txt,.md,.csv">

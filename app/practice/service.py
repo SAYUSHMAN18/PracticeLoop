@@ -12,7 +12,7 @@ from app.practice.extraction import parse_llm_json_fields
 from app.practice.fsrs_scheduler import schedule_review
 
 
-async def _day_settings(pool: asyncpg.Pool, user_id: int) -> tuple[str, int]:
+async def day_settings(pool: asyncpg.Pool, user_id: int) -> tuple[str, int]:
     """(timezone, day_rollover_hour) for this user -- the inputs to
     today_for(). A missing profile row (shouldn't happen; created with the
     user) is treated as UTC/midnight rather than raising."""
@@ -24,7 +24,7 @@ async def _day_settings(pool: asyncpg.Pool, user_id: int) -> tuple[str, int]:
 
 async def user_today(pool: asyncpg.Pool, user_id: int) -> date:
     """The current study day in the user's timezone (see app.core.usertime)."""
-    tz_name, rollover = await _day_settings(pool, user_id)
+    tz_name, rollover = await day_settings(pool, user_id)
     return today_for(tz_name, rollover)
 
 
@@ -402,7 +402,7 @@ async def streak_days(pool: asyncpg.Pool, user_id: int) -> int:
     streak across up to N single-day gaps, counted back from today. Nothing
     is decremented here -- the allowance simply regenerates weekly. A
     two-day gap always breaks the streak regardless of how many are held."""
-    tz_name, rollover = await _day_settings(pool, user_id)
+    tz_name, rollover = await day_settings(pool, user_id)
     shields = await pool.fetchval("SELECT streak_shields FROM profiles WHERE user_id = $1", user_id) or 0
 
     rows = await pool.fetch(

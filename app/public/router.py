@@ -151,6 +151,8 @@ async def robots() -> str:
         "/notifications",
         "/mentor",
         "/welcome",
+        "/verify-email",
+        "/digest",
     ]
     lines = [
         "User-agent: *",

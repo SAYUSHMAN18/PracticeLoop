@@ -93,6 +93,7 @@ async def save_profile(
     timezone: str = Form(""),
     day_rollover_hour: str = Form("0"),
     proficiency_level: str = Form(""),
+    review_reminders: bool = Form(False),
     resume: UploadFile | None = File(None),
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
@@ -135,6 +136,9 @@ async def save_profile(
         day_rollover_hour=clamp_rollover_hour(day_rollover_hour),
         proficiency_level=_parse_proficiency(proficiency_level),
     )
+    # Checkbox is "send me reminders" (checked = on); the column stores the
+    # opposite, so an absent checkbox means opted out.
+    await service.set_digest_opt_out(pool, user_id, not review_reminders)
 
     profile = await service.get_profile(pool, user_id)
     return templates.TemplateResponse(

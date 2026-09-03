@@ -36,8 +36,8 @@ async def get_profile(pool: asyncpg.Pool, user_id: int) -> asyncpg.Record:
     return await pool.fetchrow(
         """SELECT user_id, target_role, target_companies, resume_text,
                   goal_type, target_date, daily_time_budget_minutes, timezone,
-                  day_rollover_hour, onboarding_completed, proficiency_level,
-                  proficiency_source
+                  day_rollover_hour, digest_opt_out, onboarding_completed,
+                  proficiency_level, proficiency_source
            FROM profiles WHERE user_id = $1""",
         user_id,
     )
@@ -54,6 +54,13 @@ async def needs_onboarding(pool: asyncpg.Pool, user_id: int) -> bool:
 
 async def mark_onboarded(pool: asyncpg.Pool, user_id: int) -> None:
     await pool.execute("UPDATE profiles SET onboarding_completed = true WHERE user_id = $1", user_id)
+
+
+async def set_digest_opt_out(pool: asyncpg.Pool, user_id: int, opted_out: bool) -> None:
+    """Whether the re-engagement digest skips this user. Its own function
+    (not another update_profile param) because the one-click unsubscribe
+    link sets it too, from outside the profile form."""
+    await pool.execute("UPDATE profiles SET digest_opt_out = $2 WHERE user_id = $1", user_id, opted_out)
 
 
 async def update_profile(

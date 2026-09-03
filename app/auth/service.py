@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 import asyncpg
 
 from app.core.config import settings
+from app.core.email import send_email
 from app.core.security import hash_password, verify_password
 
 # A syntactically valid bcrypt hash of an unguessable password, compared
@@ -104,7 +105,9 @@ async def _register_failed_login(pool: asyncpg.Pool, user_id: int, current_count
 
 
 async def get_user(pool: asyncpg.Pool, user_id: int) -> asyncpg.Record | None:
-    return await pool.fetchrow("SELECT user_id, email, name, role FROM users WHERE user_id = $1", user_id)
+    return await pool.fetchrow(
+        "SELECT user_id, email, name, role, email_verified_at FROM users WHERE user_id = $1", user_id
+    )
 
 
 async def get_user_by_email(pool: asyncpg.Pool, email: str) -> asyncpg.Record | None:
@@ -169,6 +172,65 @@ async def consume_password_reset_token(pool: asyncpg.Pool, token: str, new_passw
                 password_hash,
             )
     return row["user_id"]
+
+
+# --- email verification --------------------------------------------------
+
+
+async def create_email_verification_token(pool: asyncpg.Pool, user_id: int) -> str:
+    """A fresh verification token. Any earlier unused one for this user is
+    dropped so only the newest link works (matters for "resend")."""
+    token = secrets.token_urlsafe(32)
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "DELETE FROM email_verification_tokens WHERE user_id = $1 AND used_at IS NULL", user_id
+            )
+            await conn.execute(
+                "INSERT INTO email_verification_tokens (token_hash, user_id) VALUES ($1, $2)",
+                _hash_token(token),
+                user_id,
+            )
+    return token
+
+
+async def consume_email_verification_token(pool: asyncpg.Pool, token: str) -> int | None:
+    """Mark the account verified. Returns the user_id, or None if the token
+    is unknown or already used. No expiry -- an unverified account isn't a
+    live security risk, so a late click still works."""
+    token_hash = _hash_token(token)
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                "SELECT user_id, used_at FROM email_verification_tokens WHERE token_hash = $1 FOR UPDATE",
+                token_hash,
+            )
+            if row is None or row["used_at"] is not None:
+                return None
+            await conn.execute(
+                "UPDATE email_verification_tokens SET used_at = now() WHERE token_hash = $1", token_hash
+            )
+            await conn.execute(
+                "UPDATE users SET email_verified_at = coalesce(email_verified_at, now()) WHERE user_id = $1",
+                row["user_id"],
+            )
+    return row["user_id"]
+
+
+async def send_verification_email(pool: asyncpg.Pool, user_id: int, email: str) -> None:
+    """Best-effort -- a send failure is logged, never raised: signup and
+    "resend" must not 500 because SMTP hiccuped."""
+    token = await create_email_verification_token(pool, user_id)
+    url = f"{settings.public_base_url.rstrip('/')}/verify-email?token={token}"
+    await send_email(
+        email,
+        "Confirm your PracticeLoop email",
+        "Welcome to PracticeLoop. Confirm this is your address so we can send "
+        "you review reminders:\n\n"
+        f"{url}\n\n"
+        "You can use the app before confirming -- this just switches on the "
+        "reminder emails.",
+    )
 
 
 _VALID_ROLES = {"student", "teacher"}

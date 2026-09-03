@@ -155,6 +155,19 @@
 
     <main class="app-main" id="main-content" tabindex="-1">
       <div class="container">
+        {% set cu = request.state.current_user %}
+        {% if cu and not cu.email_verified_at %}
+          <div class="verify-banner">
+            {% if request.query_params.get("verify_sent") %}
+              <span>Verification link sent to {{ cu.email }}. Check your inbox &mdash; and spam.</span>
+            {% else %}
+              <span>Confirm your email ({{ cu.email }}) to switch on review reminders.</span>
+              <form method="post" action="/verify-email/resend" style="margin:0;">
+                <button type="submit" class="link-button">Resend link</button>
+              </form>
+            {% endif %}
+          </div>
+        {% endif %}
         {% block content %}{% endblock %}
       </div>
     </main>

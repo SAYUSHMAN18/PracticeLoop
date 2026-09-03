@@ -73,6 +73,11 @@ class Settings(BaseSettings):
     # in the product grants it, and an unset value means no admin at all.
     admin_emails: str = ""
 
+    # Bearer token for POST /cron/digest (the re-engagement email job).
+    # Fail-closed like jobs_cron_token: unset means the endpoint 503s, so
+    # there's no open-and-disabled state.
+    digest_cron_token: str = ""
+
     # Public identity -- used for canonical URLs, Open Graph tags, the
     # sitemap, and llms.txt. Must be the absolute origin the site is
     # actually served from: a canonical pointing somewhere else is worse
