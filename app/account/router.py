@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.account import service
-from app.auth.service import InvalidCredentials, authenticate
+from app.auth.service import AccountLocked, InvalidCredentials, authenticate
 from app.core.db import get_pool
 from app.core.deps import inject_current_user, require_user_id
 from app.core.security import log_out
@@ -41,7 +41,10 @@ async def delete_account(
     cu = request.state.current_user
     try:
         await authenticate(pool, cu["email"], password)
-    except InvalidCredentials:
+    except (InvalidCredentials, AccountLocked):
+        # AccountLocked can only happen if this same form was fumbled many
+        # times -- treat it the same as a wrong password here (the account
+        # is still theirs, still not deleted, and the lock clears itself).
         return templates.TemplateResponse(
             request,
             "account/index.html",

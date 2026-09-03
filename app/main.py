@@ -70,6 +70,8 @@ app.add_middleware(
     else {
         "/login": (10, 60.0),
         "/signup": (5, 60.0),
+        "/forgot-password": (5, 300.0),
+        "/reset-password": (10, 300.0),
     },
 )
 app.add_middleware(

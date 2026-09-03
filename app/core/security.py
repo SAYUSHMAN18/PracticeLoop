@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import bcrypt
 from starlette.requests import Request
 
@@ -7,9 +9,24 @@ SESSION_USER_KEY = "user_id"
 MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_BYTES = 72  # bcrypt's hard limit; 4.x raises instead of truncating
 
+# Deliberately loose: one @, at least one dot in the domain, no spaces. The
+# only real check for an address is whether mail to it is delivered -- this
+# just rejects the obvious typos ("me", "me@localhost") the browser's own
+# type="email" also catches, so a server-side POST can't slip past it.
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
 
 class InvalidPassword(Exception):
     pass
+
+
+class InvalidEmail(Exception):
+    pass
+
+
+def validate_email(email: str) -> None:
+    if not (0 < len(email) <= 254) or not _EMAIL_RE.match(email):
+        raise InvalidEmail("Enter a valid email address.")
 
 
 def validate_password(password: str) -> None:

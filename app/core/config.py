@@ -50,6 +50,24 @@ class Settings(BaseSettings):
     # Auth
     session_secret: str = DEFAULT_SESSION_SECRET
     disable_rate_limits: bool = False  # tests flip this on -- the limiter is per-IP
+    # Per-account lockout, layered on the per-IP rate limit: this many
+    # consecutive failed logins locks the account for lockout_minutes; any
+    # successful login clears the count.
+    login_lockout_threshold: int = 8
+    login_lockout_minutes: int = 15
+
+    # Email (password reset). backend: console | smtp. console just logs the
+    # message -- the reset flow still works end to end, it just never
+    # delivers. A real deploy sets EMAIL_BACKEND=smtp plus the SMTP_* vars
+    # (Gmail, SES, Postmark, Resend, Mailgun, a local relay -- all SMTP).
+    email_backend: str = "console"
+    email_from: str = ""
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_use_starttls: bool = True
+    smtp_use_ssl: bool = False
 
     # Public identity -- used for canonical URLs, Open Graph tags, the
     # sitemap, and llms.txt. Must be the absolute origin the site is

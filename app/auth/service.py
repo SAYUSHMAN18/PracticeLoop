@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import hashlib
+import secrets
+from datetime import datetime, timedelta, timezone
+
 import asyncpg
 
+from app.core.config import settings
 from app.core.security import hash_password, verify_password
 
 # A syntactically valid bcrypt hash of an unguessable password, compared
@@ -10,6 +15,9 @@ from app.core.security import hash_password, verify_password
 # password for a real one.
 _DUMMY_HASH = "$2b$12$C6UzMDM.H6dfI/f/IKcEeO0j5T6/vE9L8AGVqLC.CplfPfjJx1//G"
 
+# A reset link is good for this long from the moment it's issued.
+_RESET_TTL = timedelta(hours=1)
+
 
 class EmailAlreadyRegistered(Exception):
     pass
@@ -17,6 +25,15 @@ class EmailAlreadyRegistered(Exception):
 
 class InvalidCredentials(Exception):
     pass
+
+
+class AccountLocked(Exception):
+    """Too many consecutive failed logins. `minutes` is roughly how long
+    is left on the lock."""
+
+    def __init__(self, minutes: int):
+        super().__init__(f"locked for ~{minutes} more minutes")
+        self.minutes = minutes
 
 
 async def create_user(pool: asyncpg.Pool, email: str, password: str, name: str) -> int:
@@ -43,7 +60,14 @@ async def create_user(pool: asyncpg.Pool, email: str, password: str, name: str) 
 
 
 async def authenticate(pool: asyncpg.Pool, email: str, password: str) -> int:
-    row = await pool.fetchrow("SELECT user_id, password_hash FROM users WHERE email = $1", email)
+    row = await pool.fetchrow(
+        "SELECT user_id, password_hash, failed_login_count, locked_until FROM users WHERE email = $1",
+        email,
+    )
+    now = datetime.now(timezone.utc)
+    if row is not None and row["locked_until"] is not None and row["locked_until"] > now:
+        raise AccountLocked(max(1, round((row["locked_until"] - now).total_seconds() / 60)))
+
     # Always run the bcrypt comparison, even for a nonexistent email --
     # short-circuiting here would let a timing difference reveal which
     # emails are registered.
@@ -51,9 +75,32 @@ async def authenticate(pool: asyncpg.Pool, email: str, password: str) -> int:
     password_ok = verify_password(password, password_hash)
 
     if row is None or not password_ok:
+        if row is not None:
+            await _register_failed_login(pool, row["user_id"], row["failed_login_count"])
         raise InvalidCredentials(email)
 
+    if row["failed_login_count"]:
+        await pool.execute(
+            "UPDATE users SET failed_login_count = 0, locked_until = NULL WHERE user_id = $1",
+            row["user_id"],
+        )
     return row["user_id"]
+
+
+async def _register_failed_login(pool: asyncpg.Pool, user_id: int, current_count: int) -> None:
+    """Bump the counter; at the threshold, also stamp a lock. A successful
+    login (or a reset) clears both."""
+    new_count = current_count + 1
+    if new_count >= settings.login_lockout_threshold:
+        await pool.execute(
+            "UPDATE users SET failed_login_count = $2, "
+            "locked_until = now() + ($3 || ' minutes')::interval WHERE user_id = $1",
+            user_id,
+            new_count,
+            str(settings.login_lockout_minutes),
+        )
+    else:
+        await pool.execute("UPDATE users SET failed_login_count = $2 WHERE user_id = $1", user_id, new_count)
 
 
 async def get_user(pool: asyncpg.Pool, user_id: int) -> asyncpg.Record | None:
@@ -62,6 +109,66 @@ async def get_user(pool: asyncpg.Pool, user_id: int) -> asyncpg.Record | None:
 
 async def get_user_by_email(pool: asyncpg.Pool, email: str) -> asyncpg.Record | None:
     return await pool.fetchrow("SELECT user_id, email, name, role FROM users WHERE email = $1", email)
+
+
+# --- password reset -------------------------------------------------------
+
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+async def create_password_reset_token(pool: asyncpg.Pool, email: str) -> str | None:
+    """A fresh single-use token for this email's account, or None if no
+    such account exists -- the caller shows the same "check your email"
+    either way, so this never reveals which."""
+    user_id = await pool.fetchval("SELECT user_id FROM users WHERE email = $1", email)
+    if user_id is None:
+        return None
+    token = secrets.token_urlsafe(32)
+    await pool.execute(
+        "INSERT INTO password_reset_tokens (token_hash, user_id) VALUES ($1, $2)",
+        _hash_token(token),
+        user_id,
+    )
+    return token
+
+
+async def consume_password_reset_token(pool: asyncpg.Pool, token: str, new_password: str) -> int | None:
+    """Validate and spend the token, then set the new password -- all in
+    one transaction. Returns the user_id, or None if the token is unknown,
+    already used, or older than an hour. Raises InvalidPassword (from
+    hash_password) if the new password fails the length rules.
+
+    Spending it also deletes every other pending reset for that user and
+    clears any login lockout."""
+    token_hash = _hash_token(token)
+    row = await pool.fetchrow(
+        "SELECT user_id, created_at, used_at FROM password_reset_tokens WHERE token_hash = $1",
+        token_hash,
+    )
+    if row is None or row["used_at"] is not None:
+        return None
+    if datetime.now(timezone.utc) - row["created_at"] > _RESET_TTL:
+        return None
+
+    password_hash = hash_password(new_password)  # raises InvalidPassword
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "UPDATE password_reset_tokens SET used_at = now() WHERE token_hash = $1", token_hash
+            )
+            await conn.execute(
+                "DELETE FROM password_reset_tokens WHERE user_id = $1 AND used_at IS NULL",
+                row["user_id"],
+            )
+            await conn.execute(
+                "UPDATE users SET password_hash = $2, failed_login_count = 0, locked_until = NULL "
+                "WHERE user_id = $1",
+                row["user_id"],
+                password_hash,
+            )
+    return row["user_id"]
 
 
 _VALID_ROLES = {"student", "teacher"}
