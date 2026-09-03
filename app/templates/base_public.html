@@ -49,7 +49,7 @@
 
   <header class="public-nav">
     <a class="brand" href="/"><span>PracticeLoop</span></a>
-    <nav aria-label="Main">
+    <nav class="public-nav-links" aria-label="Main">
       <a href="#how-it-works">How it works</a>
       <a href="#features">Features</a>
       <a href="#faq">FAQ</a>
@@ -58,8 +58,21 @@
       <button type="button" class="icon-button" id="theme-toggle" aria-label="Change color theme">
         <span id="theme-toggle-label">Sys</span>
       </button>
-      <a class="btn secondary" href="/login">Log in</a>
+      <a class="btn secondary public-nav-login" href="/login">Log in</a>
       <a class="btn" href="/signup">Start free</a>
+
+      {# The narrow-width menu. A <details> rather than a scripted drawer:
+         it is keyboard- and screen-reader-accessible for free, it works
+         with JS disabled, and it needs no nonce'd script of its own. #}
+      <details class="public-nav-menu">
+        <summary aria-label="Open menu"><span aria-hidden="true"></span></summary>
+        <div class="public-nav-menu-panel">
+          <a href="#how-it-works">How it works</a>
+          <a href="#features">Features</a>
+          <a href="#faq">FAQ</a>
+          <a href="/login">Log in</a>
+        </div>
+      </details>
     </div>
   </header>
 
