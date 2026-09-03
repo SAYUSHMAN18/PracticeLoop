@@ -1,7 +1,13 @@
 from app.assessments import service as assessments_service
 from app.auth.service import create_user
 from app.core.db import get_pool
-from app.gamification.service import award_xp, get_badges, get_xp_summary
+from app.gamification.service import (
+    award_xp,
+    get_badges,
+    get_xp_summary,
+    grant_streak_shield,
+    record_newly_earned,
+)
 from app.learning_paths.service import create_path
 from app.practice.service import create_question, record_attempt, record_mcq_attempt
 from tests.conftest import signup
@@ -190,3 +196,67 @@ async def test_topbar_shows_xp_badge_only_once_xp_exists(client):
     after = await client.get("/dashboard")
     assert "topbar-xp" in after.text
     assert "Lv 1" in after.text
+
+
+# ---------- first-earned recording + notification ----------
+
+
+async def test_record_newly_earned_notifies_once_per_badge():
+    pool = await get_pool()
+    user_id = await create_user(pool, "badge-notify@example.com", "testpassword123", "Test")
+    q = await create_question(pool, user_id, {"question": "Q", "answer": "A", "topic": "t"})
+    await record_attempt(pool, user_id, q, rating=3)
+
+    badges = await get_badges(pool, user_id, streak_days=0)
+    fresh = await record_newly_earned(pool, user_id, badges)
+    assert {b["id"] for b in fresh} == {"first_steps"}
+
+    notes = await pool.fetch(
+        "SELECT kind, title FROM notifications WHERE user_id = $1 AND kind = 'badge_earned'", user_id
+    )
+    assert [n["title"] for n in notes] == ["Badge earned: First Steps"]
+
+    # Idempotent -- a second sync with the same earned set does nothing.
+    again = await record_newly_earned(pool, user_id, await get_badges(pool, user_id, streak_days=0))
+    assert again == []
+    count = await pool.fetchval(
+        "SELECT count(*) FROM notifications WHERE user_id = $1 AND kind = 'badge_earned'", user_id
+    )
+    assert count == 1
+
+
+async def test_tiered_badges_earn_independently_as_counts_climb():
+    pool = await get_pool()
+    user_id = await create_user(pool, "badge-tiers@example.com", "testpassword123", "Test")
+    for i in range(25):
+        q = await create_question(pool, user_id, {"question": f"Q{i}", "answer": "A", "topic": "t"})
+        await record_attempt(pool, user_id, q, rating=3)
+
+    by_id = {b["id"]: b for b in await get_badges(pool, user_id, streak_days=0)}
+    assert by_id["first_steps"]["earned"] and by_id["quarter_century"]["earned"]
+    assert not by_id["half_century"]["earned"]  # needs 50
+
+
+# ---------- streak shields ----------
+
+
+async def test_a_week_long_streak_grants_one_shield_per_week():
+    pool = await get_pool()
+    user_id = await create_user(pool, "shield-grant@example.com", "testpassword123", "Test")
+
+    assert await grant_streak_shield(pool, user_id, streak=3) is False  # too short
+    assert await grant_streak_shield(pool, user_id, streak=7) is True
+    assert await grant_streak_shield(pool, user_id, streak=8) is False  # already this week
+
+    shields = await pool.fetchval("SELECT streak_shields FROM profiles WHERE user_id = $1", user_id)
+    assert shields == 1
+
+
+async def test_shields_are_capped():
+    pool = await get_pool()
+    user_id = await create_user(pool, "shield-cap@example.com", "testpassword123", "Test")
+    await pool.execute(
+        "UPDATE profiles SET streak_shields = 3, streak_shield_week = NULL WHERE user_id = $1", user_id
+    )
+    assert await grant_streak_shield(pool, user_id, streak=30) is False
+    assert await pool.fetchval("SELECT streak_shields FROM profiles WHERE user_id = $1", user_id) == 3

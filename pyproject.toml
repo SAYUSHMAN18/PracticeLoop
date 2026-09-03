@@ -20,6 +20,11 @@ dependencies = [
     "httpx>=0.27",
     "fsrs>=6.0",
     "sympy>=1.13",  # Math Lab (Phase 12): symbolic equation solving/verification
+    # The IANA time-zone database for zoneinfo. Without it, zoneinfo has no
+    # data source on Windows and on slim Linux images, so every
+    # ZoneInfo(name) raises and app.core.usertime silently falls back to
+    # UTC -- which is exactly the timezone bug it exists to fix.
+    "tzdata>=2024.1",
     # Loop Mentor and every other LLM-authored panel answers in markdown;
     # html=False makes rendering it safe without a separate sanitizer.
     "markdown-it-py>=3.0",

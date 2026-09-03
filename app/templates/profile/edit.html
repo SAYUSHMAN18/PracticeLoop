@@ -58,6 +58,20 @@
         <input id="f-timezone" type="text" name="timezone" value="{{ profile.timezone }}" placeholder="e.g. Asia/Kolkata">
       </div>
     </div>
+    <div class="form-row">
+      <div>
+        <label for="f-rollover">New day starts at</label>
+        <select id="f-rollover" name="day_rollover_hour">
+          {% for h in range(0, 24) %}
+            <option value="{{ h }}" {{ "selected" if (profile.day_rollover_hour or 0) == h }}>
+              {{ "%02d:00" % h }}{{ " (midnight)" if h == 0 }}
+            </option>
+          {% endfor %}
+        </select>
+        <p class="muted" style="font-size:0.82rem;margin-top:0.25rem;">If you often study past midnight, set this to 3 or 4 so a late session still counts for the day before &mdash; for your streak and daily review.</p>
+      </div>
+      <div></div>
+    </div>
     <label for="f-proficiency">Where are you starting from?</label>
     <select id="f-proficiency" name="proficiency_level">
       {% for value, label in proficiency_labels.items() %}

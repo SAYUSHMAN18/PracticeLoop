@@ -9,6 +9,7 @@ from app.auth.service import set_role
 from app.core.db import get_pool
 from app.core.deps import inject_current_user, require_user_id
 from app.core.templates import templates
+from app.core.usertime import clamp_rollover_hour
 from app.profile import service
 
 router = APIRouter(dependencies=[Depends(inject_current_user)])
@@ -90,6 +91,7 @@ async def save_profile(
     target_date: str = Form(""),
     daily_time_budget_minutes: str = Form(""),
     timezone: str = Form(""),
+    day_rollover_hour: str = Form("0"),
     proficiency_level: str = Form(""),
     resume: UploadFile | None = File(None),
     user_id: int = Depends(require_user_id),
@@ -130,6 +132,7 @@ async def save_profile(
         target_date=_parse_target_date(target_date),
         daily_time_budget_minutes=_parse_time_budget(daily_time_budget_minutes),
         timezone=timezone,
+        day_rollover_hour=clamp_rollover_hour(day_rollover_hour),
         proficiency_level=_parse_proficiency(proficiency_level),
     )
 

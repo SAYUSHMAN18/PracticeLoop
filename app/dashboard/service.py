@@ -5,6 +5,7 @@ from datetime import date, timedelta
 
 import asyncpg
 
+from app.core.usertime import canonical_zone_name
 from app.practice import fsrs_scheduler
 
 # Phase 5.4 mastery-score tuning. Kept as module constants (not magic
@@ -17,15 +18,18 @@ _SHRINKAGE_K = 3  # attempt count at which the neutral prior's pull is halved
 _NEUTRAL_PRIOR = 50.0  # score a topic with zero real signal is shrunk toward
 
 
-async def get_stats(pool: asyncpg.Pool, user_id: int) -> dict:
+async def get_stats(pool: asyncpg.Pool, user_id: int, today: date | None = None) -> dict:
+    today = today or date.today()
     total_questions = await pool.fetchval("SELECT count(*) FROM questions WHERE user_id = $1", user_id)
     total_attempts = await pool.fetchval("SELECT count(*) FROM attempts WHERE user_id = $1", user_id)
+    # `today` is the user's own local study day (see app.core.usertime), so
+    # this count matches exactly what the review queue will hand them.
     due_today = await pool.fetchval(
         """SELECT count(*) FROM questions q
            LEFT JOIN card_states cs ON cs.question_id = q.question_id
            WHERE q.user_id = $1 AND (cs.due IS NULL OR cs.due::date <= $2)""",
         user_id,
-        date.today(),
+        today,
     )
     # 30-day rolling window, not all-time -- an all-time average stops
     # reflecting anything after the first month of use.
@@ -33,7 +37,7 @@ async def get_stats(pool: asyncpg.Pool, user_id: int) -> dict:
         """SELECT round(avg(confidence_rating), 1) FROM attempts
            WHERE user_id = $1 AND practiced_at >= $2""",
         user_id,
-        date.today() - timedelta(days=30),
+        today - timedelta(days=30),
     )
 
     return {
@@ -148,19 +152,28 @@ async def topic_mastery(pool: asyncpg.Pool, user_id: int) -> list[dict]:
     return results
 
 
-async def activity_last_7_days(pool: asyncpg.Pool, user_id: int) -> list[dict]:
+async def activity_last_7_days(
+    pool: asyncpg.Pool, user_id: int, today: date | None = None, tz_name: str = ""
+) -> list[dict]:
     """One row per of the last 7 calendar days (oldest first, today last),
     zero-filled for days with no activity -- generate_series first, then
     LEFT JOIN the real counts onto it, so a quiet day shows as 0 instead
-    of just not appearing in the heatmap at all."""
+    of just not appearing in the heatmap at all.
+
+    Days are the user's local days: the window anchors on their `today` and
+    each attempt is bucketed by its timestamp shifted into their timezone,
+    so the heatmap and the streak agree on where a day starts."""
+    today = today or date.today()
     rows = await pool.fetch(
         """SELECT d::date AS day, count(a.attempt_id) AS attempt_count
            FROM generate_series($2::date - interval '6 days', $2::date, interval '1 day') AS d
-           LEFT JOIN attempts a ON a.user_id = $1 AND a.practiced_at::date = d::date
+           LEFT JOIN attempts a ON a.user_id = $1
+                AND (a.practiced_at AT TIME ZONE $3)::date = d::date
            GROUP BY d
            ORDER BY d""",
         user_id,
-        date.today(),
+        today,
+        canonical_zone_name(tz_name),
     )
     return [{"day": r["day"], "attempt_count": r["attempt_count"]} for r in rows]
 

@@ -6,9 +6,27 @@ import asyncpg
 
 from app.core.embedder import embed_text_async
 from app.core.llm import generate
+from app.core.usertime import canonical_zone_name, today_for
 from app.gamification.service import award_xp
 from app.practice.extraction import parse_llm_json_fields
 from app.practice.fsrs_scheduler import schedule_review
+
+
+async def _day_settings(pool: asyncpg.Pool, user_id: int) -> tuple[str, int]:
+    """(timezone, day_rollover_hour) for this user -- the inputs to
+    today_for(). A missing profile row (shouldn't happen; created with the
+    user) is treated as UTC/midnight rather than raising."""
+    row = await pool.fetchrow("SELECT timezone, day_rollover_hour FROM profiles WHERE user_id = $1", user_id)
+    if row is None:
+        return "", 0
+    return row["timezone"] or "", row["day_rollover_hour"] or 0
+
+
+async def user_today(pool: asyncpg.Pool, user_id: int) -> date:
+    """The current study day in the user's timezone (see app.core.usertime)."""
+    tz_name, rollover = await _day_settings(pool, user_id)
+    return today_for(tz_name, rollover)
+
 
 _QUESTION_COLUMNS = (
     "question_id, user_id, question, answer, example, topic, difficulty, "
@@ -250,7 +268,8 @@ async def record_mcq_attempt(
 
 
 async def due_for_review(pool: asyncpg.Pool, user_id: int, today: date | None = None) -> list[asyncpg.Record]:
-    today = today or date.today()
+    if today is None:
+        today = await user_today(pool, user_id)
     return await pool.fetch(
         f"""SELECT {", ".join("q." + c for c in _QUESTION_COLUMNS.split(", "))}, cs.due AS next_review_at
             FROM questions q
@@ -369,15 +388,36 @@ async def get_questions_by_ids(
 
 
 async def streak_days(pool: asyncpg.Pool, user_id: int) -> int:
+    """Consecutive study days, counted in the user's own timezone and day
+    boundary -- not the server's UTC date, which would roll a learner in
+    UTC+5:30 over at 5:30 AM and break the streak a day early.
+
+    `practiced_at` is stored UTC (timestamptz); `AT TIME ZONE` shifts it to
+    the user's wall clock, then the rollover hour is subtracted so a session
+    just after midnight can still count for the day before -- the exact same
+    arithmetic today_for() does for "now", applied to each attempt.
+
+    Streak freezes (profiles.streak_shields, earned one a week up to a cap)
+    are a tolerance, not a consumable: a user holding N of them keeps their
+    streak across up to N single-day gaps, counted back from today. Nothing
+    is decremented here -- the allowance simply regenerates weekly. A
+    two-day gap always breaks the streak regardless of how many are held."""
+    tz_name, rollover = await _day_settings(pool, user_id)
+    shields = await pool.fetchval("SELECT streak_shields FROM profiles WHERE user_id = $1", user_id) or 0
+
     rows = await pool.fetch(
-        "SELECT DISTINCT practiced_at::date AS d FROM attempts WHERE user_id = $1 ORDER BY d DESC",
+        """SELECT DISTINCT
+                  ((practiced_at AT TIME ZONE $2) - make_interval(hours => $3))::date AS d
+           FROM attempts WHERE user_id = $1 ORDER BY d DESC""",
         user_id,
+        canonical_zone_name(tz_name),
+        rollover,
     )
     dates = [r["d"] for r in rows]
     if not dates:
         return 0
 
-    today = date.today()
+    today = today_for(tz_name, rollover)
     if dates[0] == today:
         expected = today - timedelta(days=1)
     elif dates[0] == today - timedelta(days=1):
@@ -390,6 +430,13 @@ async def streak_days(pool: asyncpg.Pool, user_id: int) -> int:
         if d == expected:
             streak += 1
             expected -= timedelta(days=1)
+        elif d == expected - timedelta(days=1) and shields > 0:
+            # A single missed day between the last counted day and this
+            # one, covered by a freeze: the skipped day and this day both
+            # count, and the chain continues from here.
+            shields -= 1
+            streak += 2
+            expected = d - timedelta(days=1)
         else:
             break
     return streak

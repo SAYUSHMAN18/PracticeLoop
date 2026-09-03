@@ -34,7 +34,10 @@
 
 <div class="card">
   <div class="stat-grid">
-    <div class="stat"><div class="value">{{ streak }}</div><div class="label">day streak</div></div>
+    <div class="stat">
+      <div class="value">{{ streak }}</div>
+      <div class="label">day streak{% if streak_shields %} &middot; {{ streak_shields }} &#10052;{% endif %}</div>
+    </div>
     <div class="stat"><div class="value">{{ stats.total_questions }}</div><div class="label">questions banked</div></div>
     <div class="stat"><div class="value">{{ stats.due_today }}</div><div class="label">due for review</div></div>
     <div class="stat"><div class="value">{{ stats.avg_confidence or "-" }}</div><div class="label">avg confidence</div></div>

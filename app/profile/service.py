@@ -36,7 +36,8 @@ async def get_profile(pool: asyncpg.Pool, user_id: int) -> asyncpg.Record:
     return await pool.fetchrow(
         """SELECT user_id, target_role, target_companies, resume_text,
                   goal_type, target_date, daily_time_budget_minutes, timezone,
-                  onboarding_completed, proficiency_level, proficiency_source
+                  day_rollover_hour, onboarding_completed, proficiency_level,
+                  proficiency_source
            FROM profiles WHERE user_id = $1""",
         user_id,
     )
@@ -66,6 +67,7 @@ async def update_profile(
     daily_time_budget_minutes: int | None = None,
     timezone: str = "",
     proficiency_level: str = "",
+    day_rollover_hour: int = 0,
 ) -> None:
     # resume_text keeps its existing None-means-"don't touch the stored
     # text" semantics (the file upload is optional on every save) -- every
@@ -82,8 +84,8 @@ async def update_profile(
             """UPDATE profiles SET
                    target_role = $2, target_companies = $3,
                    goal_type = $4, target_date = $5, daily_time_budget_minutes = $6, timezone = $7,
-                   proficiency_level = $8, proficiency_source = 'self_reported',
-                   updated_at = now()
+                   proficiency_level = $8, day_rollover_hour = $9,
+                   proficiency_source = 'self_reported', updated_at = now()
                WHERE user_id = $1""",
             user_id,
             target_role,
@@ -93,14 +95,15 @@ async def update_profile(
             daily_time_budget_minutes,
             timezone,
             proficiency_level,
+            day_rollover_hour,
         )
     else:
         await pool.execute(
             """UPDATE profiles SET
                    target_role = $2, target_companies = $3, resume_text = $4,
                    goal_type = $5, target_date = $6, daily_time_budget_minutes = $7, timezone = $8,
-                   proficiency_level = $9, proficiency_source = 'self_reported',
-                   updated_at = now()
+                   proficiency_level = $9, day_rollover_hour = $10,
+                   proficiency_source = 'self_reported', updated_at = now()
                WHERE user_id = $1""",
             user_id,
             target_role,
@@ -111,6 +114,7 @@ async def update_profile(
             daily_time_budget_minutes,
             timezone,
             proficiency_level,
+            day_rollover_hour,
         )
 
 
