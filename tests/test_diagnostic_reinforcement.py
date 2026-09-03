@@ -77,7 +77,7 @@ async def test_without_ai_each_weak_subtopic_becomes_its_own_lesson(client):
 
 
 async def test_with_ai_the_generated_lesson_titles_are_used(client, monkeypatch):
-    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         # The prompt must actually carry the measured gaps, or the feature
         # is just "generate a unit about the topic" wearing a diagnostic's
         # name.
@@ -105,7 +105,7 @@ async def test_with_ai_the_generated_lesson_titles_are_used(client, monkeypatch)
 
 
 async def test_a_failed_llm_call_falls_back_instead_of_erroring(client, monkeypatch):
-    async def exploding_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def exploding_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         raise RuntimeError("provider is down")
 
     monkeypatch.setattr(paths_service, "generate", exploding_generate)

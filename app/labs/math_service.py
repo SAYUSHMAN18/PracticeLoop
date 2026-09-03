@@ -119,7 +119,7 @@ async def generate_steps(
         return None
     try:
         prompt = _STEPS_PROMPT.format(equation=equation_display, solutions=", ".join(solutions))
-        return await generate(prompt, temperature=0.3)
+        return await generate(prompt, temperature=0.3, cacheable=True)
     except Exception:
         logger.warning("Math Lab step generation failed", exc_info=True)
         return None

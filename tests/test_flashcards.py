@@ -35,7 +35,7 @@ async def test_fallback_without_ai_creates_one_summary_card():
 
 
 async def test_ai_path_creates_a_card_per_generated_item(monkeypatch):
-    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return (
             '[{"question": "What is a hash map?", "answer": "A key-value structure."}, '
             '{"question": "What is Big O?", "answer": "Asymptotic complexity."}]'
@@ -61,7 +61,7 @@ async def test_ai_path_creates_a_card_per_generated_item(monkeypatch):
 
 
 async def test_ai_failure_falls_back_to_summary_card(monkeypatch):
-    async def failing_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def failing_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         raise RuntimeError("LLM unavailable")
 
     monkeypatch.setattr(flashcards, "generate", failing_generate)

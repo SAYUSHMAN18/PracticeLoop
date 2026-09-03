@@ -34,7 +34,7 @@ async def _fresh_path(client, email: str, *, ai: bool, monkeypatch=None) -> tupl
     if ai:
         assert monkeypatch is not None
 
-        async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+        async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
             return _AI_LESSON
 
         monkeypatch.setattr(service, "generate", fake_generate)

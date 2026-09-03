@@ -118,7 +118,7 @@ async def test_lesson_context_includes_the_lesson_details_for_its_owner():
 async def test_ai_reply_uses_the_lesson_context_in_the_prompt(client, monkeypatch):
     captured_prompts = []
 
-    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         captured_prompts.append(prompt)
         return "This is a simple explanation."
 

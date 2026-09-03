@@ -176,7 +176,7 @@ async def test_ai_generated_skeleton_is_used_when_available(client, monkeypatch)
     """With a working LLM, the real generated structure (not the fallback)
     should be what gets persisted."""
 
-    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return """{
           "path_title": "Backend Engineering Basics",
           "modules": [
@@ -211,7 +211,7 @@ async def test_ai_generated_skeleton_is_used_when_available(client, monkeypatch)
 
 
 async def test_a_malformed_ai_response_falls_back_to_the_deterministic_skeleton(client, monkeypatch):
-    async def broken_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def broken_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return "not json at all"
 
     monkeypatch.setattr(service, "generate", broken_generate)

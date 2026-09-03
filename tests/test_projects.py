@@ -187,7 +187,7 @@ async def test_another_users_project_404s_on_view_toggle_submit_and_delete():
 
 
 async def test_ai_generated_idea_is_used_when_available(client, monkeypatch):
-    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return """{
           "title": "Build a URL shortener",
           "brief": "A small service that shortens URLs and redirects visitors.",
@@ -207,7 +207,7 @@ async def test_ai_generated_idea_is_used_when_available(client, monkeypatch):
 
 
 async def test_malformed_ai_idea_falls_back_to_the_deterministic_idea(client, monkeypatch):
-    async def broken_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def broken_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return "not json"
 
     monkeypatch.setattr(service, "generate", broken_generate)
@@ -224,7 +224,7 @@ async def test_malformed_ai_idea_falls_back_to_the_deterministic_idea(client, mo
 
 
 async def test_ai_feedback_is_shown_when_available(client, monkeypatch):
-    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return """{
           "completeness_score": 4, "quality_score": 5,
           "strengths": ["Clean structure"], "improvements": ["Add tests"],

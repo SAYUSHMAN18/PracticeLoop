@@ -189,7 +189,9 @@ async def _build_skeleton(goal: str, *, ai_available: bool) -> dict:
 
     try:
         prompt = _SKELETON_PROMPT.format(goal=goal.strip())
-        response = await generate(prompt, temperature=0.4)
+        # The prompt is just the goal string -- no user data -- so two people
+        # starting the same goal share one generation.
+        response = await generate(prompt, temperature=0.4, cacheable=True)
         data = json.loads(extract_first_json_value(response))
         return _validate_skeleton(data)
     except Exception:
@@ -625,7 +627,7 @@ async def _build_lesson_content(
         prompt = _LESSON_CONTENT_PROMPT.format(
             path_title=path_title, module_title=module_title, unit_title=unit_title, lesson_title=lesson_title
         )
-        response = await generate(prompt, temperature=0.4)
+        response = await generate(prompt, temperature=0.4, cacheable=True)
         data = json.loads(extract_first_json_value(response))
         return _validate_lesson_content(data, lesson_title)
     except Exception:

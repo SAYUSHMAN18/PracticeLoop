@@ -25,7 +25,7 @@ async def test_fallback_tailor_finds_overlap_and_gaps():
 
 
 async def test_ai_tailor_failure_degrades_to_fallback_not_a_crash(monkeypatch):
-    async def failing_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def failing_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         raise RuntimeError("LLM provider unavailable")
 
     monkeypatch.setattr(resume_tailor, "generate", failing_generate)
@@ -39,7 +39,7 @@ async def test_ai_tailor_failure_degrades_to_fallback_not_a_crash(monkeypatch):
 
 
 async def test_ai_tailor_parses_a_valid_llm_response(monkeypatch):
-    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return (
             '{"summary": "Backend engineer.", "bullets": ["Shipped the payments API"], '
             '"emphasize": ["Python"], "gaps": ["Rust"]}'

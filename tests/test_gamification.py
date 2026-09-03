@@ -118,7 +118,7 @@ async def test_completing_a_lesson_awards_xp_once_even_if_toggled_repeatedly(cli
 
 
 async def test_taking_a_diagnostic_awards_xp(client, monkeypatch):
-    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return """{"questions": [
             {"question": "2+2?", "subtopic": "math", "choices": ["3", "4"], "correct_choice_index": 1}
         ]}"""

@@ -32,7 +32,11 @@ _RECALLED_CONFIDENCE_THRESHOLD = 3.0
 
 
 async def extract_skills_from_jd(jd_text: str) -> list[str]:
-    response = await generate(_SKILL_EXTRACTION_PROMPT.format(text=jd_text.strip()), temperature=0.0)
+    # The JD text carries no identity -- two people pasting the same posting
+    # get the same skill list from cache.
+    response = await generate(
+        _SKILL_EXTRACTION_PROMPT.format(text=jd_text.strip()), temperature=0.0, cacheable=True
+    )
     data = json.loads(extract_first_json_value(response))
     if not isinstance(data, list):
         raise ValueError("Expected a JSON array of skills")

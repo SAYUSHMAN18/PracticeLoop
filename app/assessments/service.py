@@ -115,7 +115,8 @@ async def generate_diagnostic(topic: str, *, ai_available: bool) -> list[dict]:
 
     try:
         prompt = _DIAGNOSTIC_PROMPT.format(topic=topic.strip(), count=QUESTION_COUNT)
-        response = await generate(prompt, temperature=0.5)
+        # Keyed on the topic only -- shareable across students.
+        response = await generate(prompt, temperature=0.5, cacheable=True)
         data = json.loads(extract_first_json_value(response))
         return _validate_questions(data)
     except DiagnosticUnavailable:

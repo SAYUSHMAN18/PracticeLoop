@@ -21,11 +21,24 @@
       {% endif %}
     </div>
   {% endfor %}
+  {# Optimistic slots -- a nonce'd script fills these the instant a message
+     is sent, so the panel echoes what you typed and shows a typing
+     indicator rather than freezing until the reply comes back. HTMX then
+     swaps the whole panel and these are replaced by the real rendered
+     turn. #}
+  <div class="mentor-msg mentor-msg-user" id="mentor-optimistic-user" hidden>
+    <div class="mentor-bubble mentor-bubble-plain"></div>
+  </div>
+  <div class="mentor-msg mentor-msg-bot" id="mentor-typing" hidden>
+    <div class="mentor-bubble mentor-typing">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
 </div>
 
 <div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.75rem;">
   {% for action_id, label in [('explain_simply', 'Explain more simply'), ('give_hint', 'Give me a hint'), ('memory_trick', 'Memory trick'), ('study_next', 'What should I study next?')] %}
-    <form hx-post="/mentor/quick-action" hx-target="#mentor-panel-body" hx-swap="innerHTML" style="margin:0;">
+    <form class="mentor-action-form" hx-post="/mentor/quick-action" hx-target="#mentor-panel-body" hx-swap="innerHTML" style="margin:0;" data-label="{{ label }}">
       <input type="hidden" name="action_id" value="{{ action_id }}">
       <input type="hidden" name="context_type" value="{{ context_type }}">
       <input type="hidden" name="context_id" value="{{ context_id }}">
@@ -34,10 +47,47 @@
   {% endfor %}
 </div>
 
-<form hx-post="/mentor/message" hx-target="#mentor-panel-body" hx-swap="innerHTML">
+<form id="mentor-send-form" hx-post="/mentor/message" hx-target="#mentor-panel-body" hx-swap="innerHTML">
   <input type="hidden" name="context_type" value="{{ context_type }}">
   <input type="hidden" name="context_id" value="{{ context_id }}">
   <label for="f-mentor-text" class="visually-hidden">Ask Loop Mentor</label>
   <textarea id="f-mentor-text" name="text" rows="2" placeholder="Ask Loop Mentor&hellip;" required style="font-size:0.87rem;"></textarea>
   <button type="submit" style="margin-top:0.5rem;width:100%;">Send</button>
 </form>
+
+<script nonce="{{ request.state.csp_nonce }}">
+  // Optimistic mentor UI. A reply takes several seconds; without this the
+  // whole panel just sat frozen. On send we immediately echo the message
+  // and show a typing indicator; HTMX finishes in the background and swaps
+  // the real turn in over the top.
+  (function () {
+    var body = document.getElementById("mentor-panel-body");
+    if (!body) return;
+
+    function beginPending(text) {
+      var messages = document.getElementById("mentor-messages");
+      var optimistic = document.getElementById("mentor-optimistic-user");
+      var typing = document.getElementById("mentor-typing");
+      if (text && optimistic) {
+        optimistic.querySelector(".mentor-bubble").textContent = text;
+        optimistic.hidden = false;
+      }
+      if (typing) typing.hidden = false;
+      if (messages) messages.scrollTop = messages.scrollHeight;
+      body.querySelectorAll("button, textarea").forEach(function (el) { el.disabled = true; });
+    }
+
+    var sendForm = document.getElementById("mentor-send-form");
+    if (sendForm) {
+      sendForm.addEventListener("htmx:beforeRequest", function () {
+        var field = document.getElementById("f-mentor-text");
+        beginPending(field ? field.value.trim() : "");
+      });
+    }
+    document.querySelectorAll(".mentor-action-form").forEach(function (form) {
+      form.addEventListener("htmx:beforeRequest", function () {
+        beginPending(form.dataset.label || "");
+      });
+    });
+  })();
+</script>

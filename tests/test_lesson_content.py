@@ -56,7 +56,7 @@ async def test_lesson_content_is_cached_not_regenerated_on_each_view(client):
 
 
 async def test_ai_generated_content_is_used_when_available(client, monkeypatch):
-    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return """{
           "concept": "A hash map stores key-value pairs for fast lookup.",
           "example": "dict['x'] = 1 in Python.",
@@ -79,7 +79,7 @@ async def test_a_multiline_code_example_keeps_its_newlines_and_indentation(clien
     # collapses every newline and indent the moment the browser lays it
     # out -- a multi-line code sample came out as one run-on line. It now
     # renders inside <pre class="code-block">, which preserves whitespace.
-    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return """{
           "concept": "Python uses indentation to define blocks.",
           "example": "def greet(name):\\n    if name:\\n        print(name)",

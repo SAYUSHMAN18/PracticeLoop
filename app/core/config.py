@@ -18,7 +18,25 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.0-flash"
     aws_region: str = "ap-south-1"
     bedrock_model_id: str = ""
-    llm_min_interval_seconds: float = 2.1
+    # A courtesy floor between the *starts* of two outbound calls, so a burst
+    # doesn't trip a provider's per-second limit. It no longer serializes the
+    # whole process (that was the old global-lock behaviour) -- up to
+    # llm_max_concurrency calls run at once, each spaced this far apart at the
+    # point it acquires its slot.
+    llm_min_interval_seconds: float = 0.4
+    # Cap on simultaneous outbound LLM calls for the whole deployment, and
+    # per user. The per-user cap is what stops one person (or one runaway
+    # request generating a card per skill gap) from starving everyone else.
+    llm_max_concurrency: int = 4
+    llm_per_user_concurrency: int = 2
+    # If the primary provider errors after its retries, try this one once
+    # before giving up. "" = no failover. Only sensible if its key is also set.
+    llm_fallback_provider: str = ""
+    # Identical prompt + model + temperature is served from llm_cache instead
+    # of a fresh call, for the calls whose prompt carries no user data (a
+    # learning-path skeleton, a lesson body, a diagnostic). Grading and mentor
+    # replies are never cached -- their prompts embed the individual.
+    llm_cache_ttl_days: int = 30
     llm_daily_budget: int = 20  # per-user calls/day across all AI-backed routes
     # Deployment-wide ceiling across every user, checked alongside the per-user
     # budget. 0 disables it -- the right default for a self-hosted single-user

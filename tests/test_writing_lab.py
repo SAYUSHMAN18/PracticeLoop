@@ -15,7 +15,7 @@ async def test_empty_text_is_rejected_before_any_ai_call():
 
 
 async def test_feedback_is_parsed_and_scores_clamped(monkeypatch):
-    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return """{
           "clarity_score": 9, "structure_score": 0, "grammar_score": 4,
           "strengths": ["Clear thesis", "Good examples"],
@@ -35,7 +35,7 @@ async def test_feedback_is_parsed_and_scores_clamped(monkeypatch):
 
 
 async def test_malformed_ai_response_raises_failed_not_a_crash(monkeypatch):
-    async def broken_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def broken_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return "not json"
 
     monkeypatch.setattr(writing_service, "generate", broken_generate)
@@ -61,7 +61,7 @@ async def test_reviewing_without_ai_shows_an_honest_notice_not_fake_feedback(cli
 
 
 async def test_reviewing_with_ai_shows_the_real_feedback(client, monkeypatch):
-    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return """{
           "clarity_score": 4, "structure_score": 3, "grammar_score": 5,
           "strengths": ["Good voice"], "improvements": ["Add a counterargument"],

@@ -64,7 +64,7 @@ async def test_empty_topic_is_rejected(client):
 
 
 async def test_taking_a_diagnostic_end_to_end_with_a_perfect_score(client, monkeypatch):
-    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return _FAKE_QUESTIONS_JSON
 
     monkeypatch.setattr(service, "generate", fake_generate)
@@ -102,7 +102,7 @@ async def test_taking_a_diagnostic_end_to_end_with_a_perfect_score(client, monke
 
 
 async def test_taking_a_diagnostic_with_a_wrong_answer_reports_the_weak_subtopic(client, monkeypatch):
-    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return _FAKE_QUESTIONS_JSON
 
     monkeypatch.setattr(service, "generate", fake_generate)
@@ -125,7 +125,7 @@ async def test_taking_a_diagnostic_with_a_wrong_answer_reports_the_weak_subtopic
 
 
 async def test_diagnostic_result_updates_profile_proficiency_as_measured(client, monkeypatch):
-    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return _FAKE_QUESTIONS_JSON
 
     monkeypatch.setattr(service, "generate", fake_generate)

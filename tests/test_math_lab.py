@@ -80,7 +80,7 @@ async def test_an_invalid_equation_via_the_router_shows_a_friendly_error_not_a_5
 
 
 async def test_steps_appear_when_ai_is_available(client, monkeypatch):
-    async def fake_generate(prompt: str, temperature: float = 0.0) -> str:
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
         return "Step 1: subtract 5.\nStep 2: divide by 2."
 
     monkeypatch.setattr(math_service, "generate", fake_generate)

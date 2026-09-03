@@ -90,7 +90,7 @@ async def generate_idea(topic: str, *, ai_available: bool) -> dict:
     if not ai_available:
         return _fallback_idea(topic)
     try:
-        response = await generate(_IDEA_PROMPT.format(topic=topic.strip()), temperature=0.5)
+        response = await generate(_IDEA_PROMPT.format(topic=topic.strip()), temperature=0.5, cacheable=True)
         data = json.loads(extract_first_json_value(response))
         return _validate_idea(data, topic)
     except Exception:
