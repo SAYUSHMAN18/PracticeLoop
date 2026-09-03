@@ -172,6 +172,22 @@ async def test_starting_an_unknown_template_404s(client):
     assert response.status_code == 404
 
 
+async def test_subjects_page_has_a_search_and_request_box_wired_to_path_creation(client):
+    await signup(client, "subject-request@example.com")
+    page = await client.get("/subjects")
+    # The search box posts a free-text subject straight to the existing
+    # path-creation endpoint.
+    assert '<form method="post" action="/learning-paths" id="subject-request"' in page.text
+    assert 'name="goal"' in page.text
+    assert 'id="subject-templates"' in page.text  # the filterable list
+
+    made = await client.post("/learning-paths", data={"goal": "the history of jazz"}, follow_redirects=False)
+    assert made.status_code == 303
+    path_id = _path_id_from_redirect(made)
+    detail = await client.get(f"/learning-paths/{path_id}")
+    assert "history of jazz" in detail.text.lower()
+
+
 async def test_ai_generated_skeleton_is_used_when_available(client, monkeypatch):
     """With a working LLM, the real generated structure (not the fallback)
     should be what gets persisted."""

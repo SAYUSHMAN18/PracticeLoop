@@ -1,25 +1,80 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Explore Subjects - PracticeLoop{% endblock %}
 {% block content %}
 <h1>Explore Subjects</h1>
 <p class="muted">
-  Ready-made starting points -- pick one to generate a learning path instantly, or
-  <a href="/learning-paths">start from your own goal</a> instead.
+  Search a subject and start a path on it &mdash; or pick one of the ready-made
+  starting points below.
 </p>
 
 <div class="card">
-  {% for template in templates %}
-    <div class="question-item">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+  <form method="post" action="/learning-paths" id="subject-request" class="subject-search">
+    <label for="subject-q" class="visually-hidden">Search or request a subject</label>
+    <div class="subject-search-row">
+      {{ icon("search") }}
+      <input id="subject-q" name="goal" type="text" autocomplete="off"
+             placeholder="e.g. organic chemistry, world history, guitar theory&hellip;">
+      <button type="submit" id="subject-request-btn">Create path</button>
+    </div>
+    <p class="muted subject-search-hint" id="subject-hint">
+      Type any subject and press <kbd>Enter</kbd> &mdash; PracticeLoop builds the
+      module &rarr; unit &rarr; lesson structure for it.
+    </p>
+  </form>
+
+  <div class="subject-templates" id="subject-templates">
+    <p class="sidebar-group" style="margin-top:1.25rem;">Ready-made</p>
+    {% for template in templates %}
+      <div class="subject-item" data-title="{{ template.title|lower }}" data-blurb="{{ template.blurb|lower }}">
         <div>
           <strong>{{ template.title }}</strong>
-          <div class="muted" style="font-size:0.85rem;margin-top:0.2rem;">{{ template.blurb }}</div>
+          <div class="muted subject-blurb">{{ template.blurb }}</div>
         </div>
         <form method="post" action="/subjects/{{ template.id }}/start" style="margin:0;">
-          <button type="submit" style="margin-top:0;">Start this path</button>
+          <button type="submit" class="secondary">Start</button>
         </form>
       </div>
-    </div>
-  {% endfor %}
+    {% endfor %}
+    <p class="muted subject-no-match" id="subject-no-match" hidden>
+      No ready-made path matches &mdash; use <strong>Create path</strong> above to build one.
+    </p>
+  </div>
 </div>
+
+<script nonce="{{ request.state.csp_nonce }}">
+  // Client-side filter over the six ready-made cards, plus a live label on
+  // the request button so it reads "Create a path for 'X'". No network
+  // call until the user submits -- this is just narrowing the list.
+  (function () {
+    var q = document.getElementById("subject-q");
+    var btn = document.getElementById("subject-request-btn");
+    var hint = document.getElementById("subject-hint");
+    var noMatch = document.getElementById("subject-no-match");
+    var items = Array.prototype.slice.call(document.querySelectorAll(".subject-item"));
+    if (!q) return;
+
+    function apply() {
+      var term = q.value.trim().toLowerCase();
+      var shown = 0;
+      items.forEach(function (el) {
+        var hit = !term
+          || el.getAttribute("data-title").indexOf(term) !== -1
+          || el.getAttribute("data-blurb").indexOf(term) !== -1;
+        el.hidden = !hit;
+        if (hit) shown++;
+      });
+      if (noMatch) noMatch.hidden = !(term && shown === 0);
+      if (term) {
+        btn.textContent = "Create a path for “" + q.value.trim() + "”";
+        if (hint) hint.hidden = true;
+      } else {
+        btn.textContent = "Create path";
+        if (hint) hint.hidden = false;
+      }
+    }
+    q.addEventListener("input", apply);
+    apply();
+  })();
+</script>
 {% endblock %}
