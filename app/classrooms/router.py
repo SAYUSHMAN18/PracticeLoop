@@ -58,7 +58,10 @@ async def create_classroom(
     name = name.strip()
     if not name:
         raise HTTPException(status_code=400, detail="Give the classroom a name.")
-    created = await service.create_classroom(pool, user_id, name)
+    try:
+        created = await service.create_classroom(pool, user_id, name)
+    except service.NameRejected as exc:
+        return await _render_index(request, pool, user_id, error=str(exc), status_code=400)
     return RedirectResponse(f"/classrooms/{created['classroom_id']}", status_code=303)
 
 
@@ -123,6 +126,8 @@ async def create_assignment(
         )
     except service.ClassroomNotFound as exc:
         raise HTTPException(status_code=404) from exc
+    except service.NameRejected as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return RedirectResponse(f"/classrooms/{classroom_id}", status_code=303)
 
 

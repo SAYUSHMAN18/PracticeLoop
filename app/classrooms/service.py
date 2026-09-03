@@ -5,6 +5,7 @@ import string
 
 import asyncpg
 
+from app.core.moderation import check as moderate
 from app.gamification.service import get_xp_summary
 from app.practice.service import streak_days
 
@@ -21,11 +22,20 @@ class InvalidJoinCode(Exception):
     pass
 
 
+class NameRejected(Exception):
+    """A moderation check flagged the classroom name."""
+
+
 def _generate_join_code() -> str:
     return "".join(secrets.choice(_JOIN_CODE_ALPHABET) for _ in range(_JOIN_CODE_LENGTH))
 
 
 async def create_classroom(pool: asyncpg.Pool, teacher_user_id: int, name: str) -> dict:
+    # Students see this name; screen it before it's stored. Fails open --
+    # no LLM configured means every name passes.
+    if (await moderate(name)).hard_block:
+        raise NameRejected("That classroom name was flagged. Use a plain description of the class.")
+
     for _ in range(_MAX_JOIN_CODE_ATTEMPTS):
         join_code = _generate_join_code()
         try:
@@ -164,6 +174,12 @@ async def create_assignment(
     due_date,
 ) -> int:
     classroom = await get_classroom_for_teacher(pool, teacher_user_id, classroom_id)  # ownership check
+
+    # Students see the title and get a notification with it -- screen it
+    # (the description is theirs to write freely). Fails open.
+    if (await moderate(title)).hard_block:
+        raise NameRejected("That assignment title was flagged. Try rewording it.")
+
     assignment_id = await pool.fetchval(
         """INSERT INTO assignments (classroom_id, title, description, topic, due_date)
            VALUES ($1, $2, $3, $4, $5) RETURNING assignment_id""",
