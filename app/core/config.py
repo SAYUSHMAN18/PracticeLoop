@@ -56,12 +56,13 @@ class Settings(BaseSettings):
     login_lockout_threshold: int = 8
     login_lockout_minutes: int = 15
 
-    # Email (password reset). backend: console | smtp. console just logs the
-    # message -- the reset flow still works end to end, it just never
-    # delivers. A real deploy sets EMAIL_BACKEND=smtp plus the SMTP_* vars
-    # (Gmail, SES, Postmark, Resend, Mailgun, a local relay -- all SMTP).
+    # Email. backend: console | resend | smtp. console just logs the
+    # message; a real deploy sets EMAIL_BACKEND=resend (one API key, the
+    # easy path) or =smtp (any provider). Everything still works end to end
+    # on console, it just never delivers.
     email_backend: str = "console"
     email_from: str = ""
+    resend_api_key: str = ""  # for EMAIL_BACKEND=resend -- resend.com, generous free tier
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""

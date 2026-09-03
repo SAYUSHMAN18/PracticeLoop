@@ -26,6 +26,26 @@
 </div>
 
 <div class="card">
+  <h2>Email delivery</h2>
+  <table class="admin-table">
+    <tr>
+      <td>Status</td>
+      <td class="{{ '' if email.delivering else 'admin-warn' }}">
+        {{ "delivering" if email.delivering else "NOT delivering" }} &mdash; {{ email.detail }}
+      </td>
+    </tr>
+    <tr><td>From address</td><td>{{ email.from }}</td></tr>
+    <tr><td>Digest cron</td><td class="{{ 'admin-warn' if 'not' in email.digest_cron }}">{{ email.digest_cron }}</td></tr>
+  </table>
+  {% if not email.delivering %}
+    <p class="muted" style="font-size:0.82rem;margin-top:0.5rem;">
+      Password-reset and reminder emails are logged, not sent. Set <code>EMAIL_BACKEND=resend</code>
+      + <code>RESEND_API_KEY</code> + <code>EMAIL_FROM</code> (or the <code>SMTP_*</code> vars) to turn delivery on.
+    </p>
+  {% endif %}
+</div>
+
+<div class="card">
   <h2>AI layer</h2>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;">
     {% for label, w in [("Last 24h", llm.day), ("Last 7d", llm.week)] %}

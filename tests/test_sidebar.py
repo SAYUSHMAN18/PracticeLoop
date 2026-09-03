@@ -24,28 +24,39 @@ async def test_sidebar_has_every_main_nav_item_and_mobile_toggle(client):
     assert 'id="sidebar-backdrop"' in response.text
 
 
+def _nav_link_active(text: str, href: str, label: str) -> bool:
+    """The Wave 9 sidebar redesign puts an icon and a <span> label inside
+    each nav <a>, so the label is no longer the anchor's only child. Match
+    the anchor's `active` class and the label span separately."""
+    import re
+
+    pattern = (
+        rf'<a href="{re.escape(href)}" class="active">\s*'
+        rf"<svg[^>]*>.*?</svg>\s*<span>{re.escape(label)}</span>"
+    )
+    return re.search(pattern, text, re.S) is not None
+
+
 async def test_sidebar_active_link_matches_current_page(client):
-    """Phase 5's new information architecture renamed "Dashboard" to "Home"
-    and "Documents" to "Knowledge Vault" -- hrefs are unchanged, just the
-    labels shown in the sidebar."""
+    """Hrefs and labels are unchanged from Phase 5's IA -- Wave 9 just adds
+    icons and section groups to the same links."""
     await signup(client, "sidebar-active@example.com")
 
     dashboard = await client.get("/dashboard")
-    assert '<a href="/dashboard" class="active">Home</a>' in dashboard.text
-    assert '<a href="/documents" class="">Knowledge Vault</a>' in dashboard.text
+    assert _nav_link_active(dashboard.text, "/dashboard", "Home")
+    assert '<a href="/documents" class="">' in dashboard.text
 
     documents = await client.get("/documents")
-    assert '<a href="/documents" class="active">Knowledge Vault</a>' in documents.text
-    assert '<a href="/dashboard" class="">Home</a>' in documents.text
+    assert _nav_link_active(documents.text, "/documents", "Knowledge Vault")
+    assert '<a href="/dashboard" class="">' in documents.text
 
 
 async def test_sidebar_jobs_link_stays_active_across_every_jobs_subpage(client):
-    """ "Jobs" was renamed "Career Lab" in Phase 5's new information
-    architecture -- still the same /jobs href."""
+    """ "Jobs" is shown as "Career Lab" -- still the same /jobs href."""
     await signup(client, "sidebar-jobs@example.com")
     for path in ("/jobs", "/jobs/applications", "/jobs/gap-analysis", "/jobs/trends", "/jobs/runs"):
         response = await client.get(path)
-        assert '<a href="/jobs" class="active">Career Lab</a>' in response.text, path
+        assert _nav_link_active(response.text, "/jobs", "Career Lab"), path
 
 
 async def test_authenticated_pages_have_a_skip_link_and_theme_toggle(client):

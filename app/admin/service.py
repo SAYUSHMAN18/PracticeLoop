@@ -86,6 +86,29 @@ async def llm_stats(pool: asyncpg.Pool) -> dict:
     }
 
 
+def email_status() -> dict:
+    """What the operator needs to know at a glance: is email actually
+    being delivered, and is the digest cron reachable."""
+    from app.core.config import settings
+
+    backend = settings.email_backend.strip().lower()
+    if backend == "resend":
+        delivering = bool(settings.resend_api_key.strip())
+        detail = "Resend" + ("" if delivering else " -- RESEND_API_KEY not set")
+    elif backend == "smtp":
+        delivering = bool(settings.smtp_host.strip())
+        detail = f"SMTP {settings.smtp_host}" if delivering else "SMTP -- SMTP_HOST not set"
+    else:
+        delivering = False
+        detail = "console (logs only, nothing sent)"
+    return {
+        "delivering": delivering,
+        "detail": detail,
+        "from": settings.email_from or "(unset)",
+        "digest_cron": "configured" if settings.digest_cron_token.strip() else "not configured (503)",
+    }
+
+
 async def recent_signups(pool: asyncpg.Pool, limit: int = 20) -> list[asyncpg.Record]:
     return await pool.fetch(
         """SELECT u.email, u.name, u.role, u.created_at,

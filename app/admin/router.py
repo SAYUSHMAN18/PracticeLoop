@@ -46,5 +46,5 @@ async def admin_home(
     return templates.TemplateResponse(
         request,
         "admin/index.html",
-        {"overview": overview, "llm": llm, "signups": signups},
+        {"overview": overview, "llm": llm, "signups": signups, "email": service.email_status()},
     )

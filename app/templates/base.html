@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+{% from "_icons.html" import icon %}
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -133,23 +134,33 @@
 
     <aside class="sidebar" id="sidebar">
       <button type="button" class="command-palette-trigger" id="command-palette-trigger" aria-label="Open command palette">
-        <span>Go to&hellip;</span>
+        {{ icon("search") }}
+        <span>Jump to&hellip;</span>
         <kbd id="command-palette-shortcut-hint">Ctrl K</kbd>
       </button>
 
+      {% set p = request.url.path %}
       <nav class="sidebar-nav" aria-label="Main">
-        <a href="/dashboard" class="{{ 'active' if request.url.path == '/dashboard' }}">Home</a>
-        <a href="/practice/plan" class="{{ 'active' if request.url.path == '/practice/plan' }}">Today</a>
-        <a href="/learning-paths" class="{{ 'active' if request.url.path.startswith('/learning-paths') }}">My Learning Paths</a>
-        <a href="/subjects" class="{{ 'active' if request.url.path == '/subjects' }}">Explore Subjects</a>
-        <a href="/practice" class="{{ 'active' if request.url.path == '/practice' }}">Practice</a>
-        <a href="/practice/review" class="{{ 'active' if request.url.path.startswith('/practice/review') }}">Review</a>
-        <a href="/assessments" class="{{ 'active' if request.url.path.startswith('/assessments') }}">Assessments</a>
-        <a href="/documents" class="{{ 'active' if request.url.path == '/documents' }}">Knowledge Vault</a>
-        <a href="/projects" class="{{ 'active' if request.url.path.startswith('/projects') }}">Projects</a>
-        <a href="/jobs" class="{{ 'active' if request.url.path.startswith('/jobs') }}">Career Lab</a>
-        <a href="/labs" class="{{ 'active' if request.url.path.startswith('/labs') }}">Labs</a>
-        <a href="/progress" class="{{ 'active' if request.url.path == '/progress' }}">Progress</a>
+        <a href="/dashboard" class="{{ 'active' if p == '/dashboard' }}">{{ icon("home") }}<span>Home</span></a>
+        <a href="/practice/plan" class="{{ 'active' if p == '/practice/plan' }}">{{ icon("today") }}<span>Today</span></a>
+
+        <p class="sidebar-group">Learn</p>
+        <a href="/learning-paths" class="{{ 'active' if p.startswith('/learning-paths') }}">{{ icon("paths") }}<span>My Learning Paths</span></a>
+        <a href="/subjects" class="{{ 'active' if p == '/subjects' }}">{{ icon("explore") }}<span>Explore Subjects</span></a>
+        <a href="/assessments" class="{{ 'active' if p.startswith('/assessments') }}">{{ icon("assessments") }}<span>Assessments</span></a>
+
+        <p class="sidebar-group">Practice</p>
+        <a href="/practice" class="{{ 'active' if p == '/practice' or p.startswith('/practice/import') }}">{{ icon("practice") }}<span>Practice</span></a>
+        <a href="/practice/review" class="{{ 'active' if p.startswith('/practice/review') }}">{{ icon("review") }}<span>Review</span></a>
+
+        <p class="sidebar-group">Build</p>
+        <a href="/documents" class="{{ 'active' if p == '/documents' }}">{{ icon("vault") }}<span>Knowledge Vault</span></a>
+        <a href="/projects" class="{{ 'active' if p.startswith('/projects') }}">{{ icon("projects") }}<span>Projects</span></a>
+        <a href="/labs" class="{{ 'active' if p.startswith('/labs') }}">{{ icon("labs") }}<span>Labs</span></a>
+
+        <p class="sidebar-group">Grow</p>
+        <a href="/jobs" class="{{ 'active' if p.startswith('/jobs') }}">{{ icon("career") }}<span>Career Lab</span></a>
+        <a href="/progress" class="{{ 'active' if p == '/progress' }}">{{ icon("progress") }}<span>Progress</span></a>
       </nav>
     </aside>
 
