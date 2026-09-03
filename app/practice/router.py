@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 from datetime import date
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 
 from app.core.db import get_pool
 from app.core.deps import inject_current_user, require_user_id
@@ -13,7 +13,7 @@ from app.core.llm_budget import require_llm_budget
 from app.core.logging import get_logger
 from app.core.markdown import render_markdown
 from app.core.templates import templates
-from app.practice import extraction, grading, service
+from app.practice import bulk_io, extraction, grading, service
 
 router = APIRouter(prefix="/practice", dependencies=[Depends(inject_current_user)])
 logger = get_logger(__name__)
@@ -128,6 +128,66 @@ async def practice_home(
         request,
         "practice/capture.html",
         {"questions": questions, "draft": None, "raw_text": "", "ai_error": None},
+    )
+
+
+@router.get("/import", response_class=HTMLResponse)
+async def import_form(request: Request, user_id: int = Depends(require_user_id)):
+    return templates.TemplateResponse(
+        request, "practice/import.html", {"result": None, "error": None, "pasted": ""}
+    )
+
+
+@router.post("/import", response_class=HTMLResponse)
+async def import_questions(
+    request: Request,
+    pasted: str = Form(""),
+    file: UploadFile | None = File(None),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    text = pasted
+    if file is not None and file.filename:
+        raw = await file.read(1_000_000)  # 1 MB is plenty for a text deck
+        text = raw.decode("utf-8", errors="replace")
+
+    rows = bulk_io.parse_bulk(text)
+    if not rows:
+        return templates.TemplateResponse(
+            request,
+            "practice/import.html",
+            {
+                "result": None,
+                "error": "Found no rows to import -- each line needs a question and an answer, "
+                "separated by a tab or a comma.",
+                "pasted": pasted,
+            },
+            status_code=400,
+        )
+
+    existing = {q["question"].casefold() for q in await service.list_questions(pool, user_id)}
+    added = 0
+    for row in rows:
+        if row["question"].casefold() in existing:
+            continue
+        await service.create_question(pool, user_id, row, source="imported")
+        existing.add(row["question"].casefold())
+        added += 1
+
+    return templates.TemplateResponse(
+        request,
+        "practice/import.html",
+        {"result": {"added": added, "skipped": len(rows) - added}, "error": None, "pasted": ""},
+    )
+
+
+@router.get("/export.csv")
+async def export_csv(user_id: int = Depends(require_user_id), pool=Depends(get_pool)):
+    rows = await service.list_questions(pool, user_id)
+    return PlainTextResponse(
+        bulk_io.to_csv(rows),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="practiceloop-questions.csv"'},
     )
 
 

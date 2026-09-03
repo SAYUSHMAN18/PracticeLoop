@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Import questions - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Import questions</h1>
+<p class="muted">
+  Bring a deck in from Anki (export as "Notes in Plain Text") or Quizlet
+  (Export &rarr; copy the text). Paste it below or upload the file.
+</p>
+
+{% if result %}
+  <div class="card">
+    <p class="success">Imported {{ result.added }} question{{ "s" if result.added != 1 }}.</p>
+    {% if result.skipped %}
+      <p class="muted">{{ result.skipped }} row{{ "s" if result.skipped != 1 }} skipped (no answer, a header, or a duplicate).</p>
+    {% endif %}
+    <a class="btn" href="/practice">Back to the bank</a>
+  </div>
+{% endif %}
+
+<div class="card">
+  <form method="post" action="/practice/import" enctype="multipart/form-data">
+    <label for="f-paste">Paste tab- or comma-separated rows</label>
+    <textarea id="f-paste" name="pasted" rows="8"
+      placeholder="mitochondria&#9;the powerhouse of the cell&#10;ribosome&#9;makes proteins&#10;&#10;-- or --&#10;&#10;What is a mutex?,A lock that allows one thread at a time,concurrency">{{ pasted or "" }}</textarea>
+    <p class="muted" style="font-size:0.82rem;">Column 1 = question, column 2 = answer, optional column 3 = topic. A header row is detected and skipped.</p>
+
+    <label for="f-file" style="margin-top:1rem;">&hellip;or upload a .csv / .tsv / .txt</label>
+    <input id="f-file" type="file" name="file" accept=".csv,.tsv,.txt">
+
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    <button type="submit" style="margin-top:1rem;">Import</button>
+  </form>
+</div>
+
+<p class="muted"><a href="/practice/export.csv">Export your bank as CSV &darr;</a></p>
+{% endblock %}
