@@ -18,6 +18,12 @@
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     <button type="submit" style="width:100%;justify-content:center;">Sign up</button>
   </form>
-  <p class="muted" style="margin-top:1rem;">Already have an account? <a href="/login">Log in</a></p>
+  <p class="muted" style="margin-top:1rem;font-size:0.82rem;">
+    By signing up you agree to the <a href="/terms">Terms</a> and
+    <a href="/privacy">Privacy Policy</a>. If you're under the age of digital
+    consent where you live, a parent, guardian, or teacher should set up and
+    supervise the account.
+  </p>
+  <p class="muted" style="margin-top:0.75rem;">Already have an account? <a href="/login">Log in</a></p>
 </div>
 {% endblock %}

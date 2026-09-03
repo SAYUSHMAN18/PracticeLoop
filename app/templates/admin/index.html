@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Admin - PracticeLoop{% endblock %}
+{% block content %}
+<style nonce="{{ request.state.csp_nonce }}">
+  .admin-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .admin-table th, .admin-table td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border, #0002); }
+  .admin-table th { color: var(--muted); font-weight: 600; }
+  .admin-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .admin-warn { color: #c0362c; font-weight: 600; }
+  .admin-scroll { overflow-x: auto; }
+</style>
+
+<h1>Operator dashboard</h1>
+<p class="muted">Read-only. Aggregates from the standard tables and <code>llm_calls</code>.</p>
+
+<div class="card">
+  <h2>Users &amp; activity</h2>
+  <div class="stat-grid">
+    <div class="stat"><div class="value">{{ overview.users_total }}</div><div class="label">users</div></div>
+    <div class="stat"><div class="value">{{ overview.users_7d }}</div><div class="label">new / 7d</div></div>
+    <div class="stat"><div class="value">{{ overview.users_24h }}</div><div class="label">new / 24h</div></div>
+    <div class="stat"><div class="value">{{ overview.attempts_24h }}</div><div class="label">reviews / 24h</div></div>
+    <div class="stat"><div class="value">{{ overview.questions_total }}</div><div class="label">questions</div></div>
+    <div class="stat"><div class="value">{{ overview.paths_total }}</div><div class="label">learning paths</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>AI layer</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;">
+    {% for label, w in [("Last 24h", llm.day), ("Last 7d", llm.week)] %}
+    <div>
+      <h3 style="margin:0 0 0.5rem;">{{ label }}</h3>
+      <table class="admin-table">
+        <tr><td>Calls</td><td class="num">{{ w.calls }}</td></tr>
+        <tr><td>Cache hits</td><td class="num">{{ w.cached }} &middot; {{ w.cache_hit_pct }}%</td></tr>
+        <tr><td>Failed</td><td class="num {{ 'admin-warn' if w.fail_pct >= 5 }}">{{ w.failed }} &middot; {{ w.fail_pct }}%</td></tr>
+        <tr><td>Prompt tokens</td><td class="num">{{ "{:,}".format(w.prompt_tokens) }}</td></tr>
+        <tr><td>Completion tokens</td><td class="num">{{ "{:,}".format(w.completion_tokens) }}</td></tr>
+      </table>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if llm.by_provider %}
+  <h3 style="margin:1rem 0 0.5rem;">By provider (7d)</h3>
+  <table class="admin-table">
+    <tr><th>Provider</th><th>Calls</th><th>Failed</th></tr>
+    {% for p in llm.by_provider %}
+    <tr><td>{{ p.provider }}</td><td class="num">{{ p.calls }}</td><td class="num">{{ p.failed }}</td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  {% if llm.recent %}
+  <h3 style="margin:1rem 0 0.5rem;">Most recent calls</h3>
+  <div class="admin-scroll">
+    <table class="admin-table">
+      <tr><th>When</th><th>Provider</th><th>Model</th><th>ms</th><th>State</th></tr>
+      {% for c in llm.recent %}
+      <tr>
+        <td>{{ c.created_at.strftime("%m-%d %H:%M") }}</td>
+        <td>{{ c.provider }}</td>
+        <td>{{ c.model }}</td>
+        <td class="num">{{ c.latency_ms if c.latency_ms is not none else "-" }}</td>
+        <td>{% if c.failed %}<span class="admin-warn">failed</span>{% elif c.cached %}cached{% else %}ok{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Recent signups</h2>
+  <div class="admin-scroll">
+    <table class="admin-table">
+      <tr><th>When</th><th>Email</th><th>Name</th><th>Role</th><th>Reviews</th></tr>
+      {% for s in signups %}
+      <tr>
+        <td>{{ s.created_at.strftime("%Y-%m-%d") }}</td>
+        <td>{{ s.email }}</td>
+        <td>{{ s.name }}</td>
+        <td>{{ s.role }}</td>
+        <td class="num">{{ s.attempts }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% endblock %}

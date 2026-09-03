@@ -69,6 +69,10 @@ class Settings(BaseSettings):
     smtp_use_starttls: bool = True
     smtp_use_ssl: bool = False
 
+    # Comma-separated emails allowed to see /admin. Not a DB role -- nothing
+    # in the product grants it, and an unset value means no admin at all.
+    admin_emails: str = ""
+
     # Public identity -- used for canonical URLs, Open Graph tags, the
     # sitemap, and llms.txt. Must be the absolute origin the site is
     # actually served from: a canonical pointing somewhere else is worse

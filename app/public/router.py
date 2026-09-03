@@ -23,6 +23,10 @@ from app.public import content
 
 router = APIRouter()
 
+# Bumped by hand when the legal text materially changes -- not date.today(),
+# which would make "last updated" march forward every day for no reason.
+_LEGAL_LAST_UPDATED = "3 September 2026"
+
 
 def _base_url() -> str:
     return settings.public_base_url.rstrip("/")
@@ -101,6 +105,26 @@ async def landing(request: Request):
     )
 
 
+@router.get("/terms", response_class=HTMLResponse)
+async def terms(request: Request):
+    base = _base_url()
+    return templates.TemplateResponse(
+        request,
+        "legal/terms.html",
+        {"canonical_url": f"{base}/terms", "base_url": base, "last_updated": _LEGAL_LAST_UPDATED},
+    )
+
+
+@router.get("/privacy", response_class=HTMLResponse)
+async def privacy(request: Request):
+    base = _base_url()
+    return templates.TemplateResponse(
+        request,
+        "legal/privacy.html",
+        {"canonical_url": f"{base}/privacy", "base_url": base, "last_updated": _LEGAL_LAST_UPDATED},
+    )
+
+
 @router.get("/robots.txt", response_class=PlainTextResponse)
 async def robots() -> str:
     """Everything behind a login is disallowed -- not for secrecy (it all
@@ -128,7 +152,14 @@ async def robots() -> str:
         "/mentor",
         "/welcome",
     ]
-    lines = ["User-agent: *", "Allow: /$", "Allow: /login", "Allow: /signup"]
+    lines = [
+        "User-agent: *",
+        "Allow: /$",
+        "Allow: /login",
+        "Allow: /signup",
+        "Allow: /terms",
+        "Allow: /privacy",
+    ]
     lines += [f"Disallow: {path}" for path in disallowed]
     lines += ["", f"Sitemap: {base}/sitemap.xml"]
     return "\n".join(lines) + "\n"
@@ -137,7 +168,13 @@ async def robots() -> str:
 @router.get("/sitemap.xml")
 async def sitemap() -> PlainTextResponse:
     base = _base_url()
-    urls = [(f"{base}/", "1.0"), (f"{base}/signup", "0.5"), (f"{base}/login", "0.3")]
+    urls = [
+        (f"{base}/", "1.0"),
+        (f"{base}/signup", "0.5"),
+        (f"{base}/login", "0.3"),
+        (f"{base}/terms", "0.2"),
+        (f"{base}/privacy", "0.2"),
+    ]
     body = "\n".join(
         f"  <url><loc>{loc}</loc><priority>{priority}</priority></url>" for loc, priority in urls
     )

@@ -1,0 +1,85 @@
+{% extends "base_public.html" %}
+{% block title %}Privacy Policy - PracticeLoop{% endblock %}
+{% block meta_description %}What PracticeLoop collects, why, and how to get it back or delete it.{% endblock %}
+{% block content %}
+<article class="legal-doc">
+  <h1>Privacy Policy</h1>
+  <p class="muted">Last updated: {{ last_updated }}</p>
+
+  <div class="legal-callout">
+    A plain-language description of what this personal-scale project actually
+    does with data. It is not legal advice and is not a substitute for a
+    review against the law where you and your users live.
+  </div>
+
+  <h2>What is collected</h2>
+  <ul>
+    <li><strong>Account:</strong> your name, email, and a hashed password.</li>
+    <li><strong>What you create:</strong> questions, notes, learning paths,
+      diagnostic results, project write-ups, uploaded documents and resume
+      text, and your messages to the AI mentor.</li>
+    <li><strong>Activity:</strong> which questions you reviewed and when, your
+      confidence ratings, streak and XP -- the data the spaced-repetition
+      schedule and progress views are built from.</li>
+    <li><strong>Operational logs:</strong> standard server logs, and one row
+      per AI call (which provider, token counts, latency) used to watch cost
+      and reliability. These are not used to profile you.</li>
+  </ul>
+
+  <h2>Why</h2>
+  <p>
+    Only to run the features you use. There is no advertising, no sale of data,
+    and no third-party analytics or tracking scripts on the site.
+  </p>
+
+  <h2>AI processing</h2>
+  <p>
+    Generating a lesson, a diagnostic, a grade, or a mentor reply sends text to
+    a third-party AI provider (currently Groq or Google, depending on
+    configuration). Prompts that carry personal detail -- your typed answer,
+    your resume, your mentor conversation -- are sent only to produce that one
+    result. Prompts that carry none -- a topic name, a goal string -- may be
+    cached and reused to answer an identical request from another user.
+  </p>
+
+  <h2>Children</h2>
+  <p>
+    PracticeLoop is usable by students, including those under the age of
+    consent in their country. Those accounts are meant to be created and
+    supervised by a parent, guardian, or teacher. The optional guardian link
+    shows a summary only, and only after the student generates and shares an
+    invite. If you believe a child set up an unsupervised account, contact us
+    and it will be removed.
+  </p>
+
+  <h2>Retention</h2>
+  <p>
+    Your data is kept while your account exists. Deleting your account
+    (Account &rarr; Delete) removes it, including everything that references
+    it. Operational logs age out on their own within a short window.
+  </p>
+
+  <h2>Your controls</h2>
+  <ul>
+    <li><strong>Export:</strong> Account &rarr; Export downloads everything as
+      one JSON file.</li>
+    <li><strong>Delete:</strong> Account &rarr; Delete removes your account and
+      data.</li>
+    <li><strong>Correct:</strong> edit your profile and content directly.</li>
+  </ul>
+
+  <h2>Security</h2>
+  <p>
+    Passwords are hashed with bcrypt. Sessions are signed cookies. The site
+    sets a strict content-security policy and standard security headers.
+  </p>
+
+  <h2>Contact</h2>
+  <p>
+    Reach the operator through the address listed on the project's repository
+    or landing page.
+  </p>
+
+  <p class="muted" style="margin-top:2rem;"><a href="/terms">Terms of Use</a> &middot; <a href="/">Home</a></p>
+</article>
+{% endblock %}

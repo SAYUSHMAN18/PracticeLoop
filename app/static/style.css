@@ -1692,3 +1692,22 @@ h1, h2, h3, h4, p, li, td, th, summary, label, .tag { overflow-wrap: break-word;
   .public-nav { gap: 0.5rem; padding-inline: 0.85rem; }
   .public-nav .brand { font-size: 1rem; }
 }
+
+/* --- Legal pages (/terms, /privacy) --- */
+.legal-doc {
+  max-width: 64ch;
+  margin: 2.5rem auto;
+  line-height: 1.65;
+}
+.legal-doc h1 { margin-bottom: 0.25rem; }
+.legal-doc h2 { margin-top: 2rem; font-size: 1.15rem; }
+.legal-doc ul { padding-left: 1.25rem; }
+.legal-doc li { margin: 0.35rem 0; }
+.legal-callout {
+  border-left: 3px solid var(--accent-2);
+  background: var(--panel-2);
+  padding: 0.8rem 1rem;
+  margin: 1.25rem 0;
+  font-size: 0.9rem;
+  border-radius: 4px;
+}

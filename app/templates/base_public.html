@@ -42,7 +42,7 @@
      FAQPage is the part generative engines actually quote back, which is
      why the questions below are phrased the way a person would ask them
      rather than as marketing headings. #}
-  <script type="application/ld+json" nonce="{{ request.state.csp_nonce }}">{{ structured_data }}</script>
+  {% if structured_data %}<script type="application/ld+json" nonce="{{ request.state.csp_nonce }}">{{ structured_data }}</script>{% endif %}
 </head>
 <body class="public-body">
   <a href="#main-content" class="skip-link">Skip to content</a>
@@ -89,6 +89,8 @@
       <nav aria-label="Footer">
         <a href="/signup">Create an account</a>
         <a href="/login">Log in</a>
+        <a href="/terms">Terms</a>
+        <a href="/privacy">Privacy</a>
         <a href="https://github.com/SAYUSHMAN18/PracticeLoop" rel="noopener">Source on GitHub</a>
       </nav>
     </div>

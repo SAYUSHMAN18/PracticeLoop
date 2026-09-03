@@ -103,8 +103,9 @@ async def test_sitemap_is_valid_xml_listing_the_public_urls(client):
     body = response.text
     assert body.startswith("<?xml")
     assert "<urlset" in body
-    assert body.count("<url>") == 3
+    assert body.count("<url>") == 5
     assert "/signup</loc>" in body
+    assert "/privacy</loc>" in body
 
 
 async def test_llms_txt_describes_the_product_and_its_limits(client):

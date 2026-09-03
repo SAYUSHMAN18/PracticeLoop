@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.account.router import router as account_router
+from app.admin.router import router as admin_router
 from app.analytics.router import router as analytics_router
 from app.assessments.router import router as assessments_router
 from app.auth.router import router as auth_router
@@ -102,6 +103,7 @@ app.include_router(guardian_router)
 app.include_router(notifications_router)
 app.include_router(analytics_router)
 app.include_router(account_router)
+app.include_router(admin_router)
 # Last: its "/" must not shadow anything, and it is the only public surface.
 app.include_router(public_router)
 

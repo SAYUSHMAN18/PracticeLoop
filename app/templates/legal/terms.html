@@ -1,0 +1,77 @@
+{% extends "base_public.html" %}
+{% block title %}Terms of Use - PracticeLoop{% endblock %}
+{% block meta_description %}The terms you agree to when you use PracticeLoop.{% endblock %}
+{% block content %}
+<article class="legal-doc">
+  <h1>Terms of Use</h1>
+  <p class="muted">Last updated: {{ last_updated }}</p>
+
+  <div class="legal-callout">
+    This is a plain-language starting point for a personal-scale project, not
+    legal advice. Have a lawyer review it before relying on it for anything
+    that matters.
+  </div>
+
+  <h2>1. What PracticeLoop is</h2>
+  <p>
+    PracticeLoop is a study tool: you set a goal, it builds a learning path and
+    a spaced-repetition review queue, and an AI mentor answers questions. It is
+    provided as-is, for personal educational use.
+  </p>
+
+  <h2>2. Your account</h2>
+  <p>
+    You need an email address and a password. Keep the password to yourself --
+    anything done from your account is treated as done by you. Tell us if you
+    think someone else has access.
+  </p>
+  <p>
+    You must be old enough to consent to processing your own data where you
+    live (13 in the United States, 16 in much of the EU, 18 in some places).
+    If you are younger, a parent or guardian must set up and supervise the
+    account.
+  </p>
+
+  <h2>3. What you put in</h2>
+  <p>
+    Questions, notes, resume text, project write-ups, and messages to the
+    mentor are yours. You give PracticeLoop permission to store and process
+    them only to run the features you are using -- generating a lesson,
+    scheduling a review, answering a question. Some prompts that contain no
+    personal detail (a topic name, a goal string) are sent to a third-party AI
+    provider and may be cached and reused to answer the same request from
+    someone else.
+  </p>
+  <p>
+    Do not upload anything illegal, anything that isn't yours to share, or
+    anything designed to attack the service or other users.
+  </p>
+
+  <h2>4. What the AI produces</h2>
+  <p>
+    AI-generated lessons, answers, and feedback can be wrong or incomplete.
+    Check anything important against a real source. PracticeLoop is not a
+    substitute for a teacher, a doctor, a lawyer, or a financial adviser.
+  </p>
+
+  <h2>5. Availability</h2>
+  <p>
+    The service may be slow, interrupted, or discontinued. Export your data
+    (Account &rarr; Export) if you want a copy you control.
+  </p>
+
+  <h2>6. Ending your account</h2>
+  <p>
+    You can delete your account at any time from the Account page; it removes
+    your data. We may suspend an account that breaks these terms.
+  </p>
+
+  <h2>7. Changes</h2>
+  <p>
+    If these terms change materially, the "last updated" date above changes and
+    a notice appears on the site.
+  </p>
+
+  <p class="muted" style="margin-top:2rem;"><a href="/privacy">Privacy Policy</a> &middot; <a href="/">Home</a></p>
+</article>
+{% endblock %}
