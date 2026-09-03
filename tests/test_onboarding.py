@@ -68,6 +68,15 @@ async def test_skipping_welcome_marks_onboarded_without_touching_profile_fields(
     assert login.headers["location"] == "/dashboard"
 
 
+async def test_revisiting_welcome_after_onboarding_bounces_to_the_dashboard(client):
+    await _signup_without_following_redirect(client, "onboard-revisit@example.com")
+    await client.post("/welcome/skip")
+
+    revisit = await client.get("/welcome", follow_redirects=False)
+    assert revisit.status_code == 303
+    assert revisit.headers["location"] == "/dashboard"
+
+
 async def test_login_also_redirects_to_welcome_when_not_yet_onboarded():
     """Not just signup -- logging in (e.g. the user closed the tab instead
     of finishing/skipping welcome, or this is a pre-existing account from

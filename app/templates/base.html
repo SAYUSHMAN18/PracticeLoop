@@ -222,6 +222,7 @@
         { label: "My Learning Paths", href: "/learning-paths", keywords: "courses curriculum roadmap" },
         { label: "Explore Subjects", href: "/subjects", keywords: "browse catalog subjects" },
         { label: "Practice question bank", href: "/practice", keywords: "capture questions bank" },
+        { label: "Import questions", href: "/practice/import", keywords: "import anki quizlet csv tsv deck upload" },
         { label: "Quiz Arena", href: "/practice/quiz-arena", keywords: "game quiz arena batch xp" },
         { label: "Review queue", href: "/practice/review", keywords: "study review spaced repetition" },
         { label: "Study history", href: "/practice/history", keywords: "history log past reviews calendar" },
@@ -243,6 +244,7 @@
         { label: "Progress", href: "/progress", keywords: "analytics mastery history" },
         { label: "Profile & settings", href: "/profile", keywords: "settings goal timezone proficiency" },
         { label: "Log out", href: "/logout", keywords: "sign out", isForm: true },
+        { label: "Switch theme (light / dark / high contrast)", action: "theme", keywords: "theme dark light mode appearance contrast color" },
       ];
 
       var trigger = document.getElementById("command-palette-trigger");
@@ -286,6 +288,12 @@
 
       function activate(command) {
         if (!command) return;
+        if (command.action === "theme") {
+          close();
+          var themeBtn = document.getElementById("theme-toggle");
+          if (themeBtn) themeBtn.click();
+          return;
+        }
         if (command.isForm) {
           var form = document.createElement("form");
           form.method = "post";

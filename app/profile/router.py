@@ -177,7 +177,13 @@ async def welcome_page(
     enhancement plan's full multi-step wizard: the existing signup form is
     built to take under a minute, and stacking a long wizard behind it
     would work against that same plan's own "personalized first activity
-    in under three minutes" completion criteria, not toward it."""
+    in under three minutes" completion criteria, not toward it.
+
+    Someone who's already onboarded and navigates back here (a stale tab,
+    the browser back button) gets the dashboard, not the setup screen
+    again."""
+    if not await service.needs_onboarding(pool, user_id):
+        return RedirectResponse("/dashboard", status_code=303)
     profile = await service.get_profile(pool, user_id)
     return templates.TemplateResponse(
         request,
