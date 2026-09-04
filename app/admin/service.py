@@ -92,7 +92,10 @@ def email_status() -> dict:
     from app.core.config import settings
 
     backend = settings.email_backend.strip().lower()
-    if backend == "resend":
+    if backend == "brevo":
+        delivering = bool(settings.brevo_api_key.strip())
+        detail = "Brevo" + ("" if delivering else " -- BREVO_API_KEY not set")
+    elif backend == "resend":
         delivering = bool(settings.resend_api_key.strip())
         detail = "Resend" + ("" if delivering else " -- RESEND_API_KEY not set")
     elif backend == "smtp":

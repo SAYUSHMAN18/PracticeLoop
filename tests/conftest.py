@@ -71,6 +71,11 @@ async def _use_test_database():
     settings.groq_api_key = ""
     settings.gemini_api_key = ""
     settings.bedrock_model_id = ""
+    # Same reasoning for email: the send flows are tested by patching send_email
+    # directly, and test_email_backends opts each backend back in explicitly.
+    # Force console here so a developer's real EMAIL_BACKEND/*_API_KEY in .env
+    # can't turn an unrelated test into a real outbound send.
+    settings.email_backend = "console"
 
     yield
 

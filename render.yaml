@@ -42,17 +42,20 @@ services:
       - key: ADZUNA_APP_KEY
         sync: false # finds nothing without these (free at developer.adzuna.com)
       # --- Transactional email (password reset, verification, re-engagement digest) ---
-      # Without these the app logs emails to stdout instead of sending them
-      # (EMAIL_BACKEND defaults to "console"), so password reset / verify links
-      # never reach users in production.
+      # Without a real backend the app logs emails to stdout instead of sending
+      # them (EMAIL_BACKEND=console), so password reset / verify links never
+      # reach users. Render blocks outbound SMTP, so the backend must be an API
+      # one: `brevo` (300/day free, only needs a verified sender address) or
+      # `resend` (best deliverability, but needs a verified domain).
       - key: EMAIL_BACKEND
-        value: resend # console | resend | smtp
+        value: brevo # console | brevo | resend | smtp
+      - key: BREVO_API_KEY
+        sync: false # brevo.com -> SMTP & API -> API keys (xkeysib-...); required for EMAIL_BACKEND=brevo
       - key: RESEND_API_KEY
-        sync: false # from resend.com/api-keys -- required when EMAIL_BACKEND=resend
+        sync: false # resend.com/api-keys; required for EMAIL_BACKEND=resend (also needs a verified domain)
       - key: EMAIL_FROM
-        sync: false # e.g. "PracticeLoop <noreply@yourdomain.com>"; must be a Resend-verified
-                    # sender. With no domain verified, Resend only allows "onboarding@resend.dev"
-                    # and only delivers to your own account email.
+        sync: false # e.g. "PracticeLoop <noreply@yourdomain.com>". For brevo this must be a
+                    # verified Sender in the Brevo dashboard; for resend, on a verified domain.
       - key: DIGEST_CRON_TOKEN
         sync: false # must match the DIGEST_CRON_TOKEN secret in this repo's GitHub Actions
                     # settings; the digest.yml workflow POSTs /cron/digest with it. Unset =>

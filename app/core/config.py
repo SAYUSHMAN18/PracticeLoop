@@ -56,12 +56,15 @@ class Settings(BaseSettings):
     login_lockout_threshold: int = 8
     login_lockout_minutes: int = 15
 
-    # Email. backend: console | resend | smtp. console just logs the
-    # message; a real deploy sets EMAIL_BACKEND=resend (one API key, the
-    # easy path) or =smtp (any provider). Everything still works end to end
-    # on console, it just never delivers.
+    # Email. backend: console | brevo | resend | smtp. console just logs
+    # the message; a real deploy sets an API backend and the matching key.
+    # brevo needs only a verified sender address (free 300/day); resend
+    # needs a verified domain but delivers best. smtp works anywhere the
+    # host allows outbound 25/465/587 -- Render and most PaaS do not.
+    # Everything still works end to end on console, it just never delivers.
     email_backend: str = "console"
     email_from: str = ""
+    brevo_api_key: str = ""  # for EMAIL_BACKEND=brevo -- brevo.com, 300 emails/day free, no domain
     resend_api_key: str = ""  # for EMAIL_BACKEND=resend -- resend.com, generous free tier
     smtp_host: str = ""
     smtp_port: int = 587

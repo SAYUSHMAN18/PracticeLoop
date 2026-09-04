@@ -1,22 +1,30 @@
-"""Transactional email -- one function, three backends.
+"""Transactional email -- one function, four backends.
 
 `console` (the default, and what the test suite uses): the message is
-logged and nothing leaves the process. `resend`: one HTTPS POST to the
-Resend API -- set RESEND_API_KEY and EMAIL_FROM and you're done, no SMTP
-host/port/TLS to get wrong. `smtp`: a real send through stdlib smtplib
-(Gmail, SES, Postmark, Mailgun, a local relay -- all speak SMTP), run off
-the event loop.
+logged and nothing leaves the process. `brevo` and `resend`: one HTTPS
+POST to the provider's API -- set the API key and EMAIL_FROM and you're
+done. `smtp`: a real send through stdlib smtplib, run off the event loop.
+
+Pick the backend to match where this runs:
+
+* Render (and most PaaS) block outbound SMTP on ports 25/465/587, so
+  `smtp` there fails with "Network is unreachable" -- use an API backend.
+* `brevo` sends from a verified *sender address* (no domain needed) on a
+  free 300/day tier -- the path of least resistance for a new deploy.
+* `resend` needs a verified *domain* to send to anyone but your own
+  address, but gives the best deliverability once you have one.
 
 A deploy that wants password-reset and digest email to actually arrive
-sets EMAIL_BACKEND to `resend` or `smtp` and the matching vars; otherwise
-send_email() logs and returns, and every flow still works end to end, it
-just never delivers.
+sets EMAIL_BACKEND to `brevo`, `resend`, or `smtp` and the matching vars;
+otherwise send_email() logs and returns, and every flow still works end
+to end, it just never delivers.
 """
 
 from __future__ import annotations
 
 import smtplib
 from email.message import EmailMessage
+from email.utils import parseaddr
 
 import httpx
 from starlette.concurrency import run_in_threadpool
@@ -28,7 +36,7 @@ logger = get_logger(__name__)
 
 
 class EmailNotConfigured(RuntimeError):
-    """EMAIL_BACKEND=smtp but the SMTP_* settings are incomplete."""
+    """The selected EMAIL_BACKEND is missing a setting it needs."""
 
 
 def _from_address() -> str:
@@ -82,12 +90,46 @@ async def _send_resend(to: str, subject: str, text: str, html: str | None) -> No
         resp.raise_for_status()
 
 
+async def _send_brevo(to: str, subject: str, text: str, html: str | None) -> None:
+    key = settings.brevo_api_key.strip()
+    if not key:
+        raise EmailNotConfigured("EMAIL_BACKEND=brevo but BREVO_API_KEY is unset.")
+    name, addr = parseaddr(_from_address())
+    sender: dict[str, str] = {"email": addr or _from_address()}
+    if name:
+        sender["name"] = name
+    payload: dict[str, object] = {
+        "sender": sender,
+        "to": [{"email": to}],
+        "subject": subject,
+        "textContent": text,
+    }
+    if html:
+        payload["htmlContent"] = html
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers={"api-key": key, "accept": "application/json"},
+            json=payload,
+        )
+        resp.raise_for_status()
+
+
 async def send_email(to: str, subject: str, text: str, html: str | None = None) -> bool:
     """Deliver one message. Returns whether it was actually sent (False for
     the console backend, or on a swallowed delivery failure). Never raises
     for a delivery problem -- a reset email that fails to send must not
     500 the request that asked for it; the user can try again."""
     backend = settings.email_backend.strip().lower()
+
+    if backend == "brevo":
+        try:
+            await _send_brevo(to, subject, text, html)
+            logger.info("email[brevo] sent to=%s subject=%s", to, subject)
+            return True
+        except Exception:
+            logger.exception("email[brevo] send failed to=%s subject=%s", to, subject)
+            return False
 
     if backend == "resend":
         try:

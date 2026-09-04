@@ -1,8 +1,8 @@
 """send_email() backend routing, and the operator's email-status readout.
 
-console (the suite default) logs and returns False; resend does one HTTPS
-POST; smtp goes through smtplib. A delivery failure is swallowed, never
-raised -- the flow that asked for the mail must not 500.
+console (the suite default) logs and returns False; brevo and resend each
+do one HTTPS POST; smtp goes through smtplib. A delivery failure is
+swallowed, never raised -- the flow that asked for the mail must not 500.
 """
 
 from __future__ import annotations
@@ -66,10 +66,58 @@ async def test_a_resend_failure_is_swallowed(monkeypatch):
     assert await email.send_email("s@t.test", "x", "y") is False  # no raise
 
 
+async def test_brevo_backend_posts_to_the_api(monkeypatch):
+    monkeypatch.setattr(settings, "email_backend", "brevo")
+    monkeypatch.setattr(settings, "brevo_api_key", "xkeysib-test")
+    monkeypatch.setattr(settings, "email_from", "PracticeLoop <hi@pl.test>")
+
+    captured = {}
+
+    class _Resp:
+        def raise_for_status(self):
+            pass
+
+    class _Client:
+        def __init__(self, *a, **k):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def post(self, url, headers=None, json=None):
+            captured.update(url=url, headers=headers, json=json)
+            return _Resp()
+
+    monkeypatch.setattr(httpx, "AsyncClient", _Client)
+
+    assert await email.send_email("s@t.test", "Reset", "click here", html="<b>click</b>") is True
+    assert captured["url"] == "https://api.brevo.com/v3/smtp/email"
+    assert captured["headers"]["api-key"] == "xkeysib-test"
+    assert captured["json"]["sender"] == {"name": "PracticeLoop", "email": "hi@pl.test"}
+    assert captured["json"]["to"] == [{"email": "s@t.test"}]
+    assert captured["json"]["htmlContent"] == "<b>click</b>"
+
+
+async def test_a_brevo_failure_is_swallowed(monkeypatch):
+    monkeypatch.setattr(settings, "email_backend", "brevo")
+    monkeypatch.setattr(settings, "brevo_api_key", "xkeysib-test")
+
+    async def boom(*a, **k):
+        raise RuntimeError("brevo 500")
+
+    monkeypatch.setattr(email, "_send_brevo", boom)
+    assert await email.send_email("s@t.test", "x", "y") is False  # no raise
+
+
 @pytest.mark.parametrize(
     "backend,extra,expect_delivering",
     [
         ("console", {}, False),
+        ("brevo", {"brevo_api_key": "xkeysib-x"}, True),
+        ("brevo", {"brevo_api_key": ""}, False),
         ("resend", {"resend_api_key": "re_x"}, True),
         ("resend", {"resend_api_key": ""}, False),
         ("smtp", {"smtp_host": "smtp.test"}, True),
