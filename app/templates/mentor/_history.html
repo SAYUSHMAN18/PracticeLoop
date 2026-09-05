@@ -1,0 +1,27 @@
+<div class="mentor-toolbar">
+  <button type="button" class="link-button" style="padding:0.3rem 0.5rem;font-size:0.78rem;"
+          hx-get="/mentor/conversation?context_type={{ context_type }}&context_id={{ context_id }}"
+          hx-target="#mentor-panel-body" hx-swap="innerHTML">&larr; Back to chat</button>
+</div>
+
+<p class="muted" style="font-size:0.85rem;margin:0.4rem 0 0.75rem;">Past chats in this conversation. Tap one to pick it back up.</p>
+
+{% if not sessions %}
+  <p class="muted" style="font-size:0.85rem;">
+    Nothing here yet -- start a new chat from the conversation and your current one will show up
+    here once you move on to another.
+  </p>
+{% endif %}
+
+{% for s in sessions %}
+  <form hx-post="/mentor/history/{{ s.conversation_id }}/resume" hx-target="#mentor-panel-body" hx-swap="innerHTML" style="margin:0 0 0.5rem;">
+    <input type="hidden" name="context_type" value="{{ context_type }}">
+    <input type="hidden" name="context_id" value="{{ context_id }}">
+    <button type="submit" class="mentor-session-item">
+      <div class="mentor-session-date">{{ s.ended_at.strftime('%b %d, %Y') }} &middot; {{ s.ended_at.strftime('%H:%M') }}</div>
+      <div class="muted mentor-session-preview">
+        {{ s.message_count }} message{{ "s" if s.message_count != 1 }}{% if s.preview %} &mdash; &ldquo;{{ s.preview|truncate(56) }}&rdquo;{% endif %}
+      </div>
+    </button>
+  </form>
+{% endfor %}

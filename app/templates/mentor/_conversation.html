@@ -1,3 +1,20 @@
+<div class="mentor-toolbar">
+  <button type="button" class="link-button" style="padding:0.3rem 0.5rem;font-size:0.78rem;"
+          hx-get="/mentor/history?context_type={{ context_type }}&context_id={{ context_id }}"
+          hx-target="#mentor-panel-body" hx-swap="innerHTML">History</button>
+  <form hx-post="/mentor/new-chat" hx-target="#mentor-panel-body" hx-swap="innerHTML" style="margin:0;">
+    <input type="hidden" name="context_type" value="{{ context_type }}">
+    <input type="hidden" name="context_id" value="{{ context_id }}">
+    <button type="submit" class="link-button" style="padding:0.3rem 0.5rem;font-size:0.78rem;">+ New chat</button>
+  </form>
+  <form id="mentor-clear-form" hx-post="/mentor/clear" hx-target="#mentor-panel-body" hx-swap="innerHTML"
+        hx-confirm="Clear this chat? This can't be undone." style="margin:0;">
+    <input type="hidden" name="context_type" value="{{ context_type }}">
+    <input type="hidden" name="context_id" value="{{ context_id }}">
+    <button type="submit" class="link-button" style="padding:0.3rem 0.5rem;font-size:0.78rem;">Clear</button>
+  </form>
+</div>
+
 <div id="mentor-messages" style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:0.75rem;">
   {% if not messages %}
     <p class="muted" style="font-size:0.85rem;">

@@ -147,6 +147,10 @@ async def build_context(pool: asyncpg.Pool, user_id: int, context_type: str, con
 async def get_or_create_conversation(
     pool: asyncpg.Pool, user_id: int, context_type: str, context_id: int | None
 ) -> int:
+    """Finds or creates the *active* session (ended_at IS NULL) for this
+    (user, context) -- calling this twice in a row without starting a new
+    chat or resuming an old one always returns the same conversation_id,
+    same as before sessions existed."""
     if context_type not in VALID_CONTEXT_TYPES:
         context_type = "general"
     if context_type == "general":
@@ -155,7 +159,7 @@ async def get_or_create_conversation(
     row = await pool.fetchrow(
         """INSERT INTO mentor_conversations (user_id, context_type, context_id)
            VALUES ($1, $2, $3)
-           ON CONFLICT (user_id, context_type, coalesce(context_id, -1))
+           ON CONFLICT (user_id, context_type, coalesce(context_id, -1)) WHERE ended_at IS NULL
            DO UPDATE SET user_id = EXCLUDED.user_id
            RETURNING conversation_id""",
         user_id,
@@ -163,6 +167,100 @@ async def get_or_create_conversation(
         context_id,
     )
     return row["conversation_id"]
+
+
+async def start_new_chat(pool: asyncpg.Pool, user_id: int, context_type: str, context_id: int | None) -> int:
+    """Ends whichever session is currently active for this (user, context)
+    -- if any -- and opens a fresh one. The ended session's messages are
+    left exactly as they are; list_sessions is how a student finds their
+    way back to it. A no-op if the active session has no messages yet --
+    starting fresh from an already-empty chat would just leave a pointless
+    empty row behind, and list_sessions filters those out anyway."""
+    current = await get_or_create_conversation(pool, user_id, context_type, context_id)
+    has_messages = await pool.fetchval(
+        "SELECT EXISTS (SELECT 1 FROM mentor_messages WHERE conversation_id = $1)", current
+    )
+    if not has_messages:
+        return current
+
+    if context_type not in VALID_CONTEXT_TYPES:
+        context_type = "general"
+    if context_type == "general":
+        context_id = None
+
+    await pool.execute("UPDATE mentor_conversations SET ended_at = now() WHERE conversation_id = $1", current)
+    return await get_or_create_conversation(pool, user_id, context_type, context_id)
+
+
+async def switch_to_session(pool: asyncpg.Pool, user_id: int, conversation_id: int) -> int:
+    """Resumes a past session: un-ends it and ends whatever else is
+    currently active for the same (user, context), preserving the
+    at-most-one-active-session invariant get_or_create_conversation relies
+    on. The session picked up this way keeps its original created_at --
+    only its ended_at moves, back to NULL."""
+    convo = await pool.fetchrow(
+        "SELECT context_type, context_id FROM mentor_conversations "
+        "WHERE conversation_id = $1 AND user_id = $2",
+        conversation_id,
+        user_id,
+    )
+    if convo is None:
+        raise ConversationNotFound(conversation_id)
+
+    await pool.execute(
+        """UPDATE mentor_conversations SET ended_at = now()
+           WHERE user_id = $1 AND context_type = $2 AND coalesce(context_id, -1) = coalesce($3, -1)
+             AND ended_at IS NULL""",
+        user_id,
+        convo["context_type"],
+        convo["context_id"],
+    )
+    await pool.execute(
+        "UPDATE mentor_conversations SET ended_at = NULL WHERE conversation_id = $1", conversation_id
+    )
+    return conversation_id
+
+
+async def clear_conversation(pool: asyncpg.Pool, user_id: int, conversation_id: int) -> None:
+    """Wipes a session's messages in place -- distinct from start_new_chat,
+    which keeps the old messages around under a new conversation_id. This
+    is the "start over, and don't keep what was here" action."""
+    owner = await pool.fetchval(
+        "SELECT user_id FROM mentor_conversations WHERE conversation_id = $1", conversation_id
+    )
+    if owner != user_id:
+        raise ConversationNotFound(conversation_id)
+    await pool.execute("DELETE FROM mentor_messages WHERE conversation_id = $1", conversation_id)
+
+
+async def list_sessions(
+    pool: asyncpg.Pool, user_id: int, context_type: str, context_id: int | None
+) -> list[dict]:
+    """Past, ended sessions for this (user, context) -- the active one
+    (rendered by _render_conversation itself) is deliberately excluded."""
+    if context_type not in VALID_CONTEXT_TYPES:
+        context_type = "general"
+    if context_type == "general":
+        context_id = None
+
+    rows = await pool.fetch(
+        """SELECT c.conversation_id, c.created_at, c.ended_at,
+                  (SELECT count(*) FROM mentor_messages m
+                     WHERE m.conversation_id = c.conversation_id) AS message_count,
+                  (SELECT m.content FROM mentor_messages m
+                     WHERE m.conversation_id = c.conversation_id AND m.role = 'user'
+                     ORDER BY m.created_at LIMIT 1) AS preview
+           FROM mentor_conversations c
+           WHERE c.user_id = $1 AND c.context_type = $2 AND coalesce(c.context_id, -1) = coalesce($3, -1)
+             AND c.ended_at IS NOT NULL
+             AND EXISTS (SELECT 1 FROM mentor_messages m WHERE m.conversation_id = c.conversation_id)
+           ORDER BY c.ended_at DESC
+           LIMIT 20""",
+        user_id,
+        context_type,
+        context_id,
+    )
+    return [dict(r) for r in rows]
 
 
 async def list_messages(pool: asyncpg.Pool, user_id: int, conversation_id: int) -> list[dict]:

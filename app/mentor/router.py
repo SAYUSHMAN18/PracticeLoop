@@ -112,3 +112,68 @@ async def quick_action(
         pool, user_id, conversation_id, text, context=context, ai_available=llm_is_configured()
     )
     return await _render_conversation(request, pool, user_id, clean_type, clean_id)
+
+
+@router.post("/new-chat", response_class=HTMLResponse)
+async def new_chat(
+    request: Request,
+    context_type: str = Form("general"),
+    context_id: str = Form(""),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    parsed_id = int(context_id) if context_id.isdigit() else None
+    clean_type, clean_id = _clean_context(context_type, parsed_id)
+    await service.start_new_chat(pool, user_id, clean_type, clean_id)
+    return await _render_conversation(request, pool, user_id, clean_type, clean_id)
+
+
+@router.post("/clear", response_class=HTMLResponse)
+async def clear(
+    request: Request,
+    context_type: str = Form("general"),
+    context_id: str = Form(""),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    parsed_id = int(context_id) if context_id.isdigit() else None
+    clean_type, clean_id = _clean_context(context_type, parsed_id)
+    conversation_id = await service.get_or_create_conversation(pool, user_id, clean_type, clean_id)
+    await service.clear_conversation(pool, user_id, conversation_id)
+    return await _render_conversation(request, pool, user_id, clean_type, clean_id)
+
+
+@router.get("/history", response_class=HTMLResponse)
+async def history(
+    request: Request,
+    context_type: str = "general",
+    context_id: str = "",
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    parsed_id = int(context_id) if context_id.isdigit() else None
+    clean_type, clean_id = _clean_context(context_type, parsed_id)
+    sessions = await service.list_sessions(pool, user_id, clean_type, clean_id)
+    return templates.TemplateResponse(
+        request,
+        "mentor/_history.html",
+        {"sessions": sessions, "context_type": clean_type, "context_id": clean_id or ""},
+    )
+
+
+@router.post("/history/{conversation_id}/resume", response_class=HTMLResponse)
+async def resume_session(
+    request: Request,
+    conversation_id: int,
+    context_type: str = Form("general"),
+    context_id: str = Form(""),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    parsed_id = int(context_id) if context_id.isdigit() else None
+    clean_type, clean_id = _clean_context(context_type, parsed_id)
+    try:
+        await service.switch_to_session(pool, user_id, conversation_id)
+    except service.ConversationNotFound as exc:
+        raise HTTPException(status_code=404) from exc
+    return await _render_conversation(request, pool, user_id, clean_type, clean_id)
