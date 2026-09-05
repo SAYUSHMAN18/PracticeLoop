@@ -38,9 +38,9 @@
   </p>
   <form method="post" action="/jobs/applications">
     <label for="f-company">Company</label>
-    <input id="f-company" type="text" name="company" required>
+    <input id="f-company" type="text" name="company" value="{{ prefill_company }}" required>
     <label for="f-role">Role</label>
-    <input id="f-role" type="text" name="role" required>
+    <input id="f-role" type="text" name="role" value="{{ prefill_role }}" required>
     <button type="submit">Log application</button>
   </form>
 </div>

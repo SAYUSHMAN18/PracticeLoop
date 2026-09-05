@@ -5,9 +5,27 @@ import asyncpg
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.jobs.scoring import keyword_fit_score
-from app.jobs.sources import SOURCES
+from app.jobs.sources import SOURCES, RawListing
 
 logger = get_logger(__name__)
+
+_SEARCH_MAX_RESULTS = 10
+
+
+async def search_live_listings(keywords: str, location: str = "") -> list[RawListing]:
+    """An on-demand search against every configured source, for a caller
+    that isn't discover_for_user's own per-student cron pass -- right now
+    that's a teacher looking for real internships/roles to share with a
+    classroom (app/classrooms/service.py's share_opportunity). Returns []
+    (not an error) when nothing's configured, same as every source
+    already does on its own."""
+    results: list[RawListing] = []
+    for fetch in SOURCES:
+        try:
+            results.extend(await fetch(keywords=keywords, location=location, max_results=_SEARCH_MAX_RESULTS))
+        except Exception:
+            logger.exception("Live job search failed for source=%s keywords=%r", fetch.__name__, keywords)
+    return results
 
 
 async def discover_for_user(pool: asyncpg.Pool, user_id: int, target_role: str, resume_text: str) -> int:

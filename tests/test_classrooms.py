@@ -2,6 +2,8 @@ import re
 
 from app.classrooms import service
 from app.core.db import get_pool
+from app.jobs import service as jobs_service
+from app.jobs.sources import RawListing
 from app.practice.service import create_question, record_attempt
 from tests.conftest import signup
 
@@ -343,3 +345,134 @@ async def test_deleting_a_classroom_cascades_members_and_assignments(client):
     assert remaining_classroom is None
     assert remaining_member is None
     assert remaining_assignment is None
+
+
+def _fake_listing(title: str = "Frontend Intern") -> RawListing:
+    return RawListing(
+        source="fake",
+        external_id="opp-1",
+        title=title,
+        company="Acme",
+        location="Remote",
+        description="React TypeScript frontend internship",
+        url="https://example.com/job/opp-1",
+    )
+
+
+async def test_teacher_can_search_and_share_a_live_opportunity(client, monkeypatch):
+    async def fake_fetch(keywords: str, location: str = "", max_results: int = 10):
+        return [_fake_listing()]
+
+    monkeypatch.setattr(jobs_service, "SOURCES", (fake_fetch,))
+
+    await signup(client, "opp-teacher@example.com")
+    await _become_teacher(client)
+    create = await client.post("/classrooms", data={"name": "Opps class"}, follow_redirects=False)
+    classroom_id = int(_classroom_id_from_redirect(create))
+
+    search = await client.get(
+        f"/classrooms/{classroom_id}/opportunities/search", params={"keywords": "frontend"}
+    )
+    assert search.status_code == 200
+    assert "Frontend Intern" in search.text
+    assert "React" in search.text  # description echoed back
+
+    shared = await client.post(
+        f"/classrooms/{classroom_id}/opportunities",
+        data={
+            "title": "Frontend Intern",
+            "company": "Acme",
+            "location": "Remote",
+            "description": "React TypeScript frontend internship",
+            "url": "https://example.com/job/opp-1",
+        },
+        follow_redirects=False,
+    )
+    assert shared.status_code == 303
+
+    pool = await get_pool()
+    from app.auth.service import get_user_by_email
+
+    teacher = await get_user_by_email(pool, "opp-teacher@example.com")
+    opportunities = await service.list_opportunities_for_teacher(pool, teacher["user_id"], classroom_id)
+    assert len(opportunities) == 1
+    assert opportunities[0]["title"] == "Frontend Intern"
+    assert "React" in opportunities[0]["skills"] or "TypeScript" in opportunities[0]["skills"]
+
+
+async def test_sharing_an_opportunity_requires_a_title(client):
+    await signup(client, "opp-notitle@example.com")
+    await _become_teacher(client)
+    create = await client.post("/classrooms", data={"name": "No title class"}, follow_redirects=False)
+    classroom_id = int(_classroom_id_from_redirect(create))
+
+    response = await client.post(f"/classrooms/{classroom_id}/opportunities", data={"title": "   "})
+    assert response.status_code == 400
+
+
+async def test_a_teacher_cannot_share_to_another_teachers_classroom(client):
+    pool = await get_pool()
+    from app.auth.service import create_user
+
+    other_teacher_id = await create_user(pool, "opp-other-teacher@example.com", "testpassword123", "T")
+    created = await service.create_classroom(pool, other_teacher_id, "Someone else's class")
+
+    await signup(client, "opp-attacker@example.com")
+    await _become_teacher(client)
+
+    response = await client.post(
+        f"/classrooms/{created['classroom_id']}/opportunities", data={"title": "Hijacked opportunity"}
+    )
+    assert response.status_code == 404
+
+
+async def test_a_student_sees_shared_opportunities_with_skill_tags_and_a_track_link(client):
+    pool = await get_pool()
+    from app.auth.service import create_user
+
+    teacher_id = await create_user(pool, "opp-student-teacher@example.com", "testpassword123", "T")
+    created = await service.create_classroom(pool, teacher_id, "Opps for students")
+    await service.share_opportunity(
+        pool,
+        teacher_id,
+        created["classroom_id"],
+        title="Backend Intern",
+        company="Acme",
+        location="Remote",
+        description="Python FastAPI Postgres backend internship",
+        url="https://example.com/job/opp-2",
+    )
+
+    await signup(client, "opp-student@example.com")
+    await client.post("/classrooms/join", data={"join_code": created["join_code"]})
+
+    detail = await client.get(f"/classrooms/{created['classroom_id']}")
+    assert detail.status_code == 200
+    assert "Backend Intern" in detail.text
+    assert "Python" in detail.text
+    assert "/jobs/applications?company=Acme&role=Backend%20Intern" in detail.text
+
+
+async def test_sharing_an_opportunity_notifies_classroom_members(client):
+    pool = await get_pool()
+    from app.auth.service import create_user
+    from app.notifications.service import list_notifications
+
+    teacher_id = await create_user(pool, "opp-notify-teacher@example.com", "testpassword123", "T")
+    created = await service.create_classroom(pool, teacher_id, "Notify class")
+    student_id = await create_user(pool, "opp-notify-student@example.com", "testpassword123", "S")
+    await service.join_classroom(pool, student_id, created["join_code"])
+
+    await service.share_opportunity(
+        pool,
+        teacher_id,
+        created["classroom_id"],
+        title="Data Intern",
+        company="Acme",
+        location="Remote",
+        description="SQL and Python data internship",
+        url="https://example.com/job/opp-3",
+    )
+
+    notifications = await list_notifications(pool, student_id)
+    assert any(n["kind"] == "opportunity_shared" for n in notifications)

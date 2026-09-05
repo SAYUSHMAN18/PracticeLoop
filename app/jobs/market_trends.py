@@ -26,6 +26,15 @@ _KNOWN_SKILLS = [
 _SMALL_SAMPLE_THRESHOLD = 40
 
 
+def tag_skills(text: str) -> list[str]:
+    """Which of _KNOWN_SKILLS appear in a piece of text -- the same
+    keyword match compute_skill_demand runs per-listing, exposed so a
+    single posting (e.g. a classroom opportunity) can show its own
+    skill tags, not just the system-wide aggregate."""
+    lowered = text.lower()
+    return [skill for skill in _KNOWN_SKILLS if skill.lower() in lowered]
+
+
 async def compute_skill_demand(pool: asyncpg.Pool, limit: int = 15) -> dict:
     """Aggregates across every discovered listing in the system, not just
     one user's own -- deliberately not scoped by user_id, unlike everything
@@ -39,10 +48,7 @@ async def compute_skill_demand(pool: asyncpg.Pool, limit: int = 15) -> dict:
 
     counts: Counter[str] = Counter()
     for listing in listings:
-        text = f"{listing['title']} {listing['description']}".lower()
-        for skill in _KNOWN_SKILLS:
-            if skill.lower() in text:
-                counts[skill] += 1
+        counts.update(tag_skills(f"{listing['title']} {listing['description']}"))
 
     return {
         "total_listings": total_listings,

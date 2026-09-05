@@ -191,6 +191,14 @@ async def test_updating_another_users_application_is_404(client):
     await attacker.aclose()
 
 
+async def test_applications_page_prefills_company_and_role_from_query_params(client):
+    await signup(client, "prefill@example.com")
+    page = await client.get("/jobs/applications", params={"company": "Acme", "role": "Backend Intern"})
+    assert page.status_code == 200
+    assert 'value="Acme"' in page.text
+    assert 'value="Backend Intern"' in page.text
+
+
 async def test_due_follow_ups_and_stale_detection(client):
     await signup(client, "followup@example.com")
     pool = await get_pool()

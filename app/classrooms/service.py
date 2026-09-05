@@ -7,6 +7,7 @@ import asyncpg
 
 from app.core.moderation import check as moderate
 from app.gamification.service import get_xp_summary
+from app.jobs.market_trends import tag_skills
 from app.practice.service import streak_days
 
 _JOIN_CODE_ALPHABET = string.ascii_uppercase + string.digits
@@ -335,6 +336,86 @@ async def list_assignments_for_student(pool: asyncpg.Pool, student_user_id: int)
         student_user_id,
     )
     return [dict(r) for r in rows]
+
+
+async def share_opportunity(
+    pool: asyncpg.Pool,
+    teacher_user_id: int,
+    classroom_id: int,
+    *,
+    title: str,
+    company: str,
+    location: str,
+    description: str,
+    url: str,
+) -> int:
+    """A teacher curating a real, external internship/job posting for
+    their class -- not a new "employer" account posting directly. Who's
+    allowed to post as a company, moderating those postings, and an
+    employer-side applicant review dashboard are a genuinely separate,
+    real trust problem (see migration 0032's own note); this is the
+    honest, buildable slice of it: industry demand a teacher found (or
+    searched for right here, see app.jobs.service.search_live_listings)
+    becomes visible to their class, same as an assignment is."""
+    classroom = await get_classroom_for_teacher(pool, teacher_user_id, classroom_id)  # ownership check
+
+    if (await moderate(title)).hard_block:
+        raise NameRejected("That opportunity's title was flagged. Try rewording it.")
+
+    opportunity_id = await pool.fetchval(
+        """INSERT INTO classroom_opportunities (classroom_id, title, company, location, description, url)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING opportunity_id""",
+        classroom_id,
+        title,
+        company,
+        location,
+        description,
+        url,
+    )
+
+    from app.notifications.service import notify_classroom_members  # local import: avoids a load-time cycle
+
+    label = f"{title} at {company}" if company else title
+    await notify_classroom_members(
+        pool,
+        classroom_id,
+        "opportunity_shared",
+        f"New opportunity in {classroom['name']}: {label}",
+        body=description,
+        link=f"/classrooms/{classroom_id}",
+    )
+    return opportunity_id
+
+
+async def _list_opportunities(pool: asyncpg.Pool, classroom_id: int) -> list[dict]:
+    rows = await pool.fetch(
+        """SELECT opportunity_id, title, company, location, description, url, posted_at
+           FROM classroom_opportunities WHERE classroom_id = $1 ORDER BY posted_at DESC""",
+        classroom_id,
+    )
+    result = []
+    for r in rows:
+        row = dict(r)
+        # Same keyword tagging the system-wide market-trends page uses --
+        # concrete "what skills does this actually ask for" per posting,
+        # not just company/title/description as a wall of text.
+        row["skills"] = tag_skills(f"{row['title']} {row['description']}")
+        result.append(row)
+    return result
+
+
+async def list_opportunities_for_teacher(
+    pool: asyncpg.Pool, teacher_user_id: int, classroom_id: int
+) -> list[dict]:
+    await get_classroom_for_teacher(pool, teacher_user_id, classroom_id)  # ownership check
+    return await _list_opportunities(pool, classroom_id)
+
+
+async def list_opportunities_for_classroom_member(
+    pool: asyncpg.Pool, student_user_id: int, classroom_id: int
+) -> list[dict]:
+    await get_classroom_for_member(pool, student_user_id, classroom_id)  # membership check
+    return await _list_opportunities(pool, classroom_id)
 
 
 async def delete_classroom(pool: asyncpg.Pool, teacher_user_id: int, classroom_id: int) -> None:

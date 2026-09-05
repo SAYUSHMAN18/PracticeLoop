@@ -9,6 +9,7 @@ from app.classrooms import service
 from app.core.db import get_pool
 from app.core.deps import inject_current_user, require_user_id
 from app.core.templates import templates
+from app.jobs.service import search_live_listings
 
 router = APIRouter(prefix="/classrooms", dependencies=[Depends(inject_current_user)])
 
@@ -100,20 +101,113 @@ async def classroom_detail(
             raise HTTPException(status_code=404) from exc
         assignments = await service.list_assignments_for_classroom_member(pool, user_id, classroom_id)
         leaderboard = await service.get_leaderboard(pool, classroom_id)
+        opportunities = await service.list_opportunities_for_classroom_member(pool, user_id, classroom_id)
         return templates.TemplateResponse(
             request,
             "classrooms/student_detail.html",
-            {"classroom": classroom, "assignments": assignments, "leaderboard": leaderboard},
+            {
+                "classroom": classroom,
+                "assignments": assignments,
+                "leaderboard": leaderboard,
+                "opportunities": opportunities,
+            },
         )
 
     roster = await service.get_roster(pool, user_id, classroom_id)
     assignments = await service.list_assignments_for_classroom(pool, user_id, classroom_id)
     leaderboard = await service.get_leaderboard(pool, classroom_id)
+    opportunities = await service.list_opportunities_for_teacher(pool, user_id, classroom_id)
     return templates.TemplateResponse(
         request,
         "classrooms/detail.html",
-        {"classroom": classroom, "roster": roster, "assignments": assignments, "leaderboard": leaderboard},
+        {
+            "classroom": classroom,
+            "roster": roster,
+            "assignments": assignments,
+            "leaderboard": leaderboard,
+            "opportunities": opportunities,
+            "search_keywords": "",
+            "search_location": "",
+            "search_results": None,
+            "search_error": None,
+        },
     )
+
+
+@router.get("/{classroom_id}/opportunities/search", response_class=HTMLResponse)
+async def search_opportunities(
+    classroom_id: int,
+    request: Request,
+    keywords: str = "",
+    location: str = "",
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    try:
+        classroom = await service.get_classroom_for_teacher(pool, user_id, classroom_id)
+    except service.ClassroomNotFound as exc:
+        raise HTTPException(status_code=404) from exc
+
+    keywords = keywords.strip()
+    search_results: list | None = None
+    search_error = None
+    if keywords:
+        search_results = await search_live_listings(keywords, location.strip())
+        if not search_results:
+            search_error = "No live postings found for that search. Try broader keywords."
+
+    roster = await service.get_roster(pool, user_id, classroom_id)
+    assignments = await service.list_assignments_for_classroom(pool, user_id, classroom_id)
+    leaderboard = await service.get_leaderboard(pool, classroom_id)
+    opportunities = await service.list_opportunities_for_teacher(pool, user_id, classroom_id)
+    return templates.TemplateResponse(
+        request,
+        "classrooms/detail.html",
+        {
+            "classroom": classroom,
+            "roster": roster,
+            "assignments": assignments,
+            "leaderboard": leaderboard,
+            "opportunities": opportunities,
+            "search_keywords": keywords,
+            "search_location": location.strip(),
+            "search_results": search_results,
+            "search_error": search_error,
+        },
+    )
+
+
+@router.post("/{classroom_id}/opportunities")
+async def create_opportunity(
+    classroom_id: int,
+    request: Request,
+    title: str = Form(...),
+    company: str = Form(""),
+    location: str = Form(""),
+    description: str = Form(""),
+    url: str = Form(""),
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    title = title.strip()
+    if not title:
+        raise HTTPException(status_code=400, detail="An opportunity needs a title.")
+    try:
+        await service.share_opportunity(
+            pool,
+            user_id,
+            classroom_id,
+            title=title,
+            company=company.strip(),
+            location=location.strip(),
+            description=description.strip(),
+            url=url.strip(),
+        )
+    except service.ClassroomNotFound as exc:
+        raise HTTPException(status_code=404) from exc
+    except service.NameRejected as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return RedirectResponse(f"/classrooms/{classroom_id}#opportunities", status_code=303)
 
 
 @router.get("/{classroom_id}/assignments/{assignment_id}", response_class=HTMLResponse)

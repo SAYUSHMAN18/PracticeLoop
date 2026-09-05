@@ -33,4 +33,26 @@
     <p class="muted">No one to rank yet.</p>
   {% endfor %}
 </div>
+
+<div class="card">
+  <h2>Opportunities</h2>
+  <p class="muted" style="margin-top:-0.3rem;font-size:0.85rem;">Real postings your teacher shared with this class.</p>
+  {% for o in opportunities %}
+    <div class="question-item">
+      <strong>{{ o.title }}</strong>
+      {% if o.company %}<span class="muted"> at {{ o.company }}</span>{% endif %}
+      {% if o.location %}<span class="muted" style="font-size:0.82rem;"> &middot; {{ o.location }}</span>{% endif %}
+      {% if o.description %}<div class="muted" style="font-size:0.85rem;margin-top:0.3rem;">{{ o.description|truncate(220) }}</div>{% endif %}
+      {% if o.skills %}
+        <div style="margin-top:0.3rem;">{% for s in o.skills %}<span class="tag">{{ s }}</span> {% endfor %}</div>
+      {% endif %}
+      <div class="hub-links">
+        {% if o.url %}<a href="{{ o.url }}" target="_blank" rel="noopener noreferrer">View posting &rarr;</a>{% endif %}
+        <a href="/jobs/applications?company={{ o.company|urlencode }}&role={{ o.title|urlencode }}">Track this application &rarr;</a>
+      </div>
+    </div>
+  {% else %}
+    <p class="muted">Nothing shared yet.</p>
+  {% endfor %}
+</div>
 {% endblock %}

@@ -57,3 +57,12 @@ async def test_trends_page_renders_for_a_logged_in_user(client):
     response = await client.get("/jobs/trends")
     assert response.status_code == 200
     assert "Market trends" in response.text
+
+
+def test_tag_skills_finds_known_skills_case_insensitively():
+    tags = market_trends.tag_skills("Looking for a python developer with AWS and react experience")
+    assert set(tags) == {"Python", "AWS", "React"}
+
+
+def test_tag_skills_returns_nothing_for_unrelated_text():
+    assert market_trends.tag_skills("Watercolor painting and ceramics") == []

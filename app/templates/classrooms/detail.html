@@ -76,6 +76,67 @@
   {% endfor %}
 </div>
 
+<div class="card" id="opportunities">
+  <h2>Opportunities</h2>
+  <p class="muted" style="margin-top:-0.3rem;font-size:0.85rem;">
+    Search real, live internship/job postings and share the ones worth your students' attention.
+    This isn't a new job board -- it's the same search PracticeLoop's own Career Lab uses.
+  </p>
+  <form method="get" action="/classrooms/{{ classroom.classroom_id }}/opportunities/search">
+    <div class="form-row">
+      <div>
+        <label for="f-search-keywords">Keywords</label>
+        <input id="f-search-keywords" type="text" name="keywords" value="{{ search_keywords }}" placeholder="e.g. frontend intern" required>
+      </div>
+      <div>
+        <label for="f-search-location">Location (optional)</label>
+        <input id="f-search-location" type="text" name="location" value="{{ search_location }}" placeholder="e.g. Bengaluru">
+      </div>
+    </div>
+    <button type="submit">Search live postings</button>
+  </form>
+
+  {% if search_error %}
+    <p class="error" style="margin-top:0.8rem;">{{ search_error }}</p>
+  {% endif %}
+
+  {% if search_results %}
+    <h3 style="margin-top:1rem;">Results</h3>
+    {% for r in search_results %}
+      <div class="question-item">
+        <strong>{{ r.title }}</strong>
+        {% if r.company %}<span class="muted"> at {{ r.company }}</span>{% endif %}
+        {% if r.location %}<span class="muted" style="font-size:0.82rem;"> &middot; {{ r.location }}</span>{% endif %}
+        {% if r.description %}<div class="muted" style="font-size:0.85rem;margin-top:0.3rem;">{{ r.description|truncate(220) }}</div>{% endif %}
+        {% if r.url %}<div style="margin-top:0.2rem;"><a href="{{ r.url }}" target="_blank" rel="noopener noreferrer">View posting &rarr;</a></div>{% endif %}
+        <form method="post" action="/classrooms/{{ classroom.classroom_id }}/opportunities" style="margin-top:0.4rem;">
+          <input type="hidden" name="title" value="{{ r.title }}">
+          <input type="hidden" name="company" value="{{ r.company }}">
+          <input type="hidden" name="location" value="{{ r.location }}">
+          <input type="hidden" name="description" value="{{ r.description }}">
+          <input type="hidden" name="url" value="{{ r.url }}">
+          <button type="submit" class="btn secondary">Share to classroom</button>
+        </form>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <h3 style="margin-top:1rem;">Shared with this classroom</h3>
+  {% for o in opportunities %}
+    <div class="question-item">
+      <strong>{{ o.title }}</strong>
+      {% if o.company %}<span class="muted"> at {{ o.company }}</span>{% endif %}
+      {% if o.location %}<span class="muted" style="font-size:0.82rem;"> &middot; {{ o.location }}</span>{% endif %}
+      {% if o.skills %}
+        <div style="margin-top:0.3rem;">{% for s in o.skills %}<span class="tag">{{ s }}</span> {% endfor %}</div>
+      {% endif %}
+      {% if o.url %}<div style="margin-top:0.2rem;"><a href="{{ o.url }}" target="_blank" rel="noopener noreferrer">View posting &rarr;</a></div>{% endif %}
+    </div>
+  {% else %}
+    <p class="muted">Nothing shared yet -- search above to find something worth posting.</p>
+  {% endfor %}
+</div>
+
 <script nonce="{{ request.state.csp_nonce }}">
 document.getElementById("classroom-delete-form").addEventListener("submit", function (e) {
   if (!confirm("Delete \"" + this.dataset.title + "\"? This can't be undone.")) {

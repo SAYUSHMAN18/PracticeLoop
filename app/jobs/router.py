@@ -91,6 +91,8 @@ async def create_application(
 @router.get("/applications", response_class=HTMLResponse)
 async def applications_page(
     request: Request,
+    company: str = "",
+    role: str = "",
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
 ):
@@ -103,7 +105,14 @@ async def applications_page(
     return templates.TemplateResponse(
         request,
         "jobs/applications.html",
-        {"applications": apps, "stats": stats, "follow_ups": follow_ups, "stale": stale},
+        {
+            "applications": apps,
+            "stats": stats,
+            "follow_ups": follow_ups,
+            "stale": stale,
+            "prefill_company": company,
+            "prefill_role": role,
+        },
     )
 
 
