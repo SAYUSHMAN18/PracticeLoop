@@ -128,9 +128,9 @@
 * { box-sizing: border-box; }
 
 /* ---------- accessibility menu toggles (topbar "Aa" menu) ---------- */
-/* Persisted the same way as data-theme/data-mentor: set on <html> by the
-   early <head> script in base.html, before first paint. data-a11y holds
-   a space-separated token list (like a classList) so any subset of the
+/* Persisted the same way as data-theme: set on <html> by the early <head>
+   script in base.html, before first paint. data-a11y holds a
+   space-separated token list (like a classList) so any subset of the
    three can be on at once. */
 
 html[data-a11y~="large"] { font-size: 18px; }
@@ -232,28 +232,23 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 .link-button:hover { color: var(--danger); background: var(--danger-soft); }
 .inline { display: inline; margin: 0; }
 
-/* ---------- app shell: topbar + left sidebar + main + mentor panel ---------- */
+/* ---------- app shell: topbar + left sidebar + main ---------- */
 
 /* Desktop: a fixed-height topbar spanning the full width, with the
-   sidebar, main content and mentor panel as three columns underneath it.
-   --mentor-w is a custom property (not a literal 320px in the template
-   rule below) so the "collapsed" state below can override just this one
-   value instead of duplicating the whole grid-template-columns line. */
+   sidebar and main content as two columns underneath it. Loop Mentor
+   used to be a permanent third column here; it's now a floating chat
+   widget (see "Loop Mentor panel" below) so it never takes width away
+   from the reading column. */
 .app-shell {
   display: grid;
-  grid-template-columns: 240px 1fr var(--mentor-w, 320px);
+  grid-template-columns: 240px 1fr;
   grid-template-rows: 64px 1fr;
   grid-template-areas:
-    "topbar topbar topbar"
-    "sidebar main mentor";
+    "topbar topbar"
+    "sidebar main";
   min-height: 100vh;
   min-height: 100dvh;
 }
-/* Collapsed/expanded is a persisted preference (see the early <head>
-   script in base.html, same pattern as data-theme) so it's set on
-   <html> before first paint -- no flash of an expanded panel that then
-   immediately collapses once JS runs after the body loads. */
-html[data-mentor="collapsed"] .app-shell { --mentor-w: 0px; }
 
 .topbar {
   grid-area: topbar;
@@ -338,7 +333,6 @@ html[data-mentor="collapsed"] .app-shell { --mentor-w: 0px; }
 }
 .icon-button:hover { color: var(--text); background: var(--panel-2); border-color: var(--border); }
 .icon-button[aria-expanded="true"] { color: var(--accent-2); background: var(--accent-soft); }
-#mentor-toggle[aria-expanded="true"] { color: var(--mentor); background: var(--mentor-soft); }
 
 .topbar-badge {
   position: absolute;
@@ -616,33 +610,72 @@ html[data-mentor="collapsed"] .app-shell { --mentor-w: 0px; }
 
 .container { max-width: 880px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
 
-/* ---------- Loop Mentor panel ---------- */
+/* ---------- Loop Mentor: floating chat widget ---------- */
+
+/* A classic bottom-right chat widget, not a permanent layout column: a
+   round launcher button (.mentor-fab) is always visible, and clicking it
+   opens a floating chat window anchored to the same corner. Conversation
+   history is real and persisted server-side (app/mentor/service.py
+   get_or_create_conversation + list_messages) -- this only changes where
+   it's displayed, not whether it's remembered. */
+
+.mentor-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 47;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: var(--mentor);
+  color: var(--panel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 10px 28px hsl(var(--shadow-color) / 0.4);
+  transition: transform 0.15s ease;
+}
+.mentor-fab:hover { transform: scale(1.06); }
+.mentor-fab[aria-expanded="true"] { transform: scale(0.94); }
 
 .mentor-panel {
-  grid-area: mentor;
-  position: sticky;
-  top: 64px;
-  height: calc(100vh - 64px);
-  height: calc(100dvh - 64px);
-  overflow-y: auto;
-  border-left: 1px solid var(--border);
+  position: fixed;
+  right: 20px;
+  bottom: 88px;
+  z-index: 46;
+  width: min(380px, calc(100vw - 40px));
+  height: min(600px, calc(100dvh - 148px));
+  border-radius: 16px;
+  border: 1px solid var(--border);
   background: var(--panel);
+  box-shadow: 0 16px 56px hsl(var(--shadow-color) / 0.4);
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  overflow: hidden;
+  transform-origin: bottom right;
+  transform: scale(0.92) translateY(12px);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.18s ease, opacity 0.18s ease;
 }
-/* Collapsing to width: 0 via --mentor-w (see .app-shell.mentor-collapsed
-   above) would otherwise leave the panel's own content forcing the grid
-   track wider than 0 -- clip it so the column can actually shrink away. */
-html[data-mentor="collapsed"] .mentor-panel { overflow: hidden; border-left: none; }
+.mentor-panel.open {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
 
 .mentor-panel-header {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.1rem;
+  padding: 0.9rem 1.1rem;
   border-bottom: 1px solid var(--border);
+  background: var(--mentor-soft);
 }
 .mentor-badge {
   font-family: var(--font-display);
@@ -651,48 +684,26 @@ html[data-mentor="collapsed"] .mentor-panel { overflow: hidden; border-left: non
   color: var(--mentor);
   white-space: nowrap;
 }
-.mentor-panel-body { padding: 1.1rem; min-width: 260px; }
+.mentor-panel-body { flex: 1; overflow-y: auto; padding: 1.1rem; min-width: 0; }
 
-.mentor-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 45;
-  background: rgba(0, 0, 0, 0.45);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-}
-.mentor-backdrop.open { opacity: 1; pointer-events: auto; }
-
-@media (max-width: 1200px) {
-  /* Laptop: the mentor panel becomes an overlay drawer instead of a
-     permanent third column, so the main content gets real width back. */
-  .app-shell { grid-template-columns: 240px 1fr 0px; }
+@media (max-width: 600px) {
   .mentor-panel {
-    position: fixed;
-    inset: 64px 0 0 auto;
-    width: min(360px, 92vw);
-    height: calc(100vh - 64px);
-    height: calc(100dvh - 64px);
-  height: calc(100dvh - 64px);
-    transform: translateX(100%);
-    transition: transform 0.25s ease;
-    z-index: 46;
-    box-shadow: 0 0 32px hsl(var(--shadow-color) / 0.35);
+    right: 10px;
+    left: 10px;
+    bottom: 84px;
+    width: auto;
+    height: min(70vh, 70dvh);
   }
-  .mentor-panel.open { transform: translateX(0); }
-  .mentor-backdrop { display: block; }
+  .mentor-fab { right: 14px; bottom: 14px; }
 }
 
 @media (max-width: 860px) {
-  .app-shell { grid-template-columns: 0px 1fr 0px; }
+  .app-shell { grid-template-columns: 0px 1fr; }
   .sidebar {
     position: fixed;
     inset: 64px auto 0 0;
     height: calc(100vh - 64px);
     height: calc(100dvh - 64px);
-  height: calc(100dvh - 64px);
     transform: translateX(-100%);
     box-shadow: 0 0 32px hsl(var(--shadow-color) / 0.35);
     transition: transform 0.25s ease;
@@ -706,8 +717,6 @@ html[data-mentor="collapsed"] .mentor-panel { overflow: hidden; border-left: non
 @media (max-width: 600px) {
   .topbar { padding: 0 0.75rem; gap: 0.4rem; }
   .topbar .brand span { display: none; } /* icon-style dot survives via .brand::before; the wordmark text hides */
-  .mentor-panel { width: 100%; inset: auto 0 0 0; height: 80vh; height: 80dvh; transform: translateY(100%); }
-  .mentor-panel.open { transform: translateY(0); }
 }
 
 /* ---------- surfaces ---------- */
@@ -1601,7 +1610,7 @@ h1, h2, h3, h4, p, li, td, th, summary, label, .tag { overflow-wrap: break-word;
      240px rail eats a disproportionate share of the width, leaving the
      reading column narrow enough to hurt. Narrow the rail instead of
      hiding it -- navigation stays one tap away. */
-  .app-shell { grid-template-columns: 200px 1fr 0px; }
+  .app-shell { grid-template-columns: 200px 1fr; }
   .sidebar { padding-inline: 0.6rem; }
   .sidebar-nav a { font-size: 0.88rem; }
   .container { padding-inline: 1.25rem; }
@@ -1640,26 +1649,26 @@ h1, h2, h3, h4, p, li, td, th, summary, label, .tag { overflow-wrap: break-word;
 /* ---- landscape phones ---- */
 
 @media (max-height: 460px) and (orientation: landscape) {
-  /* A phone held sideways has almost no vertical room; the bottom-sheet
-     mentor panel at 80dvh would cover the whole screen. */
-  .mentor-panel { height: 92dvh; }
+  /* A phone held sideways has almost no vertical room for a floating
+     window anchored 88px off the bottom. */
+  .mentor-panel { bottom: 72px; height: min(80vh, 80dvh); }
   .hero { padding-block: 2rem; }
 }
 
 /* ---- wide desktop ---- */
 
 @media (min-width: 1600px) {
-  /* Extra width goes to the reading column and the mentor panel rather
-     than to ever-growing empty margins. */
-  .app-shell { grid-template-columns: 260px 1fr var(--mentor-w, 380px); }
+  /* Extra width goes to the reading column; Loop Mentor floats over the
+     content at a fixed size regardless of viewport width. */
+  .app-shell { grid-template-columns: 260px 1fr; }
   .container { max-width: 1000px; }
 }
 
 /* ---- printing ---- */
 
 @media print {
-  .topbar, .sidebar, .mentor-panel, .public-nav, .public-footer,
-  .sidebar-backdrop, .mentor-backdrop, .skip-link { display: none !important; }
+  .topbar, .sidebar, .mentor-panel, .mentor-fab, .public-nav, .public-footer,
+  .sidebar-backdrop, .skip-link { display: none !important; }
   .app-shell { grid-template-columns: 1fr; display: block; }
   .card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
   body { background: #fff; color: #000; }

@@ -11,18 +11,17 @@
   <meta name="robots" content="noindex, nofollow">
   <script nonce="{{ request.state.csp_nonce }}">
     // Applied before first paint (this is a synchronous, render-blocking
-    // script in <head>) so a saved manual theme/mentor/accessibility
-    // choice never flashes the wrong state on load. Absence of a saved
-    // value leaves the attribute unset, which is each feature's own
-    // default handled entirely by style.css.
+    // script in <head>) so a saved manual theme/accessibility choice never
+    // flashes the wrong state on load. Absence of a saved value leaves the
+    // attribute unset, which is each feature's own default handled
+    // entirely by style.css. Loop Mentor has no such flag here -- it's a
+    // floating chat widget now (see .mentor-fab/.mentor-panel in
+    // style.css) and always starts closed, same as any chat bubble.
     (function () {
       try {
         var theme = localStorage.getItem("pl-theme");
         if (theme === "light" || theme === "dark" || theme === "contrast") {
           document.documentElement.setAttribute("data-theme", theme);
-        }
-        if (localStorage.getItem("pl-mentor") === "collapsed") {
-          document.documentElement.setAttribute("data-mentor", "collapsed");
         }
         var a11y = localStorage.getItem("pl-a11y");
         if (a11y) {
@@ -111,8 +110,6 @@
           <span id="theme-toggle-label">Sys</span>
         </button>
 
-        <button type="button" class="icon-button" id="mentor-toggle" aria-label="Toggle Loop Mentor panel" aria-expanded="true" aria-controls="mentor-panel">&#10022;</button>
-
         {% if cu %}
         <div class="topbar-menu">
           <button type="button" class="topbar-profile" id="profile-menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="profile-menu" aria-label="Account menu">
@@ -184,7 +181,7 @@
       </div>
     </main>
 
-    <aside class="mentor-panel" id="mentor-panel" aria-label="Loop Mentor">
+    <aside class="mentor-panel" id="mentor-panel" aria-label="Loop Mentor" role="dialog" aria-modal="false">
       <div class="mentor-panel-header">
         <span class="mentor-badge">&#10022; Loop Mentor</span>
         <button type="button" class="icon-button" id="mentor-close" aria-label="Close Loop Mentor panel">&times;</button>
@@ -201,7 +198,11 @@
         <p class="muted">Loading&hellip;</p>
       </div>
     </aside>
-    <div class="mentor-backdrop" id="mentor-backdrop"></div>
+    {# The floating launcher: closed by default on every page (like any
+       chat widget), never a persisted layout column. Conversation history
+       itself is still real and server-persisted -- see the hx-get above --
+       so reopening it always shows what came before, closed or not. #}
+    <button type="button" class="mentor-fab" id="mentor-toggle" aria-label="Open Loop Mentor" aria-expanded="false" aria-controls="mentor-panel">&#10022;</button>
   </div>
 
   <div class="command-palette-backdrop" id="command-palette-backdrop" hidden>
@@ -470,45 +471,42 @@
       });
     })();
 
-    // Loop Mentor panel: a persisted expanded/collapsed attribute drives
-    // the desktop three-column layout (see html[data-mentor="collapsed"]
-    // in style.css), while the same click also toggles the drawer classes
-    // style.css uses at narrower widths -- harmless no-ops at whichever
-    // width the other mechanism doesn't apply, see the CSS comment above
-    // .mentor-backdrop for why both can toggle together safely.
+    // Loop Mentor: a floating chat widget (.mentor-fab launcher +
+    // .mentor-panel window, see style.css) that's closed by default on
+    // every page load and opened by clicking the bubble -- conversation
+    // history is unaffected either way, since it's fetched by the
+    // hx-get="load" trigger on #mentor-panel-body regardless of visibility.
     (function () {
       var toggle = document.getElementById("mentor-toggle");
       var closeBtn = document.getElementById("mentor-close");
       var panel = document.getElementById("mentor-panel");
-      var backdrop = document.getElementById("mentor-backdrop");
-      if (!toggle || !panel || !backdrop) return;
+      if (!toggle || !panel) return;
 
-      function isCollapsed() {
-        return document.documentElement.getAttribute("data-mentor") === "collapsed";
-      }
-      // The panel/backdrop already default to no "open" class (correct for
-      // both the collapsed and expanded desktop states, since that class
-      // only matters at drawer widths where the panel starts closed either
-      // way) -- only the toggle button's own aria-expanded needs syncing
-      // to whatever the early <head> script already applied.
-      toggle.setAttribute("aria-expanded", isCollapsed() ? "false" : "true");
-
-      function setState(collapsed) {
-        if (collapsed) {
-          document.documentElement.setAttribute("data-mentor", "collapsed");
-          try { localStorage.setItem("pl-mentor", "collapsed"); } catch (e) {}
-        } else {
-          document.documentElement.removeAttribute("data-mentor");
-          try { localStorage.removeItem("pl-mentor"); } catch (e) {}
+      function setOpen(open) {
+        panel.classList.toggle("open", open);
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        toggle.setAttribute("aria-label", open ? "Close Loop Mentor" : "Open Loop Mentor");
+        if (open) {
+          var field = document.getElementById("f-mentor-text");
+          if (field) field.focus();
         }
-        panel.classList.toggle("open", !collapsed);
-        backdrop.classList.toggle("open", !collapsed);
-        toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
       }
 
-      toggle.addEventListener("click", function () { setState(!isCollapsed()); });
-      closeBtn.addEventListener("click", function () { setState(true); });
-      backdrop.addEventListener("click", function () { setState(true); });
+      toggle.addEventListener("click", function () {
+        setOpen(!panel.classList.contains("open"));
+      });
+      closeBtn.addEventListener("click", function () { setOpen(false); });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && panel.classList.contains("open")) setOpen(false);
+      });
+      // Clicking anywhere outside the widget closes it, like any chat
+      // bubble -- but not a click that merely opened it (the same click
+      // that toggled it open would otherwise immediately close it again).
+      document.addEventListener("click", function (e) {
+        if (!panel.classList.contains("open")) return;
+        if (panel.contains(e.target) || toggle.contains(e.target)) return;
+        setOpen(false);
+      });
     })();
 
     // Accessibility options (large text, dyslexia-friendly font, reduced

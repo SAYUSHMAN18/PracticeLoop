@@ -22,7 +22,7 @@ async def test_mentor_panel_is_present_with_its_own_landmark(client):
     here, so this just checks the landmark and load wiring are present."""
     await signup(client, "shell-mentor@example.com")
     response = await client.get("/dashboard")
-    assert '<aside class="mentor-panel" id="mentor-panel" aria-label="Loop Mentor">' in response.text
+    assert '<aside class="mentor-panel" id="mentor-panel" aria-label="Loop Mentor"' in response.text
     assert 'hx-get="/mentor/conversation?context_type=general' in response.text
 
 
