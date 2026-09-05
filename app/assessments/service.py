@@ -9,21 +9,25 @@ from app.core.json_extraction import extract_first_json_value
 from app.core.llm import generate
 from app.gamification.service import award_xp
 
-# Fixed-length, not the plan's adaptive-difficulty-mid-quiz version --
-# generated up front with a spread of difficulty (see the prompt below)
-# rather than branching after each answer. Honest, bounded scope; true
-# per-answer adaptivity is a real follow-up, not something to fake with
-# a handful of if/else difficulty tiers.
-QUESTION_COUNT = 8
+# One LLM call still generates the whole item bank (same cost as the old
+# fixed quiz), but administration is adaptive: DIFFICULTIES is a staircase
+# (right answer -> harder, wrong answer -> easier), QUESTION_COUNT of the
+# _PER_DIFFICULTY-per-tier pool actually get shown, chosen one at a time
+# based on how the student is doing so far -- a real placement test, not
+# a fixed-order quiz with three difficulty labels sprinkled through it.
+DIFFICULTIES = ("easy", "medium", "hard")
+_PER_DIFFICULTY = 5  # pool size = len(DIFFICULTIES) * _PER_DIFFICULTY = 15
+QUESTION_COUNT = 8  # how many of the pool are actually administered
 _MAX_CHOICES = 6
 _XP_DIAGNOSTIC = 20  # a flat completion reward -- this is a placement test, not a "get it right" quiz
 
-_DIAGNOSTIC_PROMPT = """Write a {count}-question multiple-choice diagnostic quiz for this
+_DIAGNOSTIC_PROMPT = """Write a multiple-choice diagnostic item bank for this
 topic: "{topic}"
 
-Roughly a third of the questions should be easy, a third medium, a third hard. Each
-question should test a different subtopic within "{topic}", so a wrong answer says
-something specific about what the student doesn't know yet.
+Write exactly {per_difficulty} EASY, {per_difficulty} MEDIUM, and {per_difficulty} HARD
+questions ({total} total). Each question should test a different subtopic within
+"{topic}", so a wrong answer says something specific about what the student doesn't
+know yet.
 
 Output strict JSON only, no markdown fences, no commentary, in exactly this shape:
 {{
@@ -31,6 +35,7 @@ Output strict JSON only, no markdown fences, no commentary, in exactly this shap
     {{
       "question": "...",
       "subtopic": "a short 2-4 word subtopic label",
+      "difficulty": "easy",
       "choices": ["...", "...", "...", "..."],
       "correct_choice_index": 0
     }}
@@ -72,6 +77,10 @@ def _shuffle_choices(choices: list[str], correct_index: int, rng: random.Random)
 
 
 def _validate_questions(data: dict, *, rng: random.Random | None = None) -> list[dict]:
+    """No cap at QUESTION_COUNT here -- this validates the whole generated
+    item bank (up to len(DIFFICULTIES) * _PER_DIFFICULTY questions); which
+    _PER_DIFFICULTY of them get administered is the adaptive engine's job,
+    not the validator's."""
     rng = rng or random.Random()
     if not isinstance(data, dict):
         raise ValueError("not an object")
@@ -80,7 +89,7 @@ def _validate_questions(data: dict, *, rng: random.Random | None = None) -> list
         raise ValueError("no questions")
 
     cleaned = []
-    for q in raw_questions[:QUESTION_COUNT]:
+    for q in raw_questions[: len(DIFFICULTIES) * _PER_DIFFICULTY]:
         if not isinstance(q, dict):
             continue
         question_text = str(q.get("question") or "").strip()
@@ -94,11 +103,15 @@ def _validate_questions(data: dict, *, rng: random.Random | None = None) -> list
             continue
         if not isinstance(correct_index, int) or not (0 <= correct_index < len(choices)):
             continue
+        difficulty = str(q.get("difficulty") or "").strip().lower()
+        if difficulty not in DIFFICULTIES:
+            difficulty = "medium"  # a model that omits/garbles this still slots into the staircase
         choices, correct_index = _shuffle_choices(choices, correct_index, rng)
         cleaned.append(
             {
                 "question": question_text,
                 "subtopic": str(q.get("subtopic") or "").strip(),
+                "difficulty": difficulty,
                 "choices": choices,
                 "correct_choice_index": correct_index,
             }
@@ -110,11 +123,16 @@ def _validate_questions(data: dict, *, rng: random.Random | None = None) -> list
 
 
 async def generate_diagnostic(topic: str, *, ai_available: bool) -> list[dict]:
+    """Returns the full item bank (up to 15 questions spread across the
+    three difficulty tiers) for callers to administer adaptively --
+    see next_question() / record_answer() below."""
     if not ai_available:
         raise DiagnosticUnavailable()
 
     try:
-        prompt = _DIAGNOSTIC_PROMPT.format(topic=topic.strip(), count=QUESTION_COUNT)
+        prompt = _DIAGNOSTIC_PROMPT.format(
+            topic=topic.strip(), per_difficulty=_PER_DIFFICULTY, total=len(DIFFICULTIES) * _PER_DIFFICULTY
+        )
         # Keyed on the topic only -- shareable across students.
         response = await generate(prompt, temperature=0.5, cacheable=True)
         data = json.loads(extract_first_json_value(response))
@@ -123,6 +141,97 @@ async def generate_diagnostic(topic: str, *, ai_available: bool) -> list[dict]:
         raise
     except Exception as exc:
         raise DiagnosticGenerationFailed() from exc
+
+
+# --- Adaptive administration -------------------------------------------
+#
+# The item bank is generated once (generate_diagnostic, one LLM call, same
+# cost as the old fixed quiz); everything below is a plain staircase over
+# that bank, run entirely in Python against session state -- no extra LLM
+# calls, no new failure mode the LLM budget has to absorb. Right answer ->
+# next question one tier harder; wrong answer -> one tier easier. That's
+# the actual definition of an adaptive placement test: which question you
+# see next depends on how you've done so far, not a fixed order with
+# difficulty labels sprinkled through it.
+
+
+def _tier(difficulty: str) -> int:
+    return DIFFICULTIES.index(difficulty) if difficulty in DIFFICULTIES else 1
+
+
+def next_tier(tier: int, was_correct: bool) -> int:
+    step = 1 if was_correct else -1
+    return max(0, min(len(DIFFICULTIES) - 1, tier + step))
+
+
+def pick_next_question(pool: list[dict], asked_indices: list[int], tier: int) -> int | None:
+    """The unused pool question closest to `tier`, preferring an exact
+    match. Widens outward instead of stopping early just because one
+    tier's five questions ran out first -- a student who's aced every
+    "hard" question shouldn't have the diagnostic quit on them."""
+    unused = [i for i in range(len(pool)) if i not in asked_indices]
+    if not unused:
+        return None
+    for distance in range(len(DIFFICULTIES)):
+        candidates = [i for i in unused if abs(_tier(pool[i]["difficulty"]) - tier) == distance]
+        if candidates:
+            return candidates[0]
+    return unused[0]  # unreachable given the loop above covers every possible distance
+
+
+def start_session(pool: list[dict]) -> dict:
+    """Fresh adaptive-diagnostic state for a newly generated item bank.
+    Starts at the middle tier: with nothing yet known about the student,
+    every other starting point is a worse bet."""
+    state = {"pool": pool, "asked_indices": [], "results": [], "tier": 1, "current_index": None}
+    state["current_index"] = pick_next_question(pool, [], 1)
+    return state
+
+
+def current_question(state: dict) -> dict | None:
+    """The question to show right now, answer key stripped -- callers
+    must never hand `correct_choice_index` to the client."""
+    index = state["current_index"]
+    if index is None:
+        return None
+    q = state["pool"][index]
+    return {"question": q["question"], "choices": q["choices"]}
+
+
+def is_complete(state: dict) -> bool:
+    return state["current_index"] is None
+
+
+def answer_current_question(state: dict, selected_index: int) -> dict:
+    """Grades the in-play question, advances the staircase, and lines up
+    what's next (or ends the session) -- mutates `state` in place. Returns
+    {correct, subtopic} for this one question, so a caller accumulating a
+    running tally doesn't have to re-derive it from `state` afterward."""
+    index = state["current_index"]
+    q = state["pool"][index]
+    correct = selected_index == q["correct_choice_index"]
+
+    state["asked_indices"].append(index)
+    state["results"].append(correct)
+    state["tier"] = next_tier(state["tier"], correct)
+    state["current_index"] = (
+        None
+        if len(state["asked_indices"]) >= QUESTION_COUNT
+        else pick_next_question(state["pool"], state["asked_indices"], state["tier"])
+    )
+    return {"correct": correct, "subtopic": q["subtopic"]}
+
+
+def summarize(state: dict) -> tuple[int, int, list[str]]:
+    """(correct_count, total_count, weak_subtopics) for record_attempt,
+    once is_complete(state) is true."""
+    correct_count = sum(1 for ok in state["results"] if ok)
+    weak_subtopics = [
+        state["pool"][i]["subtopic"]
+        for i, ok in zip(state["asked_indices"], state["results"], strict=True)
+        if not ok and state["pool"][i]["subtopic"]
+    ]
+    return correct_count, len(state["results"]), weak_subtopics
 
 
 # (score-fraction floor, resulting level) -- checked high to low, first

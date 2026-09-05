@@ -77,7 +77,7 @@ async def start_diagnostic(
         return await _render_index(request, pool, user_id, error=exc.detail, status_code=429)
 
     try:
-        questions = await service.generate_diagnostic(topic, ai_available=True)
+        item_bank = await service.generate_diagnostic(topic, ai_available=True)
     except Exception:
         logger.warning("Diagnostic generation failed for topic=%r", topic, exc_info=True)
         return await _render_index(
@@ -88,53 +88,67 @@ async def start_diagnostic(
             status_code=502,
         )
 
-    request.session[_SESSION_KEY] = {"topic": topic, "questions": questions}
+    request.session[_SESSION_KEY] = {"topic": topic, "state": service.start_session(item_bank)}
     return RedirectResponse("/assessments/take", status_code=303)
 
 
 @router.get("/assessments/take", response_class=HTMLResponse)
 async def take_diagnostic(request: Request, user_id: int = Depends(require_user_id)):
-    state = request.session.get(_SESSION_KEY)
-    if not state:
+    session_entry = request.session.get(_SESSION_KEY)
+    if not session_entry:
         return RedirectResponse("/assessments", status_code=303)
 
-    # correct_choice_index and subtopic are the answer key -- the quiz
-    # page itself only needs the question text and its choices.
-    public_questions = [{"question": q["question"], "choices": q["choices"]} for q in state["questions"]]
+    state = session_entry["state"]
+    question = service.current_question(state)
+    if question is None:
+        # Shouldn't happen -- /assessments/submit redirects away the moment
+        # a session completes -- but a stale/tampered session cookie is a
+        # real input, not just a theoretical one, so fail back to start
+        # rather than 500 on a None question.
+        del request.session[_SESSION_KEY]
+        return RedirectResponse("/assessments", status_code=303)
+
     return templates.TemplateResponse(
         request,
         "assessments/take.html",
-        {"topic": state["topic"], "questions": public_questions},
+        {
+            "topic": session_entry["topic"],
+            "question": question,
+            "question_number": len(state["asked_indices"]) + 1,
+            # min(): an item bank smaller than QUESTION_COUNT (a narrow
+            # topic, or some generated questions dropped by validation)
+            # still ends the diagnostic early -- the progress line
+            # shouldn't promise a question count the pool can't deliver.
+            "question_count": min(service.QUESTION_COUNT, len(state["pool"])),
+        },
     )
 
 
 @router.post("/assessments/submit")
 async def submit_diagnostic(
     request: Request,
+    answer: str = Form(""),
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
 ):
-    state = request.session.get(_SESSION_KEY)
-    if not state:
+    session_entry = request.session.get(_SESSION_KEY)
+    if not session_entry:
         return RedirectResponse("/assessments", status_code=303)
 
-    form = await request.form()
-    questions = state["questions"]
-    correct_count = 0
-    weak_subtopics = []
-    for index, q in enumerate(questions):
-        raw_answer = form.get(f"answer_{index}")
-        try:
-            selected_index = int(raw_answer) if raw_answer is not None else -1
-        except ValueError:
-            selected_index = -1
-        if selected_index == q["correct_choice_index"]:
-            correct_count += 1
-        elif q["subtopic"]:
-            weak_subtopics.append(q["subtopic"])
+    state = session_entry["state"]
+    try:
+        selected_index = int(answer)
+    except ValueError:
+        selected_index = -1
+    service.answer_current_question(state, selected_index)
 
+    if not service.is_complete(state):
+        request.session[_SESSION_KEY] = session_entry  # persist the advanced state, tier, and next question
+        return RedirectResponse("/assessments/take", status_code=303)
+
+    correct_count, total_count, weak_subtopics = service.summarize(state)
     result = await service.record_attempt(
-        pool, user_id, state["topic"], correct_count, len(questions), weak_subtopics
+        pool, user_id, session_entry["topic"], correct_count, total_count, weak_subtopics
     )
     del request.session[_SESSION_KEY]
     return RedirectResponse(f"/assessments/result/{result['attempt_id']}", status_code=303)

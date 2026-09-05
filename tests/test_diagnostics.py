@@ -6,11 +6,17 @@ from app.core.db import get_pool
 from app.profile.service import get_profile, update_profile
 from tests.conftest import signup
 
+# All three the same difficulty so the adaptive staircase has nowhere to
+# widen to but pool order -- these tests are about scoring and weak-topic
+# reporting, not about tier movement (that's test_adaptive_selection.py).
 _FAKE_QUESTIONS_JSON = """{
   "questions": [
-    {"question": "2 + 2?", "subtopic": "arithmetic", "choices": ["3", "4", "5"], "correct_choice_index": 1},
-    {"question": "3 + 3?", "subtopic": "arithmetic", "choices": ["6", "7", "8"], "correct_choice_index": 0},
-    {"question": "10 / 2?", "subtopic": "division", "choices": ["4", "5", "6"], "correct_choice_index": 1}
+    {"question": "2 + 2?", "subtopic": "arithmetic", "difficulty": "medium",
+     "choices": ["3", "4", "5"], "correct_choice_index": 1},
+    {"question": "3 + 3?", "subtopic": "arithmetic", "difficulty": "medium",
+     "choices": ["6", "7", "8"], "correct_choice_index": 0},
+    {"question": "10 / 2?", "subtopic": "division", "difficulty": "medium",
+     "choices": ["4", "5", "6"], "correct_choice_index": 1}
   ]
 }"""
 
@@ -19,6 +25,17 @@ def _attempt_id_from_redirect(response) -> str:
     match = re.search(r"/assessments/result/(\d+)", str(response.headers["location"]))
     assert match, response.headers["location"]
     return match.group(1)
+
+
+async def _answer_all(client, answers: list[str]):
+    """Drives the one-question-at-a-time flow: answers must be given in
+    the order the (same-difficulty, so pool-ordered) questions are
+    administered. Returns the final /assessments/submit response, which
+    redirects to the result page once the pool is exhausted."""
+    response = None
+    for answer in answers:
+        response = await client.post("/assessments/submit", data={"answer": answer}, follow_redirects=False)
+    return response
 
 
 def _no_shuffle(monkeypatch) -> None:
@@ -79,19 +96,21 @@ async def test_taking_a_diagnostic_end_to_end_with_a_perfect_score(client, monke
     take_page = await client.get("/assessments/take")
     assert take_page.status_code == 200
     assert "2 + 2?" in take_page.text
-    # Each question must get its own distinct radio-group name -- a Jinja
-    # nested-loop bug (using the inner `loop.index0` for the outer
-    # question index) would give every question the SAME name instead.
-    assert 'name="answer_0"' in take_page.text
-    assert 'name="answer_1"' in take_page.text
-    assert 'name="answer_2"' in take_page.text
+    assert "Question 1 of 3" in take_page.text  # pool only has 3 -- min()'d down from QUESTION_COUNT
+    assert 'name="answer"' in take_page.text
     assert "correct_choice_index" not in take_page.text  # the answer key must not leak to the client
 
-    submit = await client.post(
-        "/assessments/submit",
-        data={"answer_0": "1", "answer_1": "0", "answer_2": "1"},
-        follow_redirects=False,
-    )
+    # One question at a time, in pool order (every fake question is the
+    # same difficulty, so the staircase has nowhere to reorder them to).
+    second_page = await client.post("/assessments/submit", data={"answer": "1"}, follow_redirects=False)
+    assert second_page.status_code == 303
+    assert second_page.headers["location"] == "/assessments/take"
+    assert "3 + 3?" in (await client.get("/assessments/take")).text
+
+    await client.post("/assessments/submit", data={"answer": "0"}, follow_redirects=False)
+    assert "10 / 2?" in (await client.get("/assessments/take")).text
+
+    submit = await client.post("/assessments/submit", data={"answer": "1"}, follow_redirects=False)
     assert submit.status_code == 303
     attempt_id = _attempt_id_from_redirect(submit)
 
@@ -111,12 +130,8 @@ async def test_taking_a_diagnostic_with_a_wrong_answer_reports_the_weak_subtopic
 
     await signup(client, "diag-partial@example.com")
     await client.post("/assessments/start", data={"topic": "Arithmetic"})
-    # get 2/3 right, missing the division question (index 2, correct is "1")
-    submit = await client.post(
-        "/assessments/submit",
-        data={"answer_0": "1", "answer_1": "0", "answer_2": "0"},
-        follow_redirects=False,
-    )
+    # get 2/3 right, missing the division question (last one, correct is "1")
+    submit = await _answer_all(client, ["1", "0", "0"])
     attempt_id = _attempt_id_from_redirect(submit)
 
     result = await client.get(f"/assessments/result/{attempt_id}")
@@ -134,7 +149,7 @@ async def test_diagnostic_result_updates_profile_proficiency_as_measured(client,
 
     await signup(client, "diag-profile@example.com")
     await client.post("/assessments/start", data={"topic": "Arithmetic"})
-    await client.post("/assessments/submit", data={"answer_0": "1", "answer_1": "0", "answer_2": "1"})
+    await _answer_all(client, ["1", "0", "1"])
 
     pool = await get_pool()
     user_id = await pool.fetchval("SELECT user_id FROM users WHERE email = $1", "diag-profile@example.com")
