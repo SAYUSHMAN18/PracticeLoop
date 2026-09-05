@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Shared Decks - PracticeLoop{% endblock %}
+{% block content %}
+<h1>Shared Decks</h1>
+<p class="muted" style="margin-top:-0.5rem;">
+  Publish a topic from your own bank so anyone can study from it, or import one someone
+  else shared. An imported deck copies straight into your bank -- it schedules and grades
+  exactly like anything you captured yourself.
+</p>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+<div class="card">
+  <h2>Publish a deck</h2>
+  {% if topics %}
+    <form method="post" action="/decks">
+      <label for="f-deck-name">Name</label>
+      <input id="f-deck-name" type="text" name="name" required maxlength="120" placeholder="e.g. DSA Fundamentals">
+      <label for="f-deck-description">Description (optional)</label>
+      <textarea id="f-deck-description" name="description" rows="2" maxlength="500"></textarea>
+      <label for="f-deck-topic">Topic to publish</label>
+      <select id="f-deck-topic" name="topic" required>
+        {% for t in topics %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+      </select>
+      <button type="submit">Publish</button>
+    </form>
+  {% else %}
+    <p class="muted">
+      Tag some questions with a topic in your <a href="/practice">question bank</a> first --
+      a deck is published one topic at a time.
+    </p>
+  {% endif %}
+</div>
+
+{% if my_decks %}
+<div class="card">
+  <h2>Decks you've published</h2>
+  {% for d in my_decks %}
+    <div class="question-item">
+      <a href="/decks/{{ d.deck_id }}" style="color:var(--text);text-decoration:none;font-weight:700;">{{ d.name }}</a>
+      <span class="tag">{{ d.topic }}</span>
+      <div class="muted" style="font-size:0.82rem;margin-top:0.2rem;">
+        {{ d.question_count }} question{{ 's' if d.question_count != 1 }} &middot; imported {{ d.import_count }} time{{ 's' if d.import_count != 1 }}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Browse public decks</h2>
+  <form method="get" action="/decks" class="inline-form">
+    <input type="search" name="q" value="{{ q }}" placeholder="Search by name or topic&hellip;">
+    <button type="submit">Search</button>
+  </form>
+  {% for d in public_decks %}
+    <div class="question-item">
+      <a href="/decks/{{ d.deck_id }}" style="color:var(--text);text-decoration:none;font-weight:700;">{{ d.name }}</a>
+      <span class="tag">{{ d.topic }}</span>
+      {% if d.description %}<div class="muted" style="font-size:0.85rem;margin-top:0.3rem;">{{ d.description }}</div>{% endif %}
+      <div class="muted" style="font-size:0.82rem;margin-top:0.2rem;">
+        By {{ d.owner_name }} &middot; {{ d.question_count }} question{{ 's' if d.question_count != 1 }} &middot; imported {{ d.import_count }} time{{ 's' if d.import_count != 1 }}
+      </div>
+    </div>
+  {% else %}
+    <p class="muted">{{ "No decks match that search." if q else "Nothing published yet -- be the first." }}</p>
+  {% endfor %}
+</div>
+{% endblock %}

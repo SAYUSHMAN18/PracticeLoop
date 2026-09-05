@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ deck.name }} - PracticeLoop{% endblock %}
+{% block content %}
+<p class="muted" style="margin-bottom:0.3rem;"><a href="/decks">&larr; Shared Decks</a></p>
+<h1>{{ deck.name }}</h1>
+<p class="muted" style="margin-top:-0.5rem;">
+  By {{ deck.owner_name }} &middot; <span class="tag">{{ deck.topic }}</span>
+  &middot; {{ deck.question_count }} question{{ 's' if deck.question_count != 1 }}
+  &middot; imported {{ deck.import_count }} time{{ 's' if deck.import_count != 1 }}
+</p>
+{% if deck.description %}<p>{{ deck.description }}</p>{% endif %}
+
+{% if result %}
+<div class="card">
+  <h2>Imported</h2>
+  <p>Added {{ result.added }} new question{{ 's' if result.added != 1 }} to your bank.
+     {% if result.skipped %}Skipped {{ result.skipped }} you already had.{% endif %}</p>
+  <div class="hub-links"><a href="/practice">Go to your question bank &rarr;</a></div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+    <form method="post" action="/decks/{{ deck.deck_id }}/import" style="margin:0;">
+      <button type="submit">Import into my bank</button>
+    </form>
+    {% if is_owner %}
+    <form method="post" action="/decks/{{ deck.deck_id }}/delete" id="deck-delete-form" data-title="{{ deck.name }}" style="margin:0;">
+      <button type="submit" class="secondary" style="color:var(--danger);border-color:var(--danger-soft);margin-top:0;">Unpublish</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <h2>Preview</h2>
+  {% for q in deck.questions %}
+    <div class="question-item">
+      <strong>{{ q.question }}</strong>
+      {% if q.question_type == 'multiple_choice' and q.choices %}
+        <ul style="margin:0.4rem 0 0;">{% for c in q.choices %}<li class="muted">{{ c }}</li>{% endfor %}</ul>
+      {% elif q.answer %}
+        <p class="muted" style="margin-top:0.3rem;">{{ q.answer }}</p>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+
+{% if is_owner %}
+<script nonce="{{ request.state.csp_nonce }}">
+document.getElementById("deck-delete-form").addEventListener("submit", function (e) {
+  if (!confirm("Unpublish \"" + this.dataset.title + "\"? Anyone who already imported it keeps their copy, but it leaves the gallery.")) {
+    e.preventDefault();
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

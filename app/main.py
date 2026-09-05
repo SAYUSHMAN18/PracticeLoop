@@ -27,6 +27,7 @@ from app.core.middleware import (
 )
 from app.core.templates import STATIC_DIR, templates
 from app.dashboard.router import router as dashboard_router
+from app.decks.router import router as decks_router
 from app.digest.router import router as digest_router
 from app.documents.router import router as documents_router
 from app.guardian.router import router as guardian_router
@@ -92,6 +93,7 @@ app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(practice_router)
 app.include_router(dashboard_router)
+app.include_router(decks_router)
 app.include_router(jobs_router)
 app.include_router(documents_router)
 app.include_router(learning_paths_router)
