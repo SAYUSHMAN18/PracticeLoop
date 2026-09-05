@@ -33,6 +33,10 @@ dependencies = [
     # client JS, and the colour stylesheet is generated and vendored
     # (scripts/gen_pygments_css.py) to satisfy style-src 'self'.
     "pygments>=2.18",
+    # .apkg import: modern Anki (2.1.50+) exports collection.anki21b, its
+    # SQLite collection zstd-compressed -- no way to read it without this,
+    # and Python's stdlib doesn't gain zstd support until 3.14.
+    "zstandard>=0.23",
 ]
 
 [tool.setuptools.packages.find]

@@ -3,8 +3,9 @@
 {% block content %}
 <h1>Import questions</h1>
 <p class="muted">
-  Bring a deck in from Anki (export as "Notes in Plain Text") or Quizlet
-  (Export &rarr; copy the text). Paste it below or upload the file.
+  Bring a deck in from Anki (upload the .apkg you export straight from Anki,
+  or export as "Notes in Plain Text") or Quizlet (Export &rarr; copy the
+  text). Paste it below or upload the file.
 </p>
 
 {% if result %}
@@ -24,8 +25,8 @@
       placeholder="mitochondria&#9;the powerhouse of the cell&#10;ribosome&#9;makes proteins&#10;&#10;-- or --&#10;&#10;What is a mutex?,A lock that allows one thread at a time,concurrency">{{ pasted or "" }}</textarea>
     <p class="muted" style="font-size:0.82rem;">Column 1 = question, column 2 = answer, optional column 3 = topic. A header row is detected and skipped.</p>
 
-    <label for="f-file" style="margin-top:1rem;">&hellip;or upload a .csv / .tsv / .txt</label>
-    <input id="f-file" type="file" name="file" accept=".csv,.tsv,.txt">
+    <label for="f-file" style="margin-top:1rem;">&hellip;or upload a .apkg / .csv / .tsv / .txt</label>
+    <input id="f-file" type="file" name="file" accept=".apkg,.csv,.tsv,.txt">
 
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     <button type="submit" style="margin-top:1rem;">Import</button>

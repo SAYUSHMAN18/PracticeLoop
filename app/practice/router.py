@@ -138,6 +138,10 @@ async def import_form(request: Request, user_id: int = Depends(require_user_id))
     )
 
 
+_MAX_APKG_BYTES = 20_000_000  # a real .apkg carries media the text extraction ignores, so a
+# higher cap than the plain-text path -- still bounded, not "read the whole request body"
+
+
 @router.post("/import", response_class=HTMLResponse)
 async def import_questions(
     request: Request,
@@ -146,12 +150,31 @@ async def import_questions(
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
 ):
-    text = pasted
-    if file is not None and file.filename:
-        raw = await file.read(1_000_000)  # 1 MB is plenty for a text deck
-        text = raw.decode("utf-8", errors="replace")
+    if file is not None and file.filename and file.filename.lower().endswith(".apkg"):
+        raw = await file.read(_MAX_APKG_BYTES + 1)
+        if len(raw) > _MAX_APKG_BYTES:
+            return templates.TemplateResponse(
+                request,
+                "practice/import.html",
+                {"result": None, "error": "That .apkg is too large (max 20MB).", "pasted": pasted},
+                status_code=413,
+            )
+        try:
+            rows = bulk_io.parse_apkg(raw)
+        except bulk_io.ApkgParseError as exc:
+            return templates.TemplateResponse(
+                request,
+                "practice/import.html",
+                {"result": None, "error": str(exc), "pasted": pasted},
+                status_code=400,
+            )
+    else:
+        text = pasted
+        if file is not None and file.filename:
+            raw = await file.read(1_000_000)  # 1 MB is plenty for a text deck
+            text = raw.decode("utf-8", errors="replace")
+        rows = bulk_io.parse_bulk(text)
 
-    rows = bulk_io.parse_bulk(text)
     if not rows:
         return templates.TemplateResponse(
             request,
@@ -159,7 +182,7 @@ async def import_questions(
             {
                 "result": None,
                 "error": "Found no rows to import -- each line needs a question and an answer, "
-                "separated by a tab or a comma.",
+                "separated by a tab or a comma (or upload a .apkg / .csv / .tsv file).",
                 "pasted": pasted,
             },
             status_code=400,
