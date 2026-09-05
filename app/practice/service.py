@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import asyncpg
 
@@ -442,17 +442,41 @@ async def streak_days(pool: asyncpg.Pool, user_id: int) -> int:
     return streak
 
 
+_SEED_IMMEDIATE = 12  # a ~20-25 minute first session at this deck's pace -- not all of it at once
+_SEED_PER_DAY = 8  # cards/day unlocked after that, so the rest trickles in like a real SRS ramp-up
+
+
 async def seed_starter_deck(pool: asyncpg.Pool, user_id: int) -> int:
     """Load data/starter_deck.json for a new user so the review queue and
-    search corpus have real content on day one instead of four zeros."""
+    search corpus have real content on day one instead of four zeros.
+
+    A question with no card_states row is due immediately (see
+    due_for_review), so seeding all ~79 unstaggered used to hand a brand
+    new signup a same-day plan of "78 due, ~158 minutes" -- read as
+    intimidating, not generous. Only the first _SEED_IMMEDIATE questions
+    get that default; the rest are given a future due date, batched
+    _SEED_PER_DAY per day, so the deck unlocks gradually instead of
+    landing in one sitting. Each is still a genuinely brand-new FSRS card
+    (state=Learning, stability/difficulty unset) -- only its due date is
+    artificial, so grading it later is identical to grading any other
+    first-ever review, whenever the user actually gets to it."""
     import json
     from pathlib import Path
 
     deck_path = Path(__file__).resolve().parents[2] / "data" / "starter_deck.json"
     entries = json.loads(deck_path.read_text(encoding="utf-8"))
+    now = datetime.now(timezone.utc)
 
-    for entry in entries:
-        await create_question(pool, user_id, entry, source="starter_deck")
+    for i, entry in enumerate(entries):
+        question_id = await create_question(pool, user_id, entry, source="starter_deck")
+        if i >= _SEED_IMMEDIATE:
+            due = now + timedelta(days=1 + (i - _SEED_IMMEDIATE) // _SEED_PER_DAY)
+            await pool.execute(
+                "INSERT INTO card_states (question_id, user_id, state, due) VALUES ($1, $2, 1, $3)",
+                question_id,
+                user_id,
+                due,
+            )
 
     return len(entries)
 

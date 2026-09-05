@@ -53,6 +53,7 @@
      in script-src is a script we can't verify. Self-hosting also drops a third-party
      round trip from every page load, which matters most on the free-tier cold start. #}
   <script src="/static/htmx.min.js?v={{ asset_version("htmx.min.js") }}" defer></script>
+  <script src="/static/htmx-config.js?v={{ asset_version("htmx-config.js") }}" defer data-nonce="{{ request.state.csp_nonce }}"></script>
 </head>
 <body>
   <a href="#main-content" class="skip-link">Skip to content</a>
