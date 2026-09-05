@@ -64,6 +64,15 @@ class Settings(BaseSettings):
     google_oauth_client_id: str = ""
     google_oauth_client_secret: str = ""
 
+    # Web push. Both keys unset (the default) hides the "enable
+    # notifications" control entirely -- self-generated (scripts/gen_vapid_keys.py),
+    # not issued by any provider; there's no account to create, just a
+    # keypair the app uses to prove to browsers' push services that
+    # pushes claiming to be PracticeLoop actually came from it.
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = "mailto:admin@practiceloop.onrender.com"
+
     # Email. backend: console | brevo | resend | smtp. console just logs
     # the message; a real deploy sets an API backend and the matching key.
     # brevo needs only a verified sender address (free 300/day); resend

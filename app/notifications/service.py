@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import asyncpg
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 _LIST_LIMIT = 20
 
 
@@ -12,7 +15,7 @@ class NotificationNotFound(Exception):
 async def create(
     pool: asyncpg.Pool, user_id: int, kind: str, title: str, *, body: str = "", link: str = ""
 ) -> int:
-    return await pool.fetchval(
+    notification_id = await pool.fetchval(
         """INSERT INTO notifications (user_id, kind, title, body, link)
            VALUES ($1, $2, $3, $4, $5) RETURNING notification_id""",
         user_id,
@@ -21,6 +24,16 @@ async def create(
         body,
         link,
     )
+    # Best-effort and never blocking the in-app notification on it -- a
+    # push failure (no subscription, a dead endpoint, VAPID unconfigured)
+    # must not be why the notification itself failed to record.
+    from app.notifications.push import send_push_to_user  # local import: avoids a load-time cycle
+
+    try:
+        await send_push_to_user(pool, user_id, title, body, link)
+    except Exception:
+        logger.exception("Push notification failed for user_id=%s", user_id)
+    return notification_id
 
 
 async def notify_classroom_members(

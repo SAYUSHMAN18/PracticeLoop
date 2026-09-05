@@ -58,6 +58,11 @@ templates.env.globals["public_base_url"] = settings.public_base_url.rstrip("/")
 templates.env.globals["google_oauth_available"] = lambda: bool(
     settings.google_oauth_client_id.strip() and settings.google_oauth_client_secret.strip()
 )
+# The public half of the VAPID keypair (see app/notifications/push.py) --
+# not secret, safe to hand to the browser as-is. Empty when unconfigured,
+# which push-subscribe.js's caller uses to hide the "enable notifications"
+# button entirely rather than show one that can never work.
+templates.env.globals["vapid_public_key"] = lambda: settings.vapid_public_key.strip()
 
 
 def _highlight_filter(code: str | None, language: str = "") -> str:

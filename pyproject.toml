@@ -37,6 +37,10 @@ dependencies = [
     # SQLite collection zstd-compressed -- no way to read it without this,
     # and Python's stdlib doesn't gain zstd support until 3.14.
     "zstandard>=0.23",
+    # Web push (app/notifications/push.py): the actual Web Push protocol
+    # (message encryption + VAPID JWT signing), not just an HTTP client --
+    # rolling that by hand is a real way to get it subtly wrong.
+    "pywebpush>=2.0",
 ]
 
 [tool.setuptools.packages.find]

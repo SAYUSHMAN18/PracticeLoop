@@ -120,4 +120,16 @@
     <button type="submit">Save</button>
   </form>
 </div>
+
+{% if vapid_public_key() %}
+<div class="card">
+  <h2>Browser notifications</h2>
+  <p class="muted" style="margin-top:-0.3rem;">
+    Get a real notification on this device for things like new classroom assignments -- on top of,
+    not instead of, the in-app bell.
+  </p>
+  <button type="button" id="push-toggle" class="secondary" data-vapid-key="{{ vapid_public_key() }}">Enable browser notifications</button>
+</div>
+<script src="/static/push-subscribe.js?v={{ asset_version('push-subscribe.js') }}" defer></script>
+{% endif %}
 {% endblock %}

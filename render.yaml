@@ -71,3 +71,13 @@ services:
         sync: false
       - key: GOOGLE_OAUTH_CLIENT_SECRET
         sync: false
+      # --- Web push ---
+      # Both unset hides the "enable notifications" button. Self-generated,
+      # no account or provider needed: run `python scripts/gen_vapid_keys.py`
+      # locally and paste its two output lines in as these two values.
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false # a mailto: address, e.g. mailto:you@example.com
