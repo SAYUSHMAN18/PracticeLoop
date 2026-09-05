@@ -97,6 +97,39 @@ async def test_a_multiline_code_example_keeps_its_newlines_and_indentation(clien
     assert expected in response.text
 
 
+async def test_lesson_content_renders_markdown_lists_but_not_emphasis(client, monkeypatch):
+    """emphasis is deliberately off for lesson content (same reason as Math
+    Lab: a step reading "2*x" must not have its asterisks paired into
+    <em>), but structural markdown like lists still renders."""
+
+    async def fake_generate(prompt: str, temperature: float = 0.0, **_: object) -> str:
+        return """{
+          "concept": "Two things to know:\\n- First point\\n- Second point",
+          "example": "",
+          "checkpoint_question": "Is 2*x the same as 2 times x?",
+          "checkpoint_answer": "Yes.",
+          "summary": "Done."
+        }"""
+
+    monkeypatch.setattr(service, "generate", fake_generate)
+    monkeypatch.setattr("app.learning_paths.router.llm_is_configured", lambda: True)
+
+    path_id, lesson_ids = await _create_path(client, "lesson-markdown@example.com", "Learn algebra")
+    response = await client.get(f"/learning-paths/{path_id}/lessons/{lesson_ids[0]}")
+    assert "<li>First point</li>" in response.text
+    # Literal asterisks in "2*x" must survive as-is, not get paired into
+    # <em>x</em> and silently eat the multiplication sign.
+    assert "2*x" in response.text
+    assert "<em>" not in response.text
+
+
+async def test_lesson_page_includes_katex_assets(client):
+    path_id, lesson_ids = await _create_path(client, "lesson-katex@example.com", "Learn algebra")
+    response = await client.get(f"/learning-paths/{path_id}/lessons/{lesson_ids[0]}")
+    assert "vendor/katex/katex.min.css" in response.text
+    assert "vendor/katex/katex-init.js" in response.text
+
+
 async def test_prev_next_navigation_across_lesson_boundaries(client):
     path_id, lesson_ids = await _create_path(client, "lesson-nav@example.com", "Learn origami")
     assert len(lesson_ids) == 4  # the fallback skeleton's one unit has exactly 4 lessons

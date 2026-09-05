@@ -5,7 +5,7 @@ import json
 from app.core.json_extraction import extract_first_json_value
 from app.core.llm import generate
 
-_GRADING_PROMPT = """Grade a student's answer to a practice question against the expected
+_GRADING_PROMPT = r"""Grade a student's answer to a practice question against the expected
 answer below. Output strict JSON with exactly these keys: rating (an integer 1-5) and
 feedback (a short string on what was missed or wrong, empty string if fully correct).
 
@@ -13,7 +13,11 @@ Rating scale: 1 = blackout/no relevant content, 2 = mostly wrong or missing key 
 3 = partially correct, missing important details, 4 = mostly correct with minor gaps,
 5 = fully correct, matches the expected answer's key points.
 
-Output ONLY the JSON object, no markdown fences, no explanation.
+Output ONLY the JSON object, no markdown fences, no explanation. If the feedback needs
+math notation, wrap it in $...$ so it renders -- but since this is a JSON string value,
+avoid any LaTeX command that needs a backslash (no \frac, \times, \cdot): use ^ for
+exponents, _ for subscripts, / for division, and write multiplication as juxtaposition
+(2x) or the word "times", never a bare "*".
 
 QUESTION: {question}
 

@@ -7,8 +7,18 @@ from app.core.db import get_pool
 from app.core.deps import inject_current_user, require_user_id
 from app.core.llm import is_configured as llm_is_configured
 from app.core.llm_budget import require_llm_budget
+from app.core.markdown import render_markdown
 from app.core.templates import templates
 from app.learning_paths import service
+
+# Rendered for display only -- render_markdown's output never gets written
+# back to the DB, so the stored content column stays plain text/LaTeX
+# source. emphasis=False for the same reason Math Lab needs it: a lesson
+# on algebra saying "2*x = 6" would otherwise have its multiplication sign
+# eaten by markdown pairing the two asterisks into <em>. "example" is
+# deliberately left alone -- it renders inside a <pre class="code-block">
+# as literal preformatted text, which may be real source code, not prose.
+_MARKDOWN_LESSON_FIELDS = ("concept", "checkpoint_question", "checkpoint_answer", "summary")
 
 router = APIRouter(dependencies=[Depends(inject_current_user)])
 
@@ -75,6 +85,9 @@ async def lesson_detail(
         lesson = await service.get_lesson(pool, user_id, path_id, lesson_id, ai_available=llm_is_configured())
     except service.PathNotFound as exc:
         raise HTTPException(status_code=404) from exc
+    for field in _MARKDOWN_LESSON_FIELDS:
+        if lesson["content"].get(field):
+            lesson["content"][field] = render_markdown(lesson["content"][field], emphasis=False)
     return templates.TemplateResponse(request, "learning_paths/lesson.html", {"lesson": lesson})
 
 

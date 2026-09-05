@@ -26,6 +26,15 @@ async def test_mentor_panel_is_present_with_its_own_landmark(client):
     assert 'hx-get="/mentor/conversation?context_type=general' in response.text
 
 
+async def test_katex_assets_are_wired_up_on_every_authed_page(client):
+    await signup(client, "shell-katex@example.com")
+    response = await client.get("/dashboard")
+    assert "vendor/katex/katex.min.css" in response.text
+    assert "vendor/katex/katex.min.js" in response.text
+    assert "vendor/katex/auto-render.min.js" in response.text
+    assert "vendor/katex/katex-init.js" in response.text
+
+
 async def test_a11y_menu_has_all_three_toggles(client):
     await signup(client, "shell-a11y@example.com")
     response = await client.get("/dashboard")

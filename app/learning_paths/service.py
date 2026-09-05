@@ -570,15 +570,20 @@ async def delete_path(pool: asyncpg.Pool, user_id: int, path_id: int) -> None:
     await pool.execute("DELETE FROM learning_paths WHERE path_id = $1", path_id)
 
 
-_LESSON_CONTENT_PROMPT = """You are writing one short lesson for a learning path.
+_LESSON_CONTENT_PROMPT = r"""You are writing one short lesson for a learning path.
 
 Path: "{path_title}"
 Module: "{module_title}"
 Unit: "{unit_title}"
 Lesson: "{lesson_title}"
 
-Write the lesson content. Output strict JSON only, no markdown fences, no commentary, in
-exactly this shape:
+Write the lesson content. If any field needs math notation, wrap it in $...$ so it
+renders -- but since these are JSON string values, avoid any LaTeX command that needs a
+backslash (no \frac, \times, \cdot): use ^ for exponents, _ for subscripts, / for
+division, and write multiplication as juxtaposition (2x) or the word "times", never a
+bare "*".
+
+Output strict JSON only, no markdown fences, no commentary, in exactly this shape:
 {{
   "concept": "2-4 sentences explaining the concept plainly",
   "example": "one concrete worked example illustrating it",

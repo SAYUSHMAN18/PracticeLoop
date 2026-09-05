@@ -21,13 +21,18 @@ QUESTION_COUNT = 8  # how many of the pool are actually administered
 _MAX_CHOICES = 6
 _XP_DIAGNOSTIC = 20  # a flat completion reward -- this is a placement test, not a "get it right" quiz
 
-_DIAGNOSTIC_PROMPT = """Write a multiple-choice diagnostic item bank for this
+_DIAGNOSTIC_PROMPT = r"""Write a multiple-choice diagnostic item bank for this
 topic: "{topic}"
 
 Write exactly {per_difficulty} EASY, {per_difficulty} MEDIUM, and {per_difficulty} HARD
 questions ({total} total). Each question should test a different subtopic within
 "{topic}", so a wrong answer says something specific about what the student doesn't
 know yet.
+
+If a question or choice needs math notation, wrap it in $...$ so it renders -- but
+since these are JSON string values, avoid any LaTeX command that needs a backslash (no
+\frac, \times, \cdot): use ^ for exponents, _ for subscripts, / for division, and write
+multiplication as juxtaposition (2x) or the word "times", never a bare "*".
 
 Output strict JSON only, no markdown fences, no commentary, in exactly this shape:
 {{

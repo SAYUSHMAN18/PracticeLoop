@@ -43,6 +43,11 @@
      flashcards, fenced blocks in mentor replies). Generated, self-hosted --
      the strict style-src 'self' CSP rules out a CDN. #}
   <link rel="stylesheet" href="/static/vendor/pygments.css?v={{ asset_version('vendor/pygments.css') }}">
+  {# KaTeX typesets $...$/$$...$$ math wherever it shows up -- mentor
+     replies, Math Lab steps, graded practice feedback, lesson content --
+     vendored (app/static/vendor/katex/) rather than pulled from a CDN,
+     same reasoning as htmx and the webfonts above. #}
+  <link rel="stylesheet" href="/static/vendor/katex/katex.min.css?v={{ asset_version('vendor/katex/katex.min.css') }}">
   <link rel="manifest" href="/static/manifest.json">
   <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#211c16">
@@ -53,6 +58,9 @@
      round trip from every page load, which matters most on the free-tier cold start. #}
   <script src="/static/htmx.min.js?v={{ asset_version("htmx.min.js") }}" defer></script>
   <script src="/static/htmx-config.js?v={{ asset_version("htmx-config.js") }}" defer data-nonce="{{ request.state.csp_nonce }}"></script>
+  <script src="/static/vendor/katex/katex.min.js?v={{ asset_version('vendor/katex/katex.min.js') }}" defer></script>
+  <script src="/static/vendor/katex/auto-render.min.js?v={{ asset_version('vendor/katex/auto-render.min.js') }}" defer></script>
+  <script src="/static/vendor/katex/katex-init.js?v={{ asset_version('vendor/katex/katex-init.js') }}" defer></script>
 </head>
 <body>
   <a href="#main-content" class="skip-link">Skip to content</a>
@@ -150,6 +158,7 @@
         <p class="sidebar-group">Practice</p>
         <a href="/practice" class="{{ 'active' if p == '/practice' or p.startswith('/practice/import') }}">{{ icon("practice") }}<span>Practice</span></a>
         <a href="/practice/review" class="{{ 'active' if p.startswith('/practice/review') }}">{{ icon("review") }}<span>Review</span></a>
+        <a href="/decks" class="{{ 'active' if p.startswith('/decks') }}">{{ icon("decks") }}<span>Shared Decks</span></a>
 
         <p class="sidebar-group">Build</p>
         <a href="/documents" class="{{ 'active' if p == '/documents' }}">{{ icon("vault") }}<span>Knowledge Vault</span></a>

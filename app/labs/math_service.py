@@ -102,6 +102,9 @@ _STEPS_PROMPT = """The equation {equation} has already been solved for x: x = {s
 That answer is verified and correct -- do not change it. Write a short (3-5 step)
 explanation of how to get from the equation to that answer, one step per line, no
 markdown fences, no commentary before or after the steps.
+
+Write each step's equation in LaTeX, wrapped in $...$ (e.g. $2x + 3 = 9$). Never use a
+bare "*" for multiplication -- write it as juxtaposition (2x) or \\times inside the $...$.
 """
 
 
