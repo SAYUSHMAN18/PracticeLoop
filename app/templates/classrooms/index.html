@@ -34,7 +34,7 @@
   <h2>Classrooms you've joined</h2>
   {% for classroom in joined %}
     <div class="question-item">
-      <strong>{{ classroom.name }}</strong>
+      <a href="/classrooms/{{ classroom.classroom_id }}" style="color:var(--text);text-decoration:none;font-weight:700;">{{ classroom.name }}</a>
       <div class="muted" style="font-size:0.82rem;margin-top:0.2rem;">Taught by {{ classroom.teacher_name }}</div>
     </div>
   {% else %}

@@ -36,8 +36,8 @@ async def get_profile(pool: asyncpg.Pool, user_id: int) -> asyncpg.Record:
     return await pool.fetchrow(
         """SELECT user_id, target_role, target_companies, resume_text,
                   goal_type, target_date, daily_time_budget_minutes, timezone,
-                  day_rollover_hour, digest_opt_out, github_url, linkedin_url,
-                  website_url, onboarding_completed, proficiency_level,
+                  day_rollover_hour, digest_opt_out, leaderboard_opt_out, github_url,
+                  linkedin_url, website_url, onboarding_completed, proficiency_level,
                   proficiency_source
            FROM profiles WHERE user_id = $1""",
         user_id,
@@ -62,6 +62,14 @@ async def set_digest_opt_out(pool: asyncpg.Pool, user_id: int, opted_out: bool) 
     (not another update_profile param) because the one-click unsubscribe
     link sets it too, from outside the profile form."""
     await pool.execute("UPDATE profiles SET digest_opt_out = $2 WHERE user_id = $1", user_id, opted_out)
+
+
+async def set_leaderboard_opt_out(pool: asyncpg.Pool, user_id: int, opted_out: bool) -> None:
+    """Whether this user is excluded from every classroom leaderboard
+    they're a member of. Opting out removes the row entirely rather than
+    anonymizing it -- a student who doesn't want to be ranked in front of
+    classmates shouldn't have to wonder if "Someone -- 340 XP" is them."""
+    await pool.execute("UPDATE profiles SET leaderboard_opt_out = $2 WHERE user_id = $1", user_id, opted_out)
 
 
 async def set_profile_links(

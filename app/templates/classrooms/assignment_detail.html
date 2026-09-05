@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ assignment.title }} - PracticeLoop{% endblock %}
+{% block content %}
+<p class="muted" style="margin-bottom:0.3rem;"><a href="/classrooms/{{ classroom_id }}">&larr; Back to classroom</a></p>
+<h1>{{ assignment.title }}</h1>
+{% if assignment.due_date %}<p class="muted" style="margin-top:-0.5rem;">Due {{ assignment.due_date.strftime('%b %d, %Y') }}</p>{% endif %}
+{% if assignment.description %}<p>{{ assignment.description }}</p>{% endif %}
+
+<div class="card">
+  <h2>Engagement</h2>
+  {% if not assignment.topic %}
+    <p class="muted">
+      This assignment has no diagnostic topic set, so there's nothing to measure engagement against --
+      PracticeLoop has no separate "submission" to check off, only real practice activity. Add a topic
+      when you assign work to see who's actually practicing it here.
+    </p>
+  {% else %}
+    <p class="muted" style="margin-top:-0.3rem;font-size:0.85rem;">
+      Attempts on questions tagged &ldquo;{{ assignment.topic }}&rdquo; since this was assigned
+      ({{ assignment.created_at.strftime('%b %d, %Y') }}). Not a submission -- this is a spaced-repetition
+      app, so "engaged" means practiced, not turned in.
+    </p>
+    {% for student in progress %}
+      <div class="question-item">
+        <strong>{{ student.name }}</strong>
+        {% if student.attempt_count %}
+          <span class="muted" style="font-size:0.82rem;">
+            &middot; {{ student.attempt_count }} attempt{{ 's' if student.attempt_count != 1 }}
+            &middot; avg confidence {{ student.avg_confidence }}/5
+            &middot; last practiced {{ student.last_practiced_at.strftime('%b %d, %Y') }}
+          </span>
+        {% else %}
+          <span class="muted" style="font-size:0.82rem;">&middot; hasn't practiced this topic yet</span>
+        {% endif %}
+      </div>
+    {% else %}
+      <p class="muted">No students on the roster yet.</p>
+    {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

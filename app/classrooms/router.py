@@ -88,16 +88,51 @@ async def classroom_detail(
     user_id: int = Depends(require_user_id),
     pool=Depends(get_pool),
 ):
+    # Teacher-owned first, then membership -- a teacher viewing their own
+    # classroom is never also a member of it, so these two can't both
+    # match the same user for the same classroom.
     try:
         classroom = await service.get_classroom_for_teacher(pool, user_id, classroom_id)
-        roster = await service.get_roster(pool, user_id, classroom_id)
-        assignments = await service.list_assignments_for_classroom(pool, user_id, classroom_id)
-    except service.ClassroomNotFound as exc:
-        raise HTTPException(status_code=404) from exc
+    except service.ClassroomNotFound:
+        try:
+            classroom = await service.get_classroom_for_member(pool, user_id, classroom_id)
+        except service.ClassroomNotFound as exc:
+            raise HTTPException(status_code=404) from exc
+        assignments = await service.list_assignments_for_classroom_member(pool, user_id, classroom_id)
+        leaderboard = await service.get_leaderboard(pool, classroom_id)
+        return templates.TemplateResponse(
+            request,
+            "classrooms/student_detail.html",
+            {"classroom": classroom, "assignments": assignments, "leaderboard": leaderboard},
+        )
+
+    roster = await service.get_roster(pool, user_id, classroom_id)
+    assignments = await service.list_assignments_for_classroom(pool, user_id, classroom_id)
+    leaderboard = await service.get_leaderboard(pool, classroom_id)
     return templates.TemplateResponse(
         request,
         "classrooms/detail.html",
-        {"classroom": classroom, "roster": roster, "assignments": assignments},
+        {"classroom": classroom, "roster": roster, "assignments": assignments, "leaderboard": leaderboard},
+    )
+
+
+@router.get("/{classroom_id}/assignments/{assignment_id}", response_class=HTMLResponse)
+async def assignment_progress(
+    classroom_id: int,
+    assignment_id: int,
+    request: Request,
+    user_id: int = Depends(require_user_id),
+    pool=Depends(get_pool),
+):
+    try:
+        assignment = await service.get_assignment_for_teacher(pool, user_id, classroom_id, assignment_id)
+    except (service.ClassroomNotFound, service.AssignmentNotFound) as exc:
+        raise HTTPException(status_code=404) from exc
+    progress = await service.get_assignment_progress(pool, classroom_id, assignment)
+    return templates.TemplateResponse(
+        request,
+        "classrooms/assignment_detail.html",
+        {"classroom_id": classroom_id, "assignment": assignment, "progress": progress},
     )
 
 

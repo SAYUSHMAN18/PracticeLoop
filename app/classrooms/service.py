@@ -18,6 +18,10 @@ class ClassroomNotFound(Exception):
     pass
 
 
+class AssignmentNotFound(Exception):
+    pass
+
+
 class InvalidJoinCode(Exception):
     pass
 
@@ -135,6 +139,47 @@ async def student_summary(pool: asyncpg.Pool, student_user_id: int) -> tuple[int
     return streak, xp, completed_paths
 
 
+async def get_classroom_for_member(pool: asyncpg.Pool, student_user_id: int, classroom_id: int) -> dict:
+    """The student-facing equivalent of get_classroom_for_teacher --
+    membership-checked (via classroom_members), not ownership-checked.
+    A teacher isn't a "member" of their own classroom, so this correctly
+    404s for them too; the router tries ownership first and only falls
+    back to this."""
+    row = await pool.fetchrow(
+        """SELECT c.classroom_id, c.name, t.name AS teacher_name, c.created_at
+           FROM classrooms c
+           JOIN classroom_members m ON m.classroom_id = c.classroom_id
+           JOIN users t ON t.user_id = c.teacher_user_id
+           WHERE c.classroom_id = $1 AND m.student_user_id = $2""",
+        classroom_id,
+        student_user_id,
+    )
+    if row is None:
+        raise ClassroomNotFound(classroom_id)
+    return dict(row)
+
+
+async def get_leaderboard(pool: asyncpg.Pool, classroom_id: int) -> list[dict]:
+    """Classroom members ranked by total XP, highest first -- the same
+    real signal the teacher's roster already shows, re-ranked and
+    trimmed (no email address) for an audience of classmates, and
+    excluding anyone who's opted out from their profile."""
+    members = await pool.fetch(
+        """SELECT u.user_id, u.name
+           FROM classroom_members m
+           JOIN users u ON u.user_id = m.student_user_id
+           JOIN profiles p ON p.user_id = u.user_id
+           WHERE m.classroom_id = $1 AND NOT p.leaderboard_opt_out""",
+        classroom_id,
+    )
+    ranked = []
+    for member in members:
+        xp = await get_xp_summary(pool, member["user_id"])
+        ranked.append({"user_id": member["user_id"], "name": member["name"], **xp})
+    ranked.sort(key=lambda r: r["total_xp"], reverse=True)
+    return ranked
+
+
 async def join_classroom(pool: asyncpg.Pool, student_user_id: int, join_code: str) -> dict:
     classroom = await pool.fetchrow(
         "SELECT classroom_id, name FROM classrooms WHERE join_code = $1", join_code.strip().upper()
@@ -211,6 +256,67 @@ async def list_assignments_for_classroom(
         "SELECT assignment_id, title, description, topic, due_date, created_at "
         "FROM assignments WHERE classroom_id = $1 ORDER BY due_date NULLS LAST, created_at DESC",
         classroom_id,
+    )
+    return [dict(r) for r in rows]
+
+
+async def list_assignments_for_classroom_member(
+    pool: asyncpg.Pool, student_user_id: int, classroom_id: int
+) -> list[dict]:
+    """Same rows as list_assignments_for_classroom, but membership-checked
+    for the student classroom page rather than ownership-checked for the
+    teacher's."""
+    await get_classroom_for_member(pool, student_user_id, classroom_id)  # ownership/membership check
+    rows = await pool.fetch(
+        "SELECT assignment_id, title, description, topic, due_date, created_at "
+        "FROM assignments WHERE classroom_id = $1 ORDER BY due_date NULLS LAST, created_at DESC",
+        classroom_id,
+    )
+    return [dict(r) for r in rows]
+
+
+async def get_assignment_for_teacher(
+    pool: asyncpg.Pool, teacher_user_id: int, classroom_id: int, assignment_id: int
+) -> dict:
+    await get_classroom_for_teacher(pool, teacher_user_id, classroom_id)  # ownership check
+    row = await pool.fetchrow(
+        """SELECT assignment_id, classroom_id, title, description, topic, due_date, created_at
+           FROM assignments WHERE assignment_id = $1 AND classroom_id = $2""",
+        assignment_id,
+        classroom_id,
+    )
+    if row is None:
+        raise AssignmentNotFound(assignment_id)
+    return dict(row)
+
+
+async def get_assignment_progress(pool: asyncpg.Pool, classroom_id: int, assignment: dict) -> list[dict]:
+    """Per-roster-student engagement with this assignment, since it was
+    posted: attempts and average confidence on questions tagged with its
+    topic. There's no separate "submission" concept here -- practice is
+    continuous, not turned in -- so "has this student engaged" is
+    measured the same honest way everything else in this app is: real
+    recorded attempts, never a self-reported checkbox. An assignment
+    posted with no topic has nothing to measure this way and returns an
+    empty list; the caller shows "no topic set" instead of a table."""
+    if not assignment["topic"]:
+        return []
+    rows = await pool.fetch(
+        """SELECT u.user_id, u.name,
+                  count(a.attempt_id) AS attempt_count,
+                  round(avg(a.confidence_rating), 1) AS avg_confidence,
+                  max(a.practiced_at) AS last_practiced_at
+           FROM classroom_members m
+           JOIN users u ON u.user_id = m.student_user_id
+           LEFT JOIN questions q ON q.user_id = u.user_id AND q.topic ILIKE $3
+           LEFT JOIN attempts a
+               ON a.question_id = q.question_id AND a.user_id = u.user_id AND a.practiced_at >= $2
+           WHERE m.classroom_id = $1
+           GROUP BY u.user_id, u.name
+           ORDER BY attempt_count DESC, u.name""",
+        classroom_id,
+        assignment["created_at"],
+        assignment["topic"],
     )
     return [dict(r) for r in rows]
 

@@ -84,6 +84,11 @@
       <span>Email me when I have review cards due and haven't practiced yet. Needs a confirmed email address.</span>
     </label>
 
+    <label style="display:flex;align-items:flex-start;gap:0.6rem;margin-top:0.6rem;font-size:0.9rem;">
+      <input type="checkbox" name="show_on_leaderboards" value="1" {{ "checked" if not profile.leaderboard_opt_out }}>
+      <span>Show my name and XP on classroom leaderboards, for any classroom I join.</span>
+    </label>
+
     <h2 style="margin-top:1.5rem;border-top:1px solid var(--border);padding-top:1rem;">Links</h2>
     <p class="muted" style="margin-top:-0.3rem;font-size:0.85rem;">Shown on your portfolio. Leave blank to hide.</p>
     <div class="form-row">

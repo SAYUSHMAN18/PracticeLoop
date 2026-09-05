@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ classroom.name }} - PracticeLoop{% endblock %}
+{% block content %}
+<p class="muted" style="margin-bottom:0.3rem;"><a href="/classrooms">&larr; Classrooms</a></p>
+<h1>{{ classroom.name }}</h1>
+<p class="muted" style="margin-top:-0.5rem;">Taught by {{ classroom.teacher_name }}</p>
+
+<div class="card">
+  <h2>Assignments</h2>
+  {% for a in assignments %}
+    <div class="question-item">
+      <strong>{{ a.title }}</strong>
+      {% if a.due_date %}<span class="muted" style="font-size:0.82rem;"> &middot; due {{ a.due_date.strftime('%b %d, %Y') }}</span>{% endif %}
+      {% if a.description %}<div class="muted" style="font-size:0.85rem;margin-top:0.3rem;">{{ a.description }}</div>{% endif %}
+      {% if a.topic %}<div class="hub-links"><a href="/assessments">Take a diagnostic on {{ a.topic }}</a></div>{% endif %}
+    </div>
+  {% else %}
+    <p class="muted">No assignments yet.</p>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>Leaderboard</h2>
+  <p class="muted" style="margin-top:-0.3rem;font-size:0.85rem;">
+    Ranked by total XP. <a href="/profile">Change whether you're shown here</a> from your profile.
+  </p>
+  {% for student in leaderboard %}
+    <div class="question-item">
+      <strong>#{{ loop.index }} {{ student.name }}</strong>
+      <span class="muted" style="font-size:0.82rem;"> &middot; Lv {{ student.level }} ({{ student.total_xp }} XP)</span>
+    </div>
+  {% else %}
+    <p class="muted">No one to rank yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

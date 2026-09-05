@@ -95,6 +95,7 @@ async def save_profile(
     day_rollover_hour: str = Form("0"),
     proficiency_level: str = Form(""),
     review_reminders: bool = Form(False),
+    show_on_leaderboards: bool = Form(False),
     github_url: str = Form(""),
     linkedin_url: str = Form(""),
     website_url: str = Form(""),
@@ -140,9 +141,10 @@ async def save_profile(
         day_rollover_hour=clamp_rollover_hour(day_rollover_hour),
         proficiency_level=_parse_proficiency(proficiency_level),
     )
-    # Checkbox is "send me reminders" (checked = on); the column stores the
-    # opposite, so an absent checkbox means opted out.
+    # Both checkboxes are phrased as "opt in" (checked = on); each column
+    # stores the opposite, so an absent (unchecked) checkbox means opted out.
     await service.set_digest_opt_out(pool, user_id, not review_reminders)
+    await service.set_leaderboard_opt_out(pool, user_id, not show_on_leaderboards)
     await service.set_profile_links(
         pool,
         user_id,

@@ -53,12 +53,26 @@
 
   {% for a in assignments %}
     <div class="question-item">
-      <strong>{{ a.title }}</strong>
+      <a href="/classrooms/{{ classroom.classroom_id }}/assignments/{{ a.assignment_id }}" style="color:var(--text);text-decoration:none;font-weight:700;">{{ a.title }}</a>
       {% if a.due_date %}<span class="muted" style="font-size:0.82rem;"> &middot; due {{ a.due_date.strftime('%b %d, %Y') }}</span>{% endif %}
       {% if a.description %}<div class="muted" style="font-size:0.85rem;margin-top:0.3rem;">{{ a.description }}</div>{% endif %}
+      {% if a.topic %}<div class="muted" style="font-size:0.82rem;margin-top:0.2rem;"><a href="/classrooms/{{ classroom.classroom_id }}/assignments/{{ a.assignment_id }}">See who's engaged with it &rarr;</a></div>{% endif %}
     </div>
   {% else %}
     <p class="muted">No assignments yet.</p>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>Leaderboard</h2>
+  <p class="muted" style="margin-top:-0.3rem;font-size:0.85rem;">Ranked by total XP. Students who opted out of leaderboards aren't listed.</p>
+  {% for student in leaderboard %}
+    <div class="question-item">
+      <strong>#{{ loop.index }} {{ student.name }}</strong>
+      <span class="muted" style="font-size:0.82rem;"> &middot; Lv {{ student.level }} ({{ student.total_xp }} XP)</span>
+    </div>
+  {% else %}
+    <p class="muted">No one to rank yet.</p>
   {% endfor %}
 </div>
 
