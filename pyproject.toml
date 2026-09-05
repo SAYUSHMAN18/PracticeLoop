@@ -57,6 +57,11 @@ gemini = ["google-generativeai>=0.8"]
 bedrock = ["boto3>=1.35"]
 sentry = ["sentry-sdk>=2.19"]
 dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "ruff>=0.8"]
+# Separate from `dev`: needs real browser binaries (`playwright install`),
+# which the normal unit/integration test run has no reason to pull in.
+# See tests_e2e/conftest.py for why this suite exists at all. httpx (for
+# polling /healthz) is already a core dependency, so nothing extra there.
+e2e = ["pytest-playwright>=0.5"]
 
 [tool.ruff]
 line-length = 110
@@ -68,6 +73,11 @@ ignore = [
 ]
 
 [tool.pytest.ini_options]
+# A bare `pytest`/`pytest -q` (no path) only ever collects tests/ -- the
+# browser-driven suite in tests_e2e/ needs Playwright's browser binaries
+# installed and is run separately (`pytest tests_e2e/`), so it must never
+# be picked up by accident.
+testpaths = ["tests"]
 asyncio_mode = "auto"
 # The asyncpg pool created by app.core.db.get_pool() is bound to whatever
 # event loop was active when it was created; function-scoped loops (the

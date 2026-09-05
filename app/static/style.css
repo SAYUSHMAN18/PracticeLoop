@@ -659,13 +659,22 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   transform-origin: bottom right;
   transform: scale(0.92) translateY(12px);
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-  transition: transform 0.18s ease, opacity 0.18s ease;
+  /* visibility flips to hidden only once the fade-out finishes -- opacity
+     alone leaves a fully transparent panel technically "visible" (a
+     nonzero-opacity box occupying space), which both a screen reader and
+     an automated visibility check (Playwright's included) can still treat
+     as present. .open below overrides this with a zero delay, so opening
+     shows it immediately instead of waiting out the same 0.18s. */
+  transition: transform 0.18s ease, opacity 0.18s ease, visibility 0s linear 0.18s;
 }
 .mentor-panel.open {
   transform: scale(1) translateY(0);
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
+  transition: transform 0.18s ease, opacity 0.18s ease, visibility 0s linear 0s;
 }
 
 .mentor-panel-header {

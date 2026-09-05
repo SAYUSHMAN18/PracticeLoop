@@ -9,3 +9,4 @@ venv/
 .claude/
 .gemini/
 .jolli/
+tests_e2e/.server.log

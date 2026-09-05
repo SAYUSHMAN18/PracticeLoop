@@ -59,3 +59,52 @@ jobs:
 
       - name: Test
         run: pytest tests/ -q
+
+  e2e:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      SESSION_SECRET: ci-only-secret-not-used-in-production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip and the HuggingFace model
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.cache/huggingface
+          key: ${{ runner.os }}-py311-${{ hashFiles('pyproject.toml') }}
+
+      - name: Install dependencies
+        run: |
+          pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[dev,e2e,groq]"
+
+      # A real browser, not a stub -- this suite exists specifically to
+      # render CSS/JS and check what a browser does with it (see
+      # tests_e2e/conftest.py). Chromium only: one engine is enough for a
+      # smoke suite, and it keeps this step's install time down.
+      - name: Install Playwright's Chromium
+        run: playwright install --with-deps chromium
+
+      - name: E2E smoke test
+        run: pytest tests_e2e/ -q
