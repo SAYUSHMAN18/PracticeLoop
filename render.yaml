@@ -62,3 +62,12 @@ services:
                     # /cron/digest fail-closes with 503 and no digests go out.
       - key: ADMIN_EMAILS
         sync: false # optional -- comma-separated allow-list for the /admin dashboard
+      # --- Google Sign-In ---
+      # Both unset just hides the button -- no broken link. Console setup:
+      # console.cloud.google.com -> APIs & Services -> Credentials -> Create
+      # OAuth client ID (Web application) -> authorized redirect URI
+      # https://practiceloop.onrender.com/auth/google/callback (or your own domain).
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_SECRET
+        sync: false

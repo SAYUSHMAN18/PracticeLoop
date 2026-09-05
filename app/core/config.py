@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     login_lockout_threshold: int = 8
     login_lockout_minutes: int = 15
 
+    # Google Sign-In. Both unset (the default) hides the button entirely --
+    # no dead link to a provider that isn't configured. Console setup:
+    # console.cloud.google.com -> APIs & Services -> Credentials -> OAuth
+    # client ID (Web application), authorized redirect URI
+    # {public_base_url}/auth/google/callback.
+    google_oauth_client_id: str = ""
+    google_oauth_client_secret: str = ""
+
     # Email. backend: console | brevo | resend | smtp. console just logs
     # the message; a real deploy sets an API backend and the matching key.
     # brevo needs only a verified sender address (free 300/day); resend

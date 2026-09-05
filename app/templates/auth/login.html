@@ -13,6 +13,10 @@
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     <button type="submit" style="width:100%;justify-content:center;">Log in</button>
   </form>
+  {% if google_oauth_available() %}
+    <p class="muted" style="text-align:center;margin:0.75rem 0;">or</p>
+    <a class="btn secondary" href="/auth/google" style="width:100%;justify-content:center;">Continue with Google</a>
+  {% endif %}
   <p class="muted" style="margin-top:1rem;">
     <a href="/forgot-password">Forgot your password?</a>
     &nbsp;&middot;&nbsp;

@@ -49,6 +49,15 @@ templates.env.globals["asset_version"] = _static_asset_version
 # The absolute origin this site is served from. Templates build canonical
 # and Open Graph URLs off it, so no route has to pass one down by hand.
 templates.env.globals["public_base_url"] = settings.public_base_url.rstrip("/")
+# Whether to show the "Continue with Google" button at all -- login.html
+# and signup.html both need this, and a global (like public_base_url
+# above) means neither route has to remember to thread it through every
+# one of their own error-path context dicts. A callable, not a value
+# snapshotted once at import time: tests monkeypatch settings at runtime
+# and need the button's visibility to actually track that.
+templates.env.globals["google_oauth_available"] = lambda: bool(
+    settings.google_oauth_client_id.strip() and settings.google_oauth_client_secret.strip()
+)
 
 
 def _highlight_filter(code: str | None, language: str = "") -> str:

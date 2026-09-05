@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import secrets
+
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from app.auth import service
+from app.auth import oauth, service
 from app.core.config import settings
 from app.core.db import get_pool
 from app.core.deps import require_user_id
@@ -17,6 +19,8 @@ from app.profile.service import needs_onboarding
 logger = get_logger(__name__)
 
 router = APIRouter()
+
+_OAUTH_STATE_SESSION_KEY = "oauth_state"
 
 
 @router.get("/signup", response_class=HTMLResponse)
@@ -99,6 +103,13 @@ async def login(
             },
             status_code=400,
         )
+    except service.OAuthOnlyAccount as exc:
+        return templates.TemplateResponse(
+            request,
+            "auth/login.html",
+            {"error": f"This account signs in with {exc.provider.title()} -- use the button below."},
+            status_code=400,
+        )
     except service.InvalidCredentials:
         return templates.TemplateResponse(
             request,
@@ -118,6 +129,57 @@ async def login(
 async def logout(request: Request):
     log_out(request)
     return RedirectResponse("/login", status_code=303)
+
+
+# --- Google Sign-In -------------------------------------------------------
+
+
+@router.get("/auth/google")
+async def google_oauth_start(request: Request):
+    if not oauth.is_configured():
+        return RedirectResponse("/login", status_code=303)
+    # A fresh value per attempt, checked against what the callback receives
+    # -- without it, anything landing on /auth/google/callback with a code
+    # of its own choosing (e.g. an attacker's own Google account, linked to
+    # a CSRF'd session) could get logged into whoever's browser follows it.
+    state = secrets.token_urlsafe(24)
+    request.session[_OAUTH_STATE_SESSION_KEY] = state
+    return RedirectResponse(oauth.build_authorize_url(state), status_code=303)
+
+
+@router.get("/auth/google/callback")
+async def google_oauth_callback(
+    request: Request,
+    code: str = "",
+    state: str = "",
+    error: str = "",
+    pool=Depends(get_pool),
+):
+    expected_state = request.session.pop(_OAUTH_STATE_SESSION_KEY, None)
+    if error or not code or not state or not secrets.compare_digest(state, expected_state or ""):
+        return templates.TemplateResponse(
+            request,
+            "auth/login.html",
+            {"error": "Google sign-in didn't complete -- try again.", "account_deleted": False},
+            status_code=400,
+        )
+
+    try:
+        userinfo = await oauth.exchange_code_for_userinfo(code)
+    except oauth.OAuthExchangeFailed as exc:
+        return templates.TemplateResponse(
+            request,
+            "auth/login.html",
+            {"error": str(exc), "account_deleted": False},
+            status_code=400,
+        )
+
+    user_id, _is_new = await service.get_or_create_oauth_user(
+        pool, email=userinfo["email"], name=userinfo["name"], provider="google"
+    )
+    log_in(request, user_id)
+    destination = "/welcome" if await needs_onboarding(pool, user_id) else "/dashboard"
+    return RedirectResponse(destination, status_code=303)
 
 
 # --- email verification -------------------------------------------------

@@ -37,6 +37,16 @@ class AccountLocked(Exception):
         self.minutes = minutes
 
 
+class OAuthOnlyAccount(Exception):
+    """This email belongs to an account with no password at all (created
+    via Google Sign-In) -- there's no password to be wrong here, so the
+    login form should say so instead of "incorrect email or password"."""
+
+    def __init__(self, provider: str):
+        super().__init__(f"sign in with {provider} instead")
+        self.provider = provider
+
+
 async def create_user(pool: asyncpg.Pool, email: str, password: str, name: str) -> int:
     password_hash = hash_password(password)  # raises InvalidPassword before touching the DB
 
@@ -60,20 +70,61 @@ async def create_user(pool: asyncpg.Pool, email: str, password: str, name: str) 
     return user_id
 
 
+async def get_or_create_oauth_user(
+    pool: asyncpg.Pool, *, email: str, name: str, provider: str
+) -> tuple[int, bool]:
+    """Log in an OAuth-authenticated identity, matching by email. Returns
+    (user_id, is_new).
+
+    Matching an existing password account by email rather than refusing
+    ("that email already has a password") is deliberate: the provider has
+    already verified this address belongs to whoever is signing in, so
+    it's the same person authenticating a second way, not an account
+    takeover -- and it links their account to future Google sign-ins
+    rather than leaving them stuck choosing one method forever.
+    email_verified_at is stamped immediately for a brand-new account since
+    the provider verified the address before PracticeLoop ever saw it."""
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await conn.fetchrow("SELECT user_id FROM users WHERE email = $1 FOR UPDATE", email)
+            if row is not None:
+                await conn.execute(
+                    "UPDATE users SET oauth_provider = $2 WHERE user_id = $1 AND oauth_provider = ''",
+                    row["user_id"],
+                    provider,
+                )
+                return row["user_id"], False
+
+            user_id = await conn.fetchval(
+                """INSERT INTO users (email, password_hash, name, oauth_provider, email_verified_at)
+                   VALUES ($1, NULL, $2, $3, now()) RETURNING user_id""",
+                email,
+                name,
+                provider,
+            )
+            await conn.execute("INSERT INTO profiles (user_id) VALUES ($1)", user_id)
+            return user_id, True
+
+
 async def authenticate(pool: asyncpg.Pool, email: str, password: str) -> int:
     row = await pool.fetchrow(
-        "SELECT user_id, password_hash, failed_login_count, locked_until FROM users WHERE email = $1",
+        "SELECT user_id, password_hash, oauth_provider, failed_login_count, locked_until "
+        "FROM users WHERE email = $1",
         email,
     )
     now = datetime.now(timezone.utc)
     if row is not None and row["locked_until"] is not None and row["locked_until"] > now:
         raise AccountLocked(max(1, round((row["locked_until"] - now).total_seconds() / 60)))
 
-    # Always run the bcrypt comparison, even for a nonexistent email --
-    # short-circuiting here would let a timing difference reveal which
-    # emails are registered.
-    password_hash = row["password_hash"] if row is not None else _DUMMY_HASH
+    # Always run the bcrypt comparison against *some* hash -- for a
+    # nonexistent email, and equally for a real OAuth-only account (whose
+    # password_hash is NULL), or a timing difference would leak which of
+    # the three this is before the OAuthOnlyAccount check below even runs.
+    password_hash = (row["password_hash"] if row is not None else None) or _DUMMY_HASH
     password_ok = verify_password(password, password_hash)
+
+    if row is not None and row["password_hash"] is None:
+        raise OAuthOnlyAccount(row["oauth_provider"] or "another sign-in method")
 
     if row is None or not password_ok:
         if row is not None:

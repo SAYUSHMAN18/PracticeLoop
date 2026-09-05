@@ -18,6 +18,10 @@
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     <button type="submit" style="width:100%;justify-content:center;">Sign up</button>
   </form>
+  {% if google_oauth_available() %}
+    <p class="muted" style="text-align:center;margin:0.75rem 0;">or</p>
+    <a class="btn secondary" href="/auth/google" style="width:100%;justify-content:center;">Continue with Google</a>
+  {% endif %}
   <p class="muted" style="margin-top:1rem;font-size:0.82rem;">
     By signing up you agree to the <a href="/terms">Terms</a> and
     <a href="/privacy">Privacy Policy</a>. If you're under the age of digital
